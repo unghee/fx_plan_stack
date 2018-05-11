@@ -51,9 +51,6 @@ extern "C" {
 #include "flexsea_cmd_data.h"
 #include "flexsea_cmd_tools.h"
 #include "flexsea_cmd_in_control.h"
-//Include the user files:
-#include "flexsea_cmd_user.h"
-#include "flexsea_user_structs.h"
 
 //****************************************************************************
 // Prototype(s):

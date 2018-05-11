@@ -27,8 +27,7 @@ INCLUDEPATH +=  inc \
                 include \
                 libinclude \
                 libinclude/flexseastack/flexsea-comm/inc \
-                libinclude/flexseastack/flexsea-system/inc \
-                libinclude/flexseastack/flexsea-projects/inc \
+                libinclude/flexseastack/flexsea-system/inc
 
 SOURCES += \
         src/flexseaserial.cpp \
@@ -52,12 +51,6 @@ HEADERS += \
 HEADERS += \
     libinclude/flexseastack/flexsea-shared/unity/unity.h \
     libinclude/flexseastack/flexsea-shared/unity/unity_internals.h \
-    libinclude/flexseastack/flexsea-projects/inc/flexsea_cmd_user.h \
-    libinclude/flexseastack/flexsea-projects/MIT_2DoF_Ankle_v1/inc/cmd-MIT_2DoF_Ankle_v1.h \
-    libinclude/flexseastack/flexsea-projects/RICNU_Knee_v1/inc/cmd-RICNU_Knee_v1.h \
-    libinclude/flexseastack/flexsea-projects/inc/flexsea_user_structs.h \
-    libinclude/flexseastack/flexsea-projects/inc/user-plan.h \
-    libinclude/flexseastack/flexsea-projects/inc/dynamic_user_structs.h \
     libinclude/flexseastack/flexsea-comm/inc/flexsea.h \
     libinclude/flexseastack/flexsea-comm/inc/flexsea_comm_def.h \
     libinclude/flexseastack/flexsea-comm/inc/flexsea_buffers.h \
@@ -78,10 +71,7 @@ HEADERS += \
     libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_in_control.h \
     libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_stream.h \
     libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h \
-    libinclude/flexseastack/flexsea-system/inc/flexsea_device_spec.h \
-    libinclude/flexseastack/flexsea-projects/Rigid/inc/cmd-Rigid.h \
-    libinclude/flexseastack/flexsea-projects/ActPack/inc/cmd-ActPack.h \
-    libinclude/flexseastack/flexsea-projects/Rigid/inc/cmd-Pocket.h
+    libinclude/flexseastack/flexsea-system/inc/flexsea_device_spec.h
 
 #serial lib headers
 HEADERS += \
