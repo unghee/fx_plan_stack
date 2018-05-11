@@ -33,7 +33,7 @@ public:
     ///  ***************************************
     ///  overriding serial functions
     ///  ***************************************
-    virtual std::vector<std::string> getPortList() const;
+    virtual std::vector<std::string> getAvailablePorts() const;
     virtual void open(const std::string &portName, uint16_t portIdx=0);
     virtual int isOpen(uint16_t portIdx=0) const;
     virtual void close(uint16_t portIdx=0);

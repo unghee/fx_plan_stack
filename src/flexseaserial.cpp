@@ -6,8 +6,6 @@
 #include "serial/serial.h"
 #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
 
-#ifndef TEST_CODE
-
 extern "C" {
     #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
     #include "flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h"
@@ -15,11 +13,8 @@ extern "C" {
     #include "flexseastack/flexsea-comm/inc/flexsea_payload.h"
     #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
     #include "flexseastack/flexsea-system/inc/flexsea_system.h"
+    #include "flexseastack/flexsea-system/inc/flexsea_dataformats.h"
 }
-
-#else
-    #include "fake_flexsea.h"
-#endif
 
 FlexseaSerial::FlexseaSerial() : defaultDevice(-1, -1, FX_NONE, NULL, NULL), openPorts(0)
 {
@@ -30,18 +25,103 @@ FlexseaSerial::FlexseaSerial() : defaultDevice(-1, -1, FX_NONE, NULL, NULL), ope
 
 #ifndef TEST_CODE
 
-    circularBuffer_t * cbs[FX_NUMPORTS] = {&rx_buf_circ_1, &rx_buf_circ_2, &rx_buf_circ_3, &rx_buf_circ_4};
     for(int i = 0; i < FX_NUMPORTS; i++)
-        initMultiPeriph(this->portPeriphs + i, PORT_USB, SLAVE, cbs[i]);
+        initMultiPeriph(this->portPeriphs + i, PORT_USB, SLAVE);
 
 #endif //TEST_CODE
+
+    // set which commands to highjack
+    memset(highjackedCmds, 0, NUM_COMMANDS);
+    for(int i = 0; i < NUM_COMMANDS; i++)
+        stringParsers[i] = &defaultStringParser;
+
+    highjackedCmds[CMD_SYSDATA] = 1;
+    stringParsers[CMD_SYSDATA] = &sysDataParser;
+}
+
+int FlexseaSerial::sysDataParser(int port)
+{
+    if(port < 0 || port >= FX_NUMPORTS) return 0;
+    MultiCommPeriph *cp = portPeriphs+port;
+
+    uint8_t *msgBuf = cp->in.unpacked;
+    uint16_t index=P_DATA1;
+    uint8_t lenFlags;
+    uint32_t flags[FX_BITMAP_WIDTH];
+
+    lenFlags = msgBuf[index++];
+
+    //read in our fields
+    int i, j, k, fieldOffset;
+
+    for(i=0;i<lenFlags;i++)
+        flags[i]=REBUILD_UINT32(msgBuf, &index);
+
+    uint8_t devType = msgBuf[index++];
+    uint16_t devId = msgBuf[index] + (msgBuf[index+1] << 8);
+    index+=2;
+
+    // if we haven't seen this device before we add it to our list
+    if(connectedDevices.count(devId) == 0)
+        addDevice(devId, port, static_cast<FlexseaDeviceType>(devType));
+    else if(connectedDevices.at(devId).type != devType)
+    {
+        std::cout << "Device record's type does not match incoming message, something went wrong (two devices connected with same id?)" << std::endl;
+        removeDevice(devId);
+        addDevice(devId, port, static_cast<FlexseaDeviceType>(devType));
+    }
+
+    // read into the appropriate device
+    FlexseaDevice &d = connectedDevices.at(devId);
+    FlexseaDeviceSpec ds = deviceSpecs[devType];
+
+    std::lock_guard<std::recursive_mutex> lk(*d.dataMutex);
+
+    circular_buffer<FX_DataPtr> *cb = this->databuffers.at(devId);
+    FX_DataPtr fxDataPtr;
+    if(cb->full())
+        fxDataPtr = cb->get();
+    else
+        fxDataPtr = new uint32_t[d.numFields+1]{0};
+
+    //TODO: do timestamp properly
+    static uint32_t fakeTimestamp = 0;
+    fxDataPtr[0] = fakeTimestamp++;
+
+    // read into the rest of the data like a buffer
+    uint8_t *dataPtr = (uint8_t*)(fxDataPtr+1);
+    if(dataPtr)
+    {
+        // first two fields are devType and devId, we could probably skip for reading in
+        fieldOffset = 0;
+        for(j = 0; j < ds.numFields; j++)
+        {
+            if(IS_FIELD_HIGH(j, flags))
+            {
+                uint8_t fw = FORMAT_SIZE_MAP[ds.fieldTypes[j]];
+                for(k = 0; k < fw; k++)
+                    dataPtr[fieldOffset + k] = msgBuf[index++];
+            }
+
+            fieldOffset += 4; // storing each value as a separate int32
+        }
+    }
+    else
+    {
+        std::cout << "Couldn't allocate memory for reading data into FlexseaDevice " << d.id << std::endl; // log error?
+    }
+
+    cb->put(fxDataPtr);
+
+    return 1;
 }
 
 FlexseaSerial::~FlexseaSerial()
 {
     delete[] ports;
+    ports = NULL;
     delete[] portPeriphs;
-
+    portPeriphs = NULL;
 
     for(std::unordered_map<int, uint32_t*>::iterator it = fieldMaps.begin(); it != fieldMaps.end(); ++it)
     {
@@ -53,31 +133,39 @@ FlexseaSerial::~FlexseaSerial()
     fieldMaps.clear();
 }
 
+#define CALL_MEMBER_FN(object,ptrToMember)  ((object)->*(ptrToMember))
+
 void FlexseaSerial::processReceivedData(int port, size_t len)
 {
 #ifndef TEST_CODE
+    int totalBuffered = len + circ_buff_get_size(&(portPeriphs[port].circularBuff));
     int numMessagesReceived = 0;
-    int numMessagesExpected = (len / COMM_STR_BUF_LEN);
-    int maxMessagesExpected = (len / COMM_STR_BUF_LEN + (len % COMM_STR_BUF_LEN != 0));
+    int numMessagesExpected = (totalBuffered / COMM_STR_BUF_LEN);
+    int maxMessagesExpected = (totalBuffered / COMM_STR_BUF_LEN + (totalBuffered % COMM_STR_BUF_LEN != 0));
 
     uint16_t bytesToWrite, cbSpace, bytesWritten=0;
     int error, successfulParse;
 
     while(len > 0)
     {
-        cbSpace = CB_BUF_LEN - circ_buff_get_size(portPeriphs[port].circularBuff);
+        cbSpace = CB_BUF_LEN - circ_buff_get_size(&(portPeriphs[port].circularBuff));
         bytesToWrite = MIN(len, cbSpace);
 
-        error = circ_buff_write(portPeriphs[port].circularBuff, (&largeRxBuffer[bytesWritten]), (bytesToWrite));
+        error = circ_buff_write(&(portPeriphs[port].circularBuff), (&largeRxBuffer[bytesWritten]), (bytesToWrite));
         if(error) std::cout << "circ_buff_write error:" << error << std::endl;
 
         do {
             portPeriphs[port].bytesReadyFlag = 1;
-
             successfulParse = tryParse(portPeriphs + port);
             if(portPeriphs[port].in.isMultiComplete)
             {
-                uint8_t parseResult = parseReadyMultiString(portPeriphs + port);
+                uint8_t cmd = portPeriphs[port].in.unpacked[P_CMD1] >> 1;
+                int parseResult;
+                if(highjackedCmds[cmd])
+                    parseResult = CALL_MEMBER_FN(this, stringParsers[cmd])(port);
+                else
+                    parseResult = parseReadyMultiString(portPeriphs + port);
+
                 numMessagesReceived++;
                 (void) parseResult;
             }
@@ -87,10 +175,10 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
         len -= bytesToWrite;
         bytesWritten += bytesToWrite;
 
-        if(CB_BUF_LEN == circ_buff_get_size(portPeriphs[port].circularBuff) && len)
+        if(CB_BUF_LEN == circ_buff_get_size(&(portPeriphs[port].circularBuff)) && len)
         {
             std::cout << "circ buffer is full with non valid frames; clearing..." << std::endl;
-            circ_buff_init(portPeriphs[port].circularBuff);
+            circ_buff_init(&(portPeriphs[port].circularBuff));
         }
     }
 
@@ -104,7 +192,8 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
 void FlexseaSerial::periodicTask()
 {
 #ifndef TEST_CODE
-    size_t i, nb, nr;
+    size_t i, nr;
+    long int nb;
 
     for(i = 0; i < FX_NUMPORTS; i++)
     {
@@ -124,10 +213,6 @@ void FlexseaSerial::periodicTask()
                 ports[i].read(largeRxBuffer, nr);
                 processReceivedData(i, nr);
             }
-
-            // after processing messages from a port we may have a new device
-            if(fx_spec_numConnectedDevices != deviceIds.size())
-                handleFlexseaDevice(i);
         }
     }
 #endif
@@ -225,9 +310,41 @@ void FlexseaSerial::setDeviceMap(const FlexseaDevice &d, uint32_t *map)
     throw new std::exception();
 }
 
+void FlexseaSerial::setDeviceMap(const FlexseaDevice &d, const std::vector<int> &fields)
+{
+    if(!d.isValid() || !fields.size()) return;
+
+    uint32_t map[FX_BITMAP_WIDTH];
+    memset(map, 0, sizeof(uint32_t) * FX_BITMAP_WIDTH);
+
+    uint32_t i, fieldId;
+    for(i=0;i<fields.size();i++)
+    {
+        fieldId = fields.at(i);
+        if((int)fieldId < d.numFields)
+        {
+            SET_FIELD_HIGH(fieldId, map);
+        }
+    }
+
+    setDeviceMap(d, map);
+
+}
+
 const std::vector<int>& FlexseaSerial::getDeviceIds() const
 {
     return deviceIds;
+}
+
+std::vector<int> FlexseaSerial::getDeviceIds(int portIdx) const
+{
+    std::vector<int> ids;
+    for(auto it = connectedDevices.begin(); it != connectedDevices.end(); it++)
+    {
+        if(it->second.port == portIdx)
+            ids.push_back(it->first);
+    }
+    return ids;
 }
 
 const FlexseaDevice& FlexseaSerial::getDevice(int id) const
@@ -245,45 +362,6 @@ const uint32_t* FlexseaSerial::getMap(int id) const
     else
         return NULL;
 
-}
-
-void FlexseaSerial::registerConnectionChangeFlag(uint8_t *flag) const {
-    std::lock_guard<std::mutex> guard(connectionMutex);
-    deviceConnectedFlags.push_back(flag);
-}
-
-void FlexseaSerial::registerMapChangeFlag(uint8_t *flag) const {
-    std::lock_guard<std::mutex> guard(mapMutex);
-    mapChangedFlags.push_back(flag);
-}
-
-void FlexseaSerial::unregisterConnectionChangeFlag(uint8_t *flag) const {
-    std::lock_guard<std::mutex> guard(connectionMutex);
-    deviceConnectedFlags.erase(std::remove(deviceConnectedFlags.begin(), deviceConnectedFlags.end(), flag), deviceConnectedFlags.end());
-}
-
-void FlexseaSerial::unregisterMapChangeFlag(uint8_t *flag) const {
-    std::lock_guard<std::mutex> guard(mapMutex);
-    mapChangedFlags.erase(std::remove(mapChangedFlags.begin(), mapChangedFlags.end(), flag), mapChangedFlags.end());
-}
-
-void FlexseaSerial::notifyConnectionChange()
-{
-    std::lock_guard<std::mutex> guard(connectionMutex);
-    for(std::vector<uint8_t*>::iterator it = deviceConnectedFlags.begin(); it != deviceConnectedFlags.end(); ++it)
-    {
-        if(*it)
-            *(*it) = 1;
-    }
-}
-void FlexseaSerial::notifyMapChange()
-{
-    std::lock_guard<std::mutex> guard(mapMutex);
-    for(std::vector<uint8_t*>::iterator it = mapChangedFlags.begin(); it != mapChangedFlags.end(); ++it)
-    {
-        if(*it)
-            *(*it) = 1;
-    }
 }
 
 int FlexseaSerial::addDevice(int id, int port, FlexseaDeviceType type)
@@ -306,7 +384,7 @@ int FlexseaSerial::addDevice(int id, int port, FlexseaDeviceType type)
     fieldMaps.insert({id, map});
 
     //Notify device connected
-    notifyConnectionChange();
+    deviceConnectedFlags.notify();
 
     return 0;
 }
@@ -350,7 +428,7 @@ int FlexseaSerial::removeDevice(int id)
     fieldMaps.erase(id);
 
     //Notify device connected
-    notifyConnectionChange();
+    deviceConnectedFlags.notify();
 
     m->unlock();
     delete m;
@@ -360,18 +438,16 @@ int FlexseaSerial::removeDevice(int id)
 }
 
 /* Serial functions */
-std::vector<std::string> FlexseaSerial::getPortList() const {
-#ifndef TEST_CODE
+std::vector<std::string> FlexseaSerial::getAvailablePorts() const {
+    std::vector<std::string> result;
 
+#ifndef TEST_CODE
     std::vector<serial::PortInfo> pi = serial::list_ports();
     for(unsigned int i = 0; i < pi.size(); i++)
-    {
-        serial::PortInfo p = pi.at(i);
-        if(p.description.find("STM") != std::string::npos)
-            std::cout << p.port << " " << p.hardware_id << " " << p.description << std::endl;
-    }
+        result.push_back(pi.at(i).port);
 #endif
-    return std::vector<std::string>();
+
+    return result;
 }
 
 int FlexseaSerial::isOpen(uint16_t portIdx) const { return ports[portIdx].isOpen(); }

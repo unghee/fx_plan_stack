@@ -44,7 +44,7 @@ void TestSerial::runTestSim1()
 // actually empty since all functionality in testsim2 is implemented by calling into class functions
 void TestSerial::runTestSim2() {}
 
-std::vector<std::string> TestSerial::getPortList() const { return fakePortList; }
+std::vector<std::string> TestSerial::getAvailablePorts() const { return fakePortList; }
 
 void TestSerial::open(const std::string &portName, uint16_t portIdx)
 {
@@ -151,7 +151,7 @@ void TestSerial::setDeviceMap(const FlexseaDevice &d, uint32_t *map)
     for(unsigned short i = 0; i < FX_BITMAP_WIDTH; i++)
         m[i] = map[i];
 
-    notifyMapChange();
+    mapChangedFlags.notify();
 }
 
 void TestSerial::randomConnections()
@@ -317,7 +317,7 @@ void TestSerial::testConnectDevice(int port)
         if(numFields)
             map[0] = (rand() % (int)(pow(2, numFields) - 1));
 
-        this->notifyMapChange();
+        mapChangedFlags.notify();
     }
 }
 
@@ -359,7 +359,7 @@ void TestSerial::testChangeDeviceMap()
     map[0] ^= (rand() % (int)(pow(2, numFields) - 1));
 
     //Notify device connected
-    notifyMapChange();
+    mapChangedFlags.notify();
 }
 
 void TestSerial::printData(int id,  int numFields, FX_DataPtr data)

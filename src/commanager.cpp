@@ -5,7 +5,6 @@
 #include <iostream>
 
 #ifdef TEST_CODE
-    #include "fake_flexsea.h"
 
 extern "C" {
     #include "flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h"
@@ -66,60 +65,68 @@ int CommManager::getIndexOfFrequency(int freq)
 	return indexOfFreq;
 }
 
-void CommManager::startStreaming(const FlexseaDevice& device, int cmd, int freq, bool shouldLog)
+std::vector<int> CommManager::getStreamingFrequencies() const
+{
+    std::vector<int> r;
+    r.resize(NUM_TIMER_FREQS);
+    int *d = r.data();
+    memcpy(d, timerFrequencies, sizeof(int) * NUM_TIMER_FREQS);
+    return r;
+}
+
+bool CommManager::startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto)
 {
 	int indexOfFreq = getIndexOfFrequency(freq);
 
-    if(indexOfFreq >= 0 && indexOfFreq < NUM_TIMER_FREQS)
+    if(indexOfFreq < 0 || indexOfFreq >= NUM_TIMER_FREQS)
     {
-        CmdSlaveRecord record(cmd, device.id, shouldLog, &device);
-		streamLists[indexOfFreq].push_back(record);
+        std::cout << "Invalid frequency" << std::endl;
+        return false;
+    }
 
-        std::cout << "Started streaming cmd: " << cmd << ", for slave id: " << device.id << " at frequency: " << freq << std::endl;
+    if(!fxSerial->getDevice(devId).isValid())
+    {
+        std::cout << "Invalid device id" << std::endl;
+        return false;
+    }
 
-        // increase stream count
-        bool doNotify;
-        {
-            std::lock_guard<std::mutex> l(conditionMutex);
-            streamCount++;
-            doNotify = streamCount == 1;
-        }
-        // if stream count is exactly one, then we need to wake our sleeping worker thread
-        if(doNotify)
-            wakeCV.notify_all();
-	}
-	else
-	{
-        std::cout << ("Invalid frequency") << std::endl;
-	}
+    CmdSlaveRecord record(CMD_SYSDATA, devId, shouldLog);
+
+#ifndef TEST_CODE
+    if(shouldAuto) {
+        streamLists[indexOfFreq].push_back(record);
+        std::cout << "Started streaming cmd: " << CMD_SYSDATA << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
+
+
+
+    } else {
+        autoStreamLists[indexOfFreq].push_back(record);
+        std::cout << "Started autostreaming cmd: " << CMD_SYSDATA << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
+    }
+#else
+    streamLists[indexOfFreq].push_back(record);
+    std::cout << "[Fake] Started " << (shouldLog ? " logged " : "") << (shouldAuto ? "auto" : "") << "streaming cmd: " << CMD_SYSDATA << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
+#endif
+
+    // increase stream count only for regular streaming
+    bool doNotify;
+    {
+        std::lock_guard<std::mutex> l(conditionMutex);
+        streamCount += shouldAuto ? 0 : 1;
+        doNotify = streamCount == 1;
+    }
+    // if stream count is exactly one, then we need to wake our sleeping worker thread
+    if(doNotify)
+        wakeCV.notify_all();
+
+    return true;
 }
 
-void CommManager::startAutoStreaming(const FlexseaDevice& device, int freq, int cmd, bool shouldLog)
-{
-    uint8_t slave = device.id;
-
-	int indexOfFreq = getIndexOfFrequency(freq);
-
-    if(indexOfFreq >= 0 && indexOfFreq < NUM_TIMER_FREQS)
-	{
-        CmdSlaveRecord record(cmd, slave, shouldLog, &device);
-		autoStreamLists[indexOfFreq].push_back(record);
-        std::cout << "Started autostreaming cmd: " << cmd << ", for slave id: " << slave << "at frequency: " << freq << std::endl;
-	}
-	else
-	{
-        std::cout << ("Invalid frequency") << std::endl;
-	}
-}
-
-void CommManager::stopStreaming(const FlexseaDevice &device, int cmd, int freq)
-{
-    stopStreaming(cmd, (uint8_t)device.id, freq);
-}
-
-void CommManager::stopStreaming(const FlexseaDevice &device)
+bool CommManager::stopStreaming(int devId)
 {
     std::vector<CmdSlaveRecord>* listArray[2] = {autoStreamLists, streamLists};
+
+    bool found = false;
 
     for(int listIndex = 0; listIndex < 2; listIndex++)
     {
@@ -127,67 +134,36 @@ void CommManager::stopStreaming(const FlexseaDevice &device)
 
         for(int indexOfFreq = 0; indexOfFreq < NUM_TIMER_FREQS; indexOfFreq++)
         {
-            for(unsigned int i = 0; i < (l)[indexOfFreq].size(); i++)
+            for(unsigned int i = 0; i < (l)[indexOfFreq].size(); /* no increment */)
             {
                 CmdSlaveRecord record = (l)[indexOfFreq].at(i);
-                if(record.slaveIndex == device.id)
+                if(record.slaveIndex == devId)
                 {
-                    (l)[indexOfFreq].erase((l)[indexOfFreq].begin() + i);
+                    (l)[indexOfFreq].erase( (l)[indexOfFreq].begin() + i);
 
                     if(listIndex == 0)
                     {
-                        //packAndSendStopStreaming(cmd, record.device->slaveID);
-                        std::cout << "Stopped autostreaming cmd: " << record.cmdType
-                                  << ", for slave id: " << device.id
-                                  << " at frequency: " << timerFrequencies[indexOfFreq] << std::endl;
+                        //packAndSendStopStreaming(cmd, devId);
                     }
                     else
                     {
-                        std::cout << "Stopped streaming cmd: " << record.cmdType
-                                  << ", for slave id: " << device.id
-                                  << " at frequency: " << timerFrequencies[indexOfFreq] << std::endl;
-
                         std::lock_guard<std::mutex> l(conditionMutex);
                         streamCount--;
                     }
+
+                    std::cout << "Stopped " << (listIndex == 0 ? "autostreaming" : "streaming")
+                              << " cmd: " << record.cmdType
+                              << ", for slave id: " << devId
+                              << " at frequency: " << timerFrequencies[indexOfFreq] << std::endl;
+                    found = true;
                 }
+                else    //only increment i if we aren't erasing from the vector
+                    i++;
             }
         }
     }
-}
 
-void CommManager::stopStreaming(int cmd, uint8_t slave, int freq)
-{
-	int indexOfFreq = getIndexOfFrequency(freq);
-	if(indexOfFreq < 0) return;
-
-	std::vector<CmdSlaveRecord>* listArray[2] = {autoStreamLists, streamLists};
-
-	for(int listIndex = 0; listIndex < 2; listIndex++)
-	{
-		std::vector<CmdSlaveRecord> *l = listArray[listIndex];
-
-		for(unsigned int i = 0; i < (l)[indexOfFreq].size(); i++)
-		{
-			CmdSlaveRecord record = (l)[indexOfFreq].at(i);
-			if(record.cmdType == cmd && record.slaveIndex == slave)
-			{
-				(l)[indexOfFreq].erase((l)[indexOfFreq].begin() + i);
-
-                if(listIndex == 0)
-                {
-                    //packAndSendStopStreaming(cmd, record.device->slaveID);
-                    std::cout << "Stopped autostreaming cmd: " << cmd << ", for slave id: " << slave << " at frequency: " << freq << std::endl;
-                }
-                else
-                {
-                    std::cout << "Stopped streaming cmd: " << cmd << ", for slave id: " << (int)slave << " at frequency: " << freq << std::endl;
-                    std::lock_guard<std::mutex> l(conditionMutex);
-                    streamCount--;
-                }
-			}
-		}
-	}
+    return found;
 }
 
 void CommManager::periodicTask()
@@ -250,7 +226,7 @@ void CommManager::tryPackAndSend(int cmd, int slaveId)
 #endif
 }
 
-void CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket)
+bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
 {
 	//If we are over a max size, clear the queue
 	const unsigned int MAX_Q_SIZE = 200;
@@ -262,7 +238,7 @@ void CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket)
 			outgoingBuffer.pop();
 	}
 
-	outgoingBuffer.push(Message(numb, dataPacket));
+    outgoingBuffer.push(Message(numb, dataPacket, portIdx));
 
     bool doNotify;
     {
@@ -271,6 +247,8 @@ void CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket)
     }
     if(doNotify)
         wakeCV.notify_all();
+
+    return true;
 }
 
 void CommManager::sendCommands(int index)
@@ -294,7 +272,7 @@ void CommManager::sendCommands(int index)
             break;
 
 			default:
-                //std::cout<< "Unsupported command was given: " << record.cmdType << std::endl;
+                std::cout<< "Unsupported command was given: " << record.cmdType << std::endl;
                 //stopStreaming(record.cmdType, record.slaveIndex, timerFrequencies[index]);
 				break;
 		}

@@ -9,6 +9,7 @@
 #include "flexseadevice.h"
 #include "circular_buffer.h"
 #include "periodictask.h"
+#include <algorithm>
 
 struct MultiCommPeriph_struct;
 typedef MultiCommPeriph_struct MultiCommPeriph;
@@ -28,6 +29,25 @@ namespace serial {
 
 typedef circular_buffer<FX_DataPtr> FX_DataList;
 
+class FlagList {
+    std::mutex m_;
+    std::vector<uint8_t*> l_;
+
+public:
+    void add(uint8_t* f) {
+        std::lock_guard<std::mutex> lk(m_);
+        l_.push_back(f);
+    }
+    void remove(uint8_t* f) {
+        std::lock_guard<std::mutex> lk(m_);
+        l_.erase(std::remove(l_.begin(), l_.end(), f), l_.end());
+    }
+    void notify() {
+        for(unsigned short i = 0; i < l_.size(); i++)
+            *(l_.at(i)) = 1;
+    }
+};
+
 /// \brief FlexseaSerial class manages serial ports and connected devices
 class FlexseaSerial : public PeriodicTask
 {
@@ -35,9 +55,11 @@ public:
     FlexseaSerial();
     virtual ~FlexseaSerial();
 
-    /* Returns a vector containing the ids of all connected devices
-    */
+    /// \brief Returns a vector containing the ids of all connected devices
     virtual const std::vector<int>& getDeviceIds() const;
+
+    /// \brief Returns a vector containing the ids of all connected devices at the specified port
+    virtual std::vector<int> getDeviceIds(int portIdx) const;
 
     /* Returns a FlexseaDevice object which provides an interface to incoming data
      * from a connected device
@@ -56,14 +78,14 @@ public:
 
     /* These functions allow users to be notified of the corresponding events
     */
-    void registerConnectionChangeFlag(uint8_t *flag) const;
-    void registerMapChangeFlag(uint8_t *flag) const;
+    void registerConnectionChangeFlag(uint8_t *flag) const {deviceConnectedFlags.add(flag);}
+    void registerMapChangeFlag(uint8_t *flag) const {mapChangedFlags.add(flag);}
 
-    void unregisterConnectionChangeFlag(uint8_t *flag) const;
-    void unregisterMapChangeFlag(uint8_t *flag) const;
+    void unregisterConnectionChangeFlag(uint8_t *flag) const {deviceConnectedFlags.remove(flag);}
+    void unregisterMapChangeFlag(uint8_t *flag) const {mapChangedFlags.remove(flag);}
 
     /* Serial functions */
-    virtual std::vector<std::string> getPortList() const;
+    virtual std::vector<std::string> getAvailablePorts() const;
     virtual void open(const std::string &portName, uint16_t portIdx=0);
     virtual int isOpen(uint16_t portIdx=0) const;
     virtual void close(uint16_t portIdx=0);
@@ -75,10 +97,9 @@ public:
 
     void sendDeviceWhoAmI(int port);
     virtual void setDeviceMap(const FlexseaDevice &d, uint32_t* map);
+    virtual void setDeviceMap(const FlexseaDevice &d, const std::vector<int> &fields);
 
-#ifndef TEST_CODE
-#endif
-MultiCommPeriph *portPeriphs;
+    MultiCommPeriph *portPeriphs;
 
 protected:
     std::vector<int> deviceIds;
@@ -87,9 +108,6 @@ protected:
     std::unordered_map<int, circular_buffer<FX_DataPtr>*> databuffers;
 
     const FlexseaDevice defaultDevice;
-
-    void notifyConnectionChange();
-    void notifyMapChange();
 
     int addDevice(int id, int port, FlexseaDeviceType type);
     int removeDevice(int id);
@@ -101,18 +119,27 @@ protected:
     uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
     void processReceivedData(int port, size_t nb);
 
+    mutable FlagList deviceConnectedFlags;
+    mutable FlagList mapChangedFlags;
 private:
-    mutable std::vector<uint8_t*> deviceConnectedFlags;
-    mutable std::vector<uint8_t*> mapChangedFlags;
-
-    mutable std::mutex connectionMutex;
-    mutable std::mutex mapMutex;
 
     serial::Serial *ports;
 
     uint16_t openPorts;
 
     void handleFlexseaDevice(int port);
+
+    // multi comm periph string parsing stuff
+    static const int NUM_COMMANDS = 256;
+    uint8_t highjackedCmds[NUM_COMMANDS];
+    typedef int (FlexseaSerial::*_cpParser)(int port);
+    _cpParser stringParsers[NUM_COMMANDS];
+
+    int defaultStringParser(int port) {(void) port; return 1; }
+    int sysDataParser(int port);
 };
+
+
+
 
 #endif // FLEXSEASERIAL_H
