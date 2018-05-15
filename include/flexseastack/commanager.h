@@ -12,7 +12,9 @@
 #include "flexseaserial.h"
 #include "periodictask.h"
 
-class CommManager : public PeriodicTask
+
+
+class CommManager : virtual public PeriodicTask, public FlexseaSerial
 {
 
 public:
@@ -20,11 +22,6 @@ public:
     virtual ~CommManager();
 
     static const int NUM_TIMER_FREQS = 11;
-
-    FlexseaSerial* fxSerial;
-
-    void init(FlexseaSerial* serialDriver);
-    void cleanup();
 
     /// \brief Returns a vector containing the frequencies that can be streamed at, in Hz
     std::vector<int> getStreamingFrequencies() const;
@@ -48,52 +45,26 @@ public:
     /// Returns true if the attempt was successful. May be unsuccessful if no stream for given id exists
     bool stopStreaming(int devId);
 
-    /// \brief populates a list of device ids that are at the specified portIdx;
-    std::vector<int> getDeviceIds(int portIdx) const;
+//    /// \brief populates a list of device ids that are at the specified portIdx;
+//    std::vector<int> getDeviceIds(int portIdx) const;
 
     bool enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx=0);
 
+    /// \brief overloaded to manage streams and connected devices
+    virtual void close(uint16_t portIdx);
 
 protected:
     virtual void periodicTask();
     virtual bool wakeFromLongSleep();
     virtual bool goToLongSleep();
 
+    virtual void serviceStreams(uint8_t milliseconds);
+    uint8_t serviceCount = 0;
 private:
-
-
 	//Variables & Objects:
-	class Message {
-	public:
-		static void do_delete(uint8_t buf[]) { delete[] buf; }
-
-        Message(uint8_t nb, uint8_t* data, int portIdx_=0):
-        numBytes(nb)
-        , dataPacket(std::shared_ptr<uint8_t>(new uint8_t[nb], do_delete))
-        , portIdx(portIdx_)
-        {
-            uint8_t* temp = dataPacket.get();
-			for(int i = 0; i < numBytes; i++)
-				temp[i] = data[i];
-		}
-
-		uint8_t numBytes;
-        std::shared_ptr<uint8_t> dataPacket;
-        int portIdx;
-	};
+    class Message;
+    class CmdSlaveRecord;
 	std::queue<Message> outgoingBuffer;
-
-	class CmdSlaveRecord
-	{
-	public:
-        CmdSlaveRecord(int c, int s, bool l):
-            cmdType(c), slaveIndex(s), shouldLog(l){}
-		int cmdType;
-		int slaveIndex;
-		bool shouldLog;
-		clock_t initialTime;
-        std::string date;
-	};
 
 	std::vector<CmdSlaveRecord> autoStreamLists[NUM_TIMER_FREQS];
 	std::vector<CmdSlaveRecord> streamLists[NUM_TIMER_FREQS];
@@ -113,10 +84,40 @@ private:
     uint8_t comm_str_usb[COMM_STR_LEN];
 
     void sendCommands(int index);
-    void sendCommandReadAll(const FlexseaDevice* d);
     void sendSysDataRead(uint8_t slaveId);
-    void sendCommandRigid(uint8_t slaveId);
 
     uint8_t streamCount;
 };
+
+class CommManager::Message {
+public:
+    static void do_delete(uint8_t buf[]) { delete[] buf; }
+
+    Message(uint8_t nb, uint8_t* data, int portIdx_=0):
+    numBytes(nb)
+    , dataPacket(std::shared_ptr<uint8_t>(new uint8_t[nb], do_delete))
+    , portIdx(portIdx_)
+    {
+        uint8_t* temp = dataPacket.get();
+        for(int i = 0; i < numBytes; i++)
+            temp[i] = data[i];
+    }
+
+    uint8_t numBytes;
+    std::shared_ptr<uint8_t> dataPacket;
+    int portIdx;
+};
+
+class CommManager::CmdSlaveRecord
+{
+public:
+    CmdSlaveRecord(int c, int s, bool l):
+        cmdType(c), slaveIndex(s), shouldLog(l){}
+    int cmdType;
+    int slaveIndex;
+    bool shouldLog;
+    clock_t initialTime;
+    std::string date;
+};
+
 #endif // STREAMMANAGER_H

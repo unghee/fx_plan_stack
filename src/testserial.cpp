@@ -46,12 +46,12 @@ void TestSerial::runTestSim2() {}
 
 std::vector<std::string> TestSerial::getAvailablePorts() const { return fakePortList; }
 
-void TestSerial::open(const std::string &portName, uint16_t portIdx)
+bool TestSerial::tryOpen(const std::string &portName, uint16_t portIdx)
 {
     if(isOpen(portIdx))
     {
         std::cout << "Port index " << portIdx << " already open." << std::endl;
-        return;
+        return false;
     }
 
     // get the idx of this name within the fakePortList
@@ -68,7 +68,7 @@ void TestSerial::open(const std::string &portName, uint16_t portIdx)
         if(portMapping[j] == (int)i)
         {
             std::cout << "Port \"" << portName << "\" already open at index " << j << std::endl;
-            return;
+            return false;
         }
     }
                                 // 1 in a 10 times we fail to connect
@@ -76,31 +76,27 @@ void TestSerial::open(const std::string &portName, uint16_t portIdx)
     {
         std::cout << "Connecting to port \"" << portName << "\" at index " << portIdx << std::endl;
         // connect a couple devices (random number between 1 and 3) at this port
-        unsigned int n = rand() % 3 + 1;
-        for(j=0;j<n;j++)
-            testConnectDevice(portIdx);
-
         portMapping[portIdx] = i;
+        std::lock_guard<std::mutex> lk(_portsMutex);
+        openPorts++;
+        return true;
     }
+    return false;
 }
 
 int TestSerial::isOpen(uint16_t portIdx) const {    return (portMapping[portIdx] != -1);   }
 
-void TestSerial::close(uint16_t portIdx)
+void TestSerial::tryClose(uint16_t portIdx)
 {
-    for(unsigned short x = 0; x < deviceIds.size(); /* no increment */)
-    {
-        if( connectedDevices.at(deviceIds.at(x)).port == portIdx )
-            testDisconnectDevice(deviceIds.at(x));
-        else
-            x++;
-    }
 
     if(portMapping[portIdx] != -1)
     {
         std::string portName = fakePortList.at(portMapping[portIdx]);
-        std::cout << "Disconnecting port \"" << portName << "\" at index " << portIdx << std::endl;
+        std::cout << "[Fake] Disconnecting port \"" << portName << "\" at index " << portIdx << std::endl;
         portMapping[portIdx] = -1;
+
+        std::lock_guard<std::mutex> lk(_portsMutex);
+        openPorts--;
     }
 }
 
@@ -152,6 +148,15 @@ void TestSerial::setDeviceMap(const FlexseaDevice &d, uint32_t *map)
         m[i] = map[i];
 
     mapChangedFlags.notify();
+}
+
+void TestSerial::sendDeviceWhoAmI(int port)
+{
+    // fake receiving replies from random # of devices
+
+    unsigned int j, n = rand() % 3 + 1;
+    for(j=0;j<n;j++)
+        testConnectDevice(port);
 }
 
 void TestSerial::randomConnections()
@@ -395,7 +400,7 @@ void TestSerial::testReceiveDataFromDevice(int id, uint32_t timestamp)
         return;
 
     //lock the mutex before accessing data buffer
-    d.dataMutex->lock();
+    std::lock_guard<std::recursive_mutex> lk(*d.dataMutex);
 
     //get the data buffer for this device
     circular_buffer<FX_DataPtr> *cb = databuffers.at(id);
@@ -422,9 +427,6 @@ void TestSerial::testReceiveDataFromDevice(int id, uint32_t timestamp)
 
     if(runVerbose && timestamp % 100 == 0)
         printData(d.id, d.numFields, dataptr);
-
-    //unlock the mutex after done accessing
-    d.dataMutex->unlock();
 }
 
 void TestSerial::printBitMap(const uint32_t* map, int numFields)

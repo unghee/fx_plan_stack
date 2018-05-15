@@ -13,18 +13,16 @@ class FlexseaDevice
 {
 public:
 	FlexseaDevice(int _id=-1, int _port=-1, FlexseaDeviceType _type=FX_NONE,
-			const uint32_t* map=NULL, const circular_buffer<FX_DataPtr>* data_=NULL,
-			std::recursive_mutex *m=NULL);
+			const uint32_t* map=nullptr, const circular_buffer<FX_DataPtr>* data_=nullptr,
+			std::recursive_mutex *m=nullptr);
 
     const int id;
     const int port;
     const FlexseaDeviceType type;
     const int numFields;
 
-    /* data gives access to data thats come into this device.
-     * The actual buffer is managed by whichever object created this FlexseaDevice object
-    */
-    const circular_buffer<FX_DataPtr>* data;
+    bool hasData() const { return !data->empty(); }
+    bool dataCount() const { return data->count(); }
 
     /* dataMutex should be locked while accessing data to ensure thread safety
     */
@@ -37,8 +35,9 @@ public:
      *      and copies the fields specified in by this devices bitmap into output
      *      user should specify the length of output buffer to avoid buffer overflow
      *      outputSize is specified as length of int32_t array
+     *      returns the timestamp
     */
-    void getData(uint32_t index, int32_t *output, uint16_t outputSize) const;
+    uint32_t getData(uint32_t index, int32_t *output, uint16_t outputSize) const;
 
     /// \brief returns the first index of data whose timestamp is later than given timeStamp
     uint16_t getIndexAfterTime(uint32_t timeStamp) const;
@@ -77,6 +76,10 @@ protected:
     mutable uint32_t lastFieldLabelMap[FX_BITMAP_WIDTH] = {0};
     mutable std::vector<std::string> lastRequest;
 
+    /* data gives access to data thats come into this device.
+     * The actual buffer is managed by whichever object created this FlexseaDevice object
+    */
+    const circular_buffer<FX_DataPtr>* data;
 };
 
 #endif // FLEXSEADEVICE_H

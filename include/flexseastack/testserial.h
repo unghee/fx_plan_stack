@@ -1,9 +1,9 @@
 #ifndef TESTSERIAL_H
 #define TESTSERIAL_H
 
-#include "flexseaserial.h"
+#include "flexseastack/commanager.h"
 
-class TestSerial : public FlexseaSerial
+class TestSerial : public CommManager
 {
 public:
     TestSerial();
@@ -30,16 +30,20 @@ public:
     //set high if you want more info coming through stdout
     bool runVerbose;
 
-    ///  ***************************************
-    ///  overriding serial functions
-    ///  ***************************************
+    //  ***************************************
+    //  overriding serial functions
+    //  ***************************************
     virtual std::vector<std::string> getAvailablePorts() const;
-    virtual void open(const std::string &portName, uint16_t portIdx=0);
+    virtual bool tryOpen(const std::string &portName, uint16_t portIdx=0);
     virtual int isOpen(uint16_t portIdx=0) const;
-    virtual void close(uint16_t portIdx=0);
+    virtual void tryClose(uint16_t portIdx=0);
     virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t portIdx=0);
     virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d);
+
+    // overriding flexseaserial functions
     virtual void setDeviceMap(const FlexseaDevice &d, uint32_t* map);
+    virtual void sendDeviceWhoAmI(int port);
+    virtual void serviceOpenPorts() {} // do nothing as data is fake received when written to
 
 private:
     /* Three "Test Cases" */

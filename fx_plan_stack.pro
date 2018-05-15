@@ -34,7 +34,9 @@ SOURCES += \
         src/testserial.cpp \
         src/flexseadevice.cpp \
         src/commanager.cpp \
-        src/periodictask.cpp
+        src/periodictask.cpp \
+    src/serialdriver.cpp \
+    src/flexseadeviceprovider.cpp
 
 HEADERS += \
         include/flexseastack/flexseaserial.h \
@@ -45,7 +47,9 @@ HEADERS += \
         include/flexseastack/commanager.h \
         include/flexseastack/periodictask.h \
         include/flexseastack/flexsea-system/inc/flexsea_device_spec.h \
-        include/flexseastack/flexsea-system/inc/flexsea_sys_def.h
+        include/flexseastack/flexsea-system/inc/flexsea_sys_def.h \
+    include/flexseastack/serialdriver.h \
+    include/flexseastack/flexseadeviceprovider.h
 
 #flexsea stack headers
 HEADERS += \

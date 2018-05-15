@@ -22,34 +22,24 @@ extern "C" {
     #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
     #include "flexseastack/flexsea-system/inc/flexsea_system.h"
     #include "flexseastack/flexsea_board.h"
-    #include "flexseastack/flexsea-projects/Rigid/inc/cmd-Rigid.h"
 #endif
 
-CommManager::CommManager() : PeriodicTask()
+CommManager::CommManager() : PeriodicTask(), FlexseaSerial()
 {
-	// Because this class is used in a thread, init is called after the class
-	// has been passed to the thread. This avoid allocating heap in the
-	// "creator thread" instead of the "SerialDriver thread".
-	// see https://wiki.qt.io/QThreads_general_usage
+    //this needs to be in order from smallest to largest
+    int timerFreqsInHz[NUM_TIMER_FREQS] = {1, 5, 10, 20, 33, 50, 100, 200, 300, 500, 1000};
+    for(int i = 0; i < NUM_TIMER_FREQS; i++)
+    {
+        timerFrequencies[i] = timerFreqsInHz[i];
+        timerIntervals[i] = 1000.0f / timerFreqsInHz[i];
+        autoStreamLists[i] = std::vector<CmdSlaveRecord>();
+        streamLists[i] = std::vector<CmdSlaveRecord>();
+    }
+
+    streamCount = 0;
 }
 
 CommManager::~CommManager(){}
-
-void CommManager::init(FlexseaSerial* serialDriver)
-{
-	//this needs to be in order from smallest to largest
-	int timerFreqsInHz[NUM_TIMER_FREQS] = {1, 5, 10, 20, 33, 50, 100, 200, 300, 500, 1000};
-	for(int i = 0; i < NUM_TIMER_FREQS; i++)
-	{
-		timerFrequencies[i] = timerFreqsInHz[i];
-		timerIntervals[i] = 1000.0f / timerFreqsInHz[i];
-		autoStreamLists[i] = std::vector<CmdSlaveRecord>();
-		streamLists[i] = std::vector<CmdSlaveRecord>();
-	}
-
-    streamCount = 0;
-    fxSerial = serialDriver;
-}
 
 int CommManager::getIndexOfFrequency(int freq)
 {
@@ -84,7 +74,7 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, bool shoul
         return false;
     }
 
-    if(!fxSerial->getDevice(devId).isValid())
+    if(!this->getDevice(devId).isValid())
     {
         std::cout << "Invalid device id" << std::endl;
         return false;
@@ -168,13 +158,26 @@ bool CommManager::stopStreaming(int devId)
 
 void CommManager::periodicTask()
 {
+    serviceStreams(taskPeriod);
+    serviceOpenAttempts(taskPeriod);
+
+    if(!serviceCount)
+        serviceOpenPorts();
+
+    serviceCount++;
+    if(serviceCount >= 4)
+        serviceCount = 0;
+}
+
+void CommManager::serviceStreams(uint8_t milliseconds)
+{
     const float TOLERANCE = 0.0001;
     int i;
     if(outgoingBuffer.size())
     {
         Message m = outgoingBuffer.front();
         outgoingBuffer.pop();
-        fxSerial->write(m.numBytes, m.dataPacket.get());
+        this->write(m.numBytes, m.dataPacket.get(), 0);
     }
     else
     {
@@ -183,7 +186,7 @@ void CommManager::periodicTask()
             if(!streamLists[i].size()) continue;
 
             //received clocks comes in at 5ms/clock
-            msSinceLast[i] += taskPeriod;
+            msSinceLast[i] += milliseconds;
 
             float timerInterval = timerIntervals[i];
             if((msSinceLast[i] + TOLERANCE) > timerInterval)
@@ -199,16 +202,16 @@ void CommManager::periodicTask()
 
 bool CommManager::wakeFromLongSleep()
 {
-    return (this->outgoingBuffer.size() || this->streamCount > 0);
+    return FlexseaSerial::wakeFromLongSleep() || (this->outgoingBuffer.size() || this->streamCount > 0);
 }
 bool CommManager::goToLongSleep()
 {
-    return streamCount == 0;
+    return streamCount == 0 && FlexseaSerial::goToLongSleep();
 }
 
 void CommManager::tryPackAndSend(int cmd, int slaveId)
 {
-    const FlexseaDevice &d = fxSerial->getDevice(slaveId);
+    const FlexseaDevice &d = this->getDevice(slaveId);
     (void)cmd;
 #ifndef TEST_CODE
     if(d.port < 0 || d.port >= FX_NUMPORTS || d.type == FX_NONE) return;
@@ -217,13 +220,39 @@ void CommManager::tryPackAndSend(int cmd, int slaveId)
     uint8_t info[2] = {PORT_USB, PORT_USB};
     pack(P_AND_S_DEFAULT, slaveId, info, &numb, comm_str_usb);
 
-    fxSerial->write(numb, comm_str_usb, d.port);
+    this->write(numb, comm_str_usb, d.port);
 #else
     (void)d;
     printf("Writing to \"serial\": ");
     fwrite(comm_str_usb, COMM_PERIPH_ARR_LEN, 1, stdout);
     fflush(stdout);
 #endif
+}
+
+void CommManager::close(uint16_t portIdx)
+{
+
+    for(auto &l : autoStreamLists)
+    {
+        for(CmdSlaveRecord &r : l)
+        {
+            FlexseaDevice &d = connectedDevices.at(r.slaveIndex);
+            if(d.port == portIdx)
+                stopStreaming(d.id);
+        }
+    }
+
+    for(auto &l : streamLists)
+    {
+        for(CmdSlaveRecord &r : l)
+        {
+            FlexseaDevice &d = connectedDevices.at(r.slaveIndex);
+            if(d.port == portIdx)
+                stopStreaming(d.id);
+        }
+    }
+
+    FlexseaSerial::close(portIdx);
 }
 
 bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
@@ -260,13 +289,6 @@ void CommManager::sendCommands(int index)
 		CmdSlaveRecord record = streamLists[index].at(i);
 		switch(record.cmdType)
         {
-#ifndef TEST_CODE
-            case CMD_READ_ALL_RIGID:
-                sendCommandRigid(record.slaveIndex);
-                break;
-
-#endif //TEST_CODE
-
         case CMD_SYSDATA:
             sendSysDataRead(record.slaveIndex);
             break;
@@ -279,26 +301,13 @@ void CommManager::sendCommands(int index)
 	}
 }
 
-#ifndef TEST_CODE
-void CommManager::sendCommandRigid(uint8_t slaveId)
-{
-    static int index = 0;
-    index++;
-    index %= 3;
-
-    tx_cmd_rigid_r(TX_N_DEFAULT, (uint8_t)(index));
-    tryPackAndSend(CMD_READ_ALL_RIGID, slaveId);
-}
-
-#endif // TEST_CODE
-
 void CommManager::sendSysDataRead(uint8_t slaveId)
 {
-    const FlexseaDevice &d = fxSerial->getDevice(slaveId);
+    const FlexseaDevice &d = this->getDevice(slaveId);
 
     if(d.id != slaveId) return;
 
-    MultiCommPeriph *cp = fxSerial->portPeriphs + d.port;
+    MultiCommPeriph *cp = this->portPeriphs + d.port;
     MultiWrapper *out = &cp->out;
 
     const uint8_t RESERVEDBYTES = 4;
@@ -329,7 +338,7 @@ void CommManager::sendSysDataRead(uint8_t slaveId)
         unsigned int frameId = 0;
         while(out->frameMap > 0)
         {
-            fxSerial->write(PACKET_WRAPPER_LEN, out->packed[frameId], d);
+            this->write(PACKET_WRAPPER_LEN, out->packed[frameId], d);
             out->frameMap &= (   ~(1 << frameId)   );
             frameId++;
         }

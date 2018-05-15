@@ -16,11 +16,9 @@ extern "C" {
     #include "flexseastack/flexsea-system/inc/flexsea_dataformats.h"
 }
 
-FlexseaSerial::FlexseaSerial() : defaultDevice(-1, -1, FX_NONE, NULL, NULL), openPorts(0)
+FlexseaSerial::FlexseaSerial() : SerialDriver(FX_NUMPORTS)
 {
-    ports = new serial::Serial[FX_NUMPORTS];
     portPeriphs = new MultiCommPeriph[FX_NUMPORTS];
-
     initializeDeviceSpecs();
 
 #ifndef TEST_CODE
@@ -37,6 +35,12 @@ FlexseaSerial::FlexseaSerial() : defaultDevice(-1, -1, FX_NONE, NULL, NULL), ope
 
     highjackedCmds[CMD_SYSDATA] = 1;
     stringParsers[CMD_SYSDATA] = &sysDataParser;
+}
+
+FlexseaSerial::~FlexseaSerial()
+{
+    delete[] portPeriphs;
+    portPeriphs = nullptr;
 }
 
 int FlexseaSerial::sysDataParser(int port)
@@ -116,23 +120,6 @@ int FlexseaSerial::sysDataParser(int port)
     return 1;
 }
 
-FlexseaSerial::~FlexseaSerial()
-{
-    delete[] ports;
-    ports = NULL;
-    delete[] portPeriphs;
-    portPeriphs = NULL;
-
-    for(std::unordered_map<int, uint32_t*>::iterator it = fieldMaps.begin(); it != fieldMaps.end(); ++it)
-    {
-        if(it->second)
-            delete[] (it->second);
-
-        (it->second) = nullptr;
-    }
-    fieldMaps.clear();
-}
-
 #define CALL_MEMBER_FN(object,ptrToMember)  ((object)->*(ptrToMember))
 
 void FlexseaSerial::processReceivedData(int port, size_t len)
@@ -191,9 +178,20 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
 
 void FlexseaSerial::periodicTask()
 {
-#ifndef TEST_CODE
+    serviceOpenPorts();
+    serviceOpenAttempts(taskPeriod);
+}
+
+void FlexseaSerial::serviceOpenPorts()
+{
     size_t i, nr;
     long int nb;
+
+    {
+        std::lock_guard<std::mutex> lk(_portsMutex);
+        if(!openPorts)
+            return;
+    }
 
     for(i = 0; i < FX_NUMPORTS; i++)
     {
@@ -215,48 +213,10 @@ void FlexseaSerial::periodicTask()
             }
         }
     }
-#endif
 }
 
-bool FlexseaSerial::wakeFromLongSleep() { return openPorts > 0; }
-bool FlexseaSerial::goToLongSleep() { return openPorts == 0; }
-
-void FlexseaSerial::handleFlexseaDevice(int port)
-{
-#ifndef TEST_CODE
-    if(fx_spec_numConnectedDevices > deviceIds.size())
-    {   // new device
-        // figure which device is new
-        unsigned int i;
-        for(i=0;i<fx_spec_numConnectedDevices;i++)
-        {
-            if(connectedDevices.count( DEVICESPEC_UUID_BY_IDX(i) ) == 0)
-                break;
-        }
-
-        if(i == fx_spec_numConnectedDevices)
-        {
-            std::cout << "Failed to find a connected device in the c interface that is not in the gui stack interface already\n";
-        }
-        else
-        {
-            addDevice(DEVICESPEC_UUID_BY_IDX(i), port, static_cast<FlexseaDeviceType>(DEVICESPEC_TYPE_BY_IDX(i)));
-            int devId = deviceIds.back();
-            FlexseaDeviceType type = connectedDevices.at(devId).type;
-            std::cout << "Connected to a Flexsea Device at port " << ports[port].getPort() << std::endl
-                      << "Device id: " << devId << ", type: " << type << std::endl;
-        }
-    }
-    else
-    {
-        ;
-        // device disconnected
-        // figure which device and removeIt
-    }
-#else
-    (void)port;
-#endif
-}
+bool FlexseaSerial::wakeFromLongSleep() { return openPorts > 0 || haveOpenAttempts; }
+bool FlexseaSerial::goToLongSleep() { return !openPorts && !haveOpenAttempts; }
 
 void FlexseaSerial::sendDeviceWhoAmI(int port)
 {
@@ -302,6 +262,82 @@ void FlexseaSerial::sendDeviceWhoAmI(int port)
 #endif
 }
 
+
+void FlexseaSerial::open(std::string portName, int portIdx)
+{
+    if(portIdx >= _NUMPORTS) return;
+
+    std::lock_guard<std::mutex> lk(openAttemptMut_);
+    openAttempts.emplace_back(portIdx, portName, 0, 5, 100, 100);
+
+    if(!haveOpenAttempts)
+    {
+        std::lock_guard<std::mutex> pTaskLock(conditionMutex);
+        haveOpenAttempts = true;
+    }
+
+    wakeCV.notify_all();
+}
+
+void FlexseaSerial::openCancelRequest(int portIdx)
+{
+    std::lock_guard<std::mutex> lk(openAttemptMut_);
+    for(auto& oa : openAttempts)
+    {
+        if(oa.portIdx == portIdx)
+            oa.markedToRemove = true;
+    }
+}
+
+void FlexseaSerial::close(uint16_t portIdx)
+{
+    std::vector<int> idsToRemove;
+    idsToRemove.reserve(connectedDevices.size());
+
+    for(const auto &d : connectedDevices)
+    {
+        if(d.second.port == portIdx)
+            idsToRemove.push_back(d.first);
+    }
+
+    for(const int &id : idsToRemove)
+        this->removeDevice(id);
+
+    tryClose(portIdx);
+}
+
+void FlexseaSerial::serviceOpenAttempts(uint8_t delayed)
+{
+    std::lock_guard<std::mutex> lk(openAttemptMut_);
+    if(!haveOpenAttempts) return;
+
+    // iterate through and service each attempt
+    for(auto& attempt : openAttempts)
+    {
+        attempt.delayed += delayed;
+        attempt.tries++;
+        if(attempt.delayed >= attempt.delay)
+        {
+            attempt.delayed -= attempt.delay;
+            bool succeeded = tryOpen(attempt.portName, attempt.portIdx);
+
+            if(succeeded)
+                sendDeviceWhoAmI(attempt.portIdx);
+
+            attempt.markedToRemove = succeeded || attempt.tries >= attempt.tryMax;
+        }
+    }
+
+    // remove attempts that are complete
+    openAttempts.erase(
+                std::remove_if(openAttempts.begin(), openAttempts.end(),
+                               [=](OpenAttempt oa){return oa.markedToRemove;} ),
+                openAttempts.end());
+
+    std::lock_guard<std::mutex> pTaskLock(conditionMutex);
+    haveOpenAttempts = !openAttempts.empty();
+}
+
 void FlexseaSerial::setDeviceMap(const FlexseaDevice &d, uint32_t *map)
 {
     (void)d;
@@ -329,229 +365,4 @@ void FlexseaSerial::setDeviceMap(const FlexseaDevice &d, const std::vector<int> 
 
     setDeviceMap(d, map);
 
-}
-
-const std::vector<int>& FlexseaSerial::getDeviceIds() const
-{
-    return deviceIds;
-}
-
-std::vector<int> FlexseaSerial::getDeviceIds(int portIdx) const
-{
-    std::vector<int> ids;
-    for(auto it = connectedDevices.begin(); it != connectedDevices.end(); it++)
-    {
-        if(it->second.port == portIdx)
-            ids.push_back(it->first);
-    }
-    return ids;
-}
-
-const FlexseaDevice& FlexseaSerial::getDevice(int id) const
-{
-    if(connectedDevices.count(id))
-        return connectedDevices.at(id);
-    else
-        return defaultDevice;
-}
-
-const uint32_t* FlexseaSerial::getMap(int id) const
-{
-    if(fieldMaps.count(id))
-        return fieldMaps.at(id);
-    else
-        return NULL;
-
-}
-
-int FlexseaSerial::addDevice(int id, int port, FlexseaDeviceType type)
-{
-    int unique = 1;
-    for(std::vector<int>::iterator it = deviceIds.begin(); it != deviceIds.end() && unique; ++it)
-    {
-        if((*it) == id)
-            unique = 0;
-    }
-    if(!unique) return 1;
-
-    uint32_t* map = new uint32_t[FX_BITMAP_WIDTH]{0};
-    circular_buffer<FX_DataPtr> *cb = new circular_buffer<FX_DataPtr>(FX_DATA_BUFFER_SIZE);
-    std::recursive_mutex *cbMutex = new std::recursive_mutex();
-
-    deviceIds.push_back(id);
-    databuffers.insert({id, cb});
-    connectedDevices.insert({id, FlexseaDevice(id, port, type, map, cb, cbMutex)});
-    fieldMaps.insert({id, map});
-
-    //Notify device connected
-    deviceConnectedFlags.notify();
-
-    return 0;
-}
-
-int FlexseaSerial::removeDevice(int id)
-{
-    int found = 0;
-    std::vector<int>::iterator it;
-    for(it = deviceIds.begin(); it != deviceIds.end() && !found; ++it)
-    {
-        if((*it) == id)
-            found = 1;
-    }
-    if(!found) return 1;
-
-    //remove record in device ids
-    deviceIds.erase(--it);
-
-    //deallocate the circular buffer
-    std::recursive_mutex *m = connectedDevices.at(id).dataMutex;
-    m->lock();
-
-    circular_buffer<FX_DataPtr> *cb = databuffers.at(id);
-    FX_DataPtr dataptr;
-    while(cb->count())
-    {
-        dataptr = cb->get();
-        if(dataptr)
-            delete dataptr;
-    }
-    if(cb)
-        delete cb;
-    databuffers.erase(id);
-
-    //remove record from connected devices
-    connectedDevices.erase(id);
-
-    //deallocate from field maps
-    uint32_t *map = fieldMaps.at(id);
-    delete[] map;
-    fieldMaps.erase(id);
-
-    //Notify device connected
-    deviceConnectedFlags.notify();
-
-    m->unlock();
-    delete m;
-    m = NULL;
-
-    return 0;
-}
-
-/* Serial functions */
-std::vector<std::string> FlexseaSerial::getAvailablePorts() const {
-    std::vector<std::string> result;
-
-#ifndef TEST_CODE
-    std::vector<serial::PortInfo> pi = serial::list_ports();
-    for(unsigned int i = 0; i < pi.size(); i++)
-        result.push_back(pi.at(i).port);
-#endif
-
-    return result;
-}
-
-int FlexseaSerial::isOpen(uint16_t portIdx) const { return ports[portIdx].isOpen(); }
-
-void FlexseaSerial::open(const std::string &portName, uint16_t portIdx) {
-
-    if(portIdx >= FX_NUMPORTS)
-    {
-        std::cout << "Can't to open port outside range (" << portIdx << ")" << std::endl;
-        return;
-    }
-
-    if(ports[portIdx].isOpen())
-    {
-        std::cout << "Port " << portIdx << " already open" << std::endl;
-        return;
-    }
-    serial::Serial *s = ports+portIdx;
-    s->setPort(portName);
-    s->setBaudrate(400000);
-    s->setBytesize(serial::eightbits);
-    s->setParity(serial::parity_none);
-    s->setStopbits(serial::stopbits_one);
-    s->setFlowcontrol(serial::flowcontrol_hardware);
-
-    unsigned int cnt=0, tries=5;
-    while(cnt++ < tries && !s->isOpen())
-        try { s->open(); } catch (...) {}
-
-    if(s->isOpen())
-    {
-        bool doNotify;
-        std::cout << "Opened port " << portName << " at index " << portIdx << " in " << cnt << " tries" << std::endl;
-        {
-            std::lock_guard<std::mutex> lk(conditionMutex);
-            openPorts++;
-            doNotify = openPorts == 1;
-
-            this->sendDeviceWhoAmI(portIdx);
-        }
-
-        if(doNotify)
-            wakeCV.notify_all();
-
-    }
-    else
-        std::cout << "Failed to open port " << portName << " at index " << portIdx << " after " << tries << " tries" << std::endl;
-
-}
-
-void FlexseaSerial::close(uint16_t portIdx) {
-    if(portIdx >= FX_NUMPORTS)
-    {
-        std::cout << "Can't close port outside range (" << portIdx << ")" << std::endl;
-        return;
-    }
-
-    if(ports[portIdx].isOpen())
-    {
-        std::cout << "Port " << portIdx << " already closed" << std::endl;
-        return;
-    }
-
-    ports[portIdx].close();
-    if(ports[portIdx].isOpen())
-    {
-        std::cout << "Closed port " << portIdx << "." << std::endl;
-        std::lock_guard<std::mutex> lk(conditionMutex);
-        openPorts--;
-    }
-}
-
-void FlexseaSerial::tryReadWrite(uint8_t bytes_to_send, uint8_t *serial_tx_data, int timeout, uint16_t portIdx) {
-    (void)bytes_to_send;
-    (void)serial_tx_data;
-    (void)timeout;
-    (void)portIdx;
-}
-
-void FlexseaSerial::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t portIdx)
-{
-    if(portIdx >= FX_NUMPORTS)
-    {
-        std::cout << "Can't write to port outside range (" << portIdx << ")" << std::endl;
-        return;
-    }
-    if(!ports[portIdx].isOpen())
-    {
-        std::cout << "Port " << portIdx << " not open" << std::endl;
-        for(unsigned int i = 0; i < deviceIds.size(); i++)
-        {
-            if(connectedDevices.at(deviceIds.at(i)).port == portIdx)
-                removeDevice(deviceIds.at(i));
-        }
-        return;
-    }
-
-    try {
-        ports[portIdx].write(serial_tx_data, bytes_to_send);
-    } catch (serial::IOException e) {
-        std::cout << "IO Exception:  " << e.what() << std::endl;
-    } catch (serial::SerialException e) {
-        std::cout << "Serial Exception:  " << e.what() << std::endl;
-    } catch (serial::PortNotOpenedException e) {
-        std::cout << "Port wasn't open" << std::endl;
-    }
 }

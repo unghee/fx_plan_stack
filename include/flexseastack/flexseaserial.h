@@ -10,6 +10,8 @@
 #include "circular_buffer.h"
 #include "periodictask.h"
 #include <algorithm>
+#include "flexseastack/serialdriver.h"
+#include "flexseastack/flexseadeviceprovider.h"
 
 struct MultiCommPeriph_struct;
 typedef MultiCommPeriph_struct MultiCommPeriph;
@@ -17,9 +19,6 @@ typedef MultiCommPeriph_struct MultiCommPeriph;
 namespace serial {
     class Serial;
 }
-
-#ifndef TEST_CODE
-#endif
 
 #define FX_NUMPORTS 4
 
@@ -29,106 +28,42 @@ namespace serial {
 
 typedef circular_buffer<FX_DataPtr> FX_DataList;
 
-class FlagList {
-    std::mutex m_;
-    std::vector<uint8_t*> l_;
-
-public:
-    void add(uint8_t* f) {
-        std::lock_guard<std::mutex> lk(m_);
-        l_.push_back(f);
-    }
-    void remove(uint8_t* f) {
-        std::lock_guard<std::mutex> lk(m_);
-        l_.erase(std::remove(l_.begin(), l_.end(), f), l_.end());
-    }
-    void notify() {
-        for(unsigned short i = 0; i < l_.size(); i++)
-            *(l_.at(i)) = 1;
-    }
-};
+class OpenAttempt;
+typedef std::vector<OpenAttempt> OpenAttemptList;
 
 /// \brief FlexseaSerial class manages serial ports and connected devices
-class FlexseaSerial : public PeriodicTask
+class FlexseaSerial : virtual public PeriodicTask, public SerialDriver, public FlexseaDeviceProvider
 {
 public:
     FlexseaSerial();
     virtual ~FlexseaSerial();
 
-    /// \brief Returns a vector containing the ids of all connected devices
-    virtual const std::vector<int>& getDeviceIds() const;
-
-    /// \brief Returns a vector containing the ids of all connected devices at the specified port
-    virtual std::vector<int> getDeviceIds(int portIdx) const;
-
-    /* Returns a FlexseaDevice object which provides an interface to incoming data
-     * from a connected device
-    */
-    virtual const FlexseaDevice& getDevice(int id) const;
-
-    /* Returns a bitmap indicating which fields are active for the device with specified id
-     *
-     * FX_Bitmap is a uint32_t[3],
-     * so if (0x01 & active()[0]) then field 0 is active
-     *    if (0x01 & active()[1]) then field 32 is active
-     *
-     * or in general if (1 << x) & active()[y] then field 32*y+x is active
-    */
-    virtual const uint32_t* getMap(int id) const;
-
-    /* These functions allow users to be notified of the corresponding events
-    */
-    void registerConnectionChangeFlag(uint8_t *flag) const {deviceConnectedFlags.add(flag);}
-    void registerMapChangeFlag(uint8_t *flag) const {mapChangedFlags.add(flag);}
-
-    void unregisterConnectionChangeFlag(uint8_t *flag) const {deviceConnectedFlags.remove(flag);}
-    void unregisterMapChangeFlag(uint8_t *flag) const {mapChangedFlags.remove(flag);}
-
-    /* Serial functions */
-    virtual std::vector<std::string> getAvailablePorts() const;
-    virtual void open(const std::string &portName, uint16_t portIdx=0);
-    virtual int isOpen(uint16_t portIdx=0) const;
-    virtual void close(uint16_t portIdx=0);
-    virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t portIdx=0);
-    virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d) {this->write(bytes_to_send, serial_tx_data, d.port);}
-    virtual void tryReadWrite(uint8_t bytes_to_send, uint8_t *serial_tx_data, int timeout, uint16_t portIdx=0);
-    virtual void flush(uint16_t portIdx=0){(void)portIdx;}
-    virtual void clear(uint16_t portIdx=0){(void)portIdx;}
-
-    void sendDeviceWhoAmI(int port);
+    virtual void sendDeviceWhoAmI(int port);
     virtual void setDeviceMap(const FlexseaDevice &d, uint32_t* map);
     virtual void setDeviceMap(const FlexseaDevice &d, const std::vector<int> &fields);
+
+    virtual void open(std::string, int portIdx);
+    virtual void openCancelRequest(int portIdx);
+    virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d) {this->write(bytes_to_send, serial_tx_data, d.port);}
+    virtual void close(uint16_t portIdx);
 
     MultiCommPeriph *portPeriphs;
 
 protected:
-    std::vector<int> deviceIds;
-    std::unordered_map<int, FlexseaDevice> connectedDevices;
-    std::unordered_map<int, uint32_t*> fieldMaps;
-    std::unordered_map<int, circular_buffer<FX_DataPtr>*> databuffers;
-
-    const FlexseaDevice defaultDevice;
-
-    int addDevice(int id, int port, FlexseaDeviceType type);
-    int removeDevice(int id);
-
     virtual void periodicTask();
     virtual bool wakeFromLongSleep();
     virtual bool goToLongSleep();
 
+    OpenAttemptList openAttempts;
+    bool haveOpenAttempts = false;
+    std::mutex openAttemptMut_;
+    void serviceOpenAttempts(uint8_t delayed);
+
     uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
     void processReceivedData(int port, size_t nb);
+    virtual void serviceOpenPorts();
 
-    mutable FlagList deviceConnectedFlags;
-    mutable FlagList mapChangedFlags;
 private:
-
-    serial::Serial *ports;
-
-    uint16_t openPorts;
-
-    void handleFlexseaDevice(int port);
-
     // multi comm periph string parsing stuff
     static const int NUM_COMMANDS = 256;
     uint8_t highjackedCmds[NUM_COMMANDS];
@@ -139,7 +74,15 @@ private:
     int sysDataParser(int port);
 };
 
+class OpenAttempt {
+public:
+    explicit OpenAttempt(int portIdx_, std::string portName_, int tries_, int tryMax_, int delay_, int delayed_) :
+        portIdx(portIdx_), portName(portName_), tries(tries_), tryMax(tryMax_), delay(delay_), delayed(delayed_), markedToRemove(false) {}
 
-
+    int portIdx;
+    std::string portName;
+    int tries, tryMax, delay, delayed;
+    bool markedToRemove;
+};
 
 #endif // FLEXSEASERIAL_H

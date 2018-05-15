@@ -1,10 +1,7 @@
 #include "flexseastack/periodictask.h"
 #include <chrono>
 #include <thread>
-
-#ifdef QT_DEBUG
 #include <iostream>
-#endif //QT_DEBUG
 
 void PeriodicTask::runPeriodicTask()
 {
@@ -29,12 +26,10 @@ void PeriodicTask::runPeriodicTask()
         else
         {
             std::unique_lock<std::mutex> lk(conditionMutex);
+            std::cout << "Thread: " << std::this_thread::get_id() << " going into long sleep" << std::endl;
             wakeCV.wait(lk, [this]{return (!runPeriodicThread || this->wakeFromLongSleep());});
             nextWake = std::chrono::high_resolution_clock::now();
-
-            #ifdef QT_DEBUG
-                        std::cout << "Thread: " << std::this_thread::get_id() << " woke after long sleep" << std::endl;
-            #endif //QT_DEBUG
+            std::cout << "Thread: " << std::this_thread::get_id() << " woke after long sleep" << std::endl;
         }
     }
 

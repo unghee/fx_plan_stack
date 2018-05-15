@@ -8,9 +8,9 @@ FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, const 
     , port(_port)
     , type(_type)
     , numFields( deviceSpecs[_type].numFields )
-    , data(data_)
     , dataMutex(m)
     , bitmap(map)
+    , data(data_)
 {}
 
 /* Returns a vector of strings which describe the fields specified by map  */
@@ -45,21 +45,28 @@ const std::vector<std::string>& FlexseaDevice::getFieldLabels() const
     return lastRequest;
 }
 
-void FlexseaDevice::getData(uint32_t index, int32_t *output, uint16_t outputSize) const
+uint32_t FlexseaDevice::getData(uint32_t index, int32_t *output, uint16_t outputSize) const
 {
     /*  Not a real implementation just for dev/testing purposes
     */
+    if(index >= dataCount()) return 0;
+
+    std::lock_guard<std::recursive_mutex> lk(*dataMutex);
+
     uint16_t fieldId = 0;
     uint16_t i = 0;
+    FX_DataPtr ptr = ((uint32_t*)data->peek(index));
     while(fieldId < 32*FX_BITMAP_WIDTH && i < outputSize && (fieldId) < numFields)
     {
         if(IS_FIELD_HIGH(fieldId, bitmap))
         {
-            output[i++] = ((uint32_t*)data->peek(index))[1+fieldId];
+            output[i++] = ptr[1+fieldId];
         }
 
         fieldId++;
     }
+
+    return ptr[0];
 }
 
 uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
@@ -116,7 +123,7 @@ uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, std::vector<uint32_
     outputData.clear();
     outputData.reserve(data->count() - i);
 
-    FX_DataPtr p = NULL;
+    FX_DataPtr p = nullptr;
 
     while(i < data->count())
     {
