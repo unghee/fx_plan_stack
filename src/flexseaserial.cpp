@@ -21,12 +21,8 @@ FlexseaSerial::FlexseaSerial() : SerialDriver(FX_NUMPORTS)
     portPeriphs = new MultiCommPeriph[FX_NUMPORTS];
     initializeDeviceSpecs();
 
-#ifndef TEST_CODE
-
     for(int i = 0; i < FX_NUMPORTS; i++)
         initMultiPeriph(this->portPeriphs + i, PORT_USB, SLAVE);
-
-#endif //TEST_CODE
 
     // set which commands to highjack
     memset(highjackedCmds, 0, NUM_COMMANDS);
@@ -124,7 +120,7 @@ int FlexseaSerial::sysDataParser(int port)
 
 void FlexseaSerial::processReceivedData(int port, size_t len)
 {
-#ifndef TEST_CODE
+
     int totalBuffered = len + circ_buff_get_size(&(portPeriphs[port].circularBuff));
     int numMessagesReceived = 0;
     int numMessagesExpected = (totalBuffered / COMM_STR_BUF_LEN);
@@ -169,11 +165,6 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
         }
     }
 
-#else
-    //throw base::NotImplementedException();
-    (void) len;
-    (void) port;
-#endif
 }
 
 void FlexseaSerial::periodicTask()
@@ -220,7 +211,7 @@ bool FlexseaSerial::goToLongSleep() { return !openPorts && !haveOpenAttempts; }
 
 void FlexseaSerial::sendDeviceWhoAmI(int port)
 {
-#ifndef TEST_CODE
+
     uint32_t flag = 0;
     uint8_t lenFlags = 1, error;
 
@@ -254,12 +245,8 @@ void FlexseaSerial::sendDeviceWhoAmI(int port)
             frameId++;
         }
         out->isMultiComplete = 1;
-
 //        std::cout << "Wrote who am i message" << std::endl;
     }
-#else
-    (void) port;
-#endif
 }
 
 

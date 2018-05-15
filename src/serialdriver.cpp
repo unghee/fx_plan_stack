@@ -22,14 +22,13 @@ SerialDriver::~SerialDriver()
 }
 
 /* Serial functions */
-std::vector<std::string> SerialDriver::getAvailablePorts() const {
+std::vector<std::string> SerialDriver::getAvailablePorts() const
+{
     std::vector<std::string> result;
 
-#ifndef TEST_CODE
     std::vector<serial::PortInfo> pi = serial::list_ports();
     for(unsigned int i = 0; i < pi.size(); i++)
         result.push_back(pi.at(i).port);
-#endif
 
     return result;
 }

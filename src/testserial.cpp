@@ -136,8 +136,14 @@ void TestSerial::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, const Fle
 {
     static uint32_t timestamp = 0;
     timestamp++;
-    (void) bytes_to_send;
-    (void) serial_tx_data;
+
+    if(0 && runVerbose) // make this not 0 if you want to see what's printed
+    {
+        printf("Writing to \"serial\": ");
+        fwrite(serial_tx_data, bytes_to_send, 1, stdout);
+        fflush(stdout);
+    }
+
     testReceiveDataFromDevice(d.id, timestamp);
 }
 

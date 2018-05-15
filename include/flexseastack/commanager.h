@@ -69,19 +69,11 @@ private:
 	std::vector<CmdSlaveRecord> autoStreamLists[NUM_TIMER_FREQS];
 	std::vector<CmdSlaveRecord> streamLists[NUM_TIMER_FREQS];
 
-    void tryPackAndSend(int cmd, int slaveId);
     int getIndexOfFrequency(int freq);
 
     int timerFrequencies[NUM_TIMER_FREQS];
 	float timerIntervals[NUM_TIMER_FREQS];
     float msSinceLast[NUM_TIMER_FREQS] = {0};
-
-    std::vector<std::string> experimentLabels;
-    std::vector<int> experimentCodes;
-
-    //this should go somewhere else probly
-    static const int COMM_STR_LEN = 150;
-    uint8_t comm_str_usb[COMM_STR_LEN];
 
     void sendCommands(int index);
     void sendSysDataRead(uint8_t slaveId);

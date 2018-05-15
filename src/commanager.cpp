@@ -4,25 +4,22 @@
 #include <thread>
 #include <iostream>
 
-#ifdef TEST_CODE
-
 extern "C" {
     #include "flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h"
     #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
 }
 #include "flexseastack/flexsea-system/inc/flexsea_system.h"
 
-#else
 
-extern "C" {
-    #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
-    #include "flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h"
-}
-    #include "flexseastack/flexsea-comm/inc/flexsea.h"
-    #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
-    #include "flexseastack/flexsea-system/inc/flexsea_system.h"
-    #include "flexseastack/flexsea_board.h"
-#endif
+//extern "C" {
+//    #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
+//    #include "flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h"
+//}
+//    #include "flexseastack/flexsea-comm/inc/flexsea.h"
+//    #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
+//    #include "flexseastack/flexsea-system/inc/flexsea_system.h"
+//    #include "flexseastack/flexsea_board.h"
+//#endif
 
 CommManager::CommManager() : PeriodicTask(), FlexseaSerial()
 {
@@ -82,27 +79,18 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, bool shoul
 
     CmdSlaveRecord record(CMD_SYSDATA, devId, shouldLog);
 
-#ifndef TEST_CODE
-    if(shouldAuto) {
-        streamLists[indexOfFreq].push_back(record);
-        std::cout << "Started streaming cmd: " << CMD_SYSDATA << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
-
-
-
-    } else {
-        autoStreamLists[indexOfFreq].push_back(record);
-        std::cout << "Started autostreaming cmd: " << CMD_SYSDATA << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
-    }
-#else
-    streamLists[indexOfFreq].push_back(record);
-    std::cout << "[Fake] Started " << (shouldLog ? " logged " : "") << (shouldAuto ? "auto" : "") << "streaming cmd: " << CMD_SYSDATA << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
-#endif
+    std::cout << "Started " << (shouldLog ? " logged " : "") << (shouldAuto ? "auto" : "") << "streaming cmd: " << CMD_SYSDATA << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
+    if(shouldAuto)
+        autoStreamLists[indexOfFreq].emplace_back(CMD_SYSDATA, devId, shouldLog);
+    else
+        streamLists[indexOfFreq].emplace_back(CMD_SYSDATA, devId, shouldLog);
 
     // increase stream count only for regular streaming
-    bool doNotify;
+    bool doNotify = false;
+    if(!shouldAuto)
     {
         std::lock_guard<std::mutex> l(conditionMutex);
-        streamCount += shouldAuto ? 0 : 1;
+        streamCount++;
         doNotify = streamCount == 1;
     }
     // if stream count is exactly one, then we need to wake our sleeping worker thread
@@ -207,26 +195,6 @@ bool CommManager::wakeFromLongSleep()
 bool CommManager::goToLongSleep()
 {
     return streamCount == 0 && FlexseaSerial::goToLongSleep();
-}
-
-void CommManager::tryPackAndSend(int cmd, int slaveId)
-{
-    const FlexseaDevice &d = this->getDevice(slaveId);
-    (void)cmd;
-#ifndef TEST_CODE
-    if(d.port < 0 || d.port >= FX_NUMPORTS || d.type == FX_NONE) return;
-
-    uint16_t numb = 0;
-    uint8_t info[2] = {PORT_USB, PORT_USB};
-    pack(P_AND_S_DEFAULT, slaveId, info, &numb, comm_str_usb);
-
-    this->write(numb, comm_str_usb, d.port);
-#else
-    (void)d;
-    printf("Writing to \"serial\": ");
-    fwrite(comm_str_usb, COMM_PERIPH_ARR_LEN, 1, stdout);
-    fflush(stdout);
-#endif
 }
 
 void CommManager::close(uint16_t portIdx)
