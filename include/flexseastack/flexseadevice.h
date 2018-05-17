@@ -22,7 +22,7 @@ public:
     const int numFields;
 
     bool hasData() const { return !data->empty(); }
-    bool dataCount() const { return data->count(); }
+    int dataCount() const { return data->count(); }
 
     /* dataMutex should be locked while accessing data to ensure thread safety
     */
