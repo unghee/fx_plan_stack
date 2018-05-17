@@ -91,28 +91,29 @@ uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
     return i + (t >= timestamp);
 }
 
-uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, uint32_t *output, uint16_t outputSize) const
-{
-    size_t i = 0, j = 0, sizeData = (this->numFields+1)*4;
-    std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
+//uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, uint32_t *output, uint16_t outputSize) const
+//{
+//    size_t i = 0, j = 0, sizeData = (this->numFields+1)*sizeof(int32_t);
 
-    while(i < data->count() && data->peek(i)[0] <= timestamp)
-        i++;
+//    std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
 
-    while(i < data->count() && j < outputSize)
-    {
-        memcpy(output+j, data->peek(i++), sizeData);
-        j+=numFields+1;
-    }
+//    while(i < data->count() && data->peek(i)[0] <= timestamp)
+//        i++;
 
-    uint32_t last = data->peek(i-1)[0];
+//    while(i < data->count() && j < outputSize)
+//    {
+//        memcpy(output+j, data->peek(i++), sizeData);
+//        j+=numFields+1;
+//    }
 
-    return last;
-}
+//    uint32_t last = data->peek(i-1)[0];
+
+//    return last;
+//}
 
 uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, std::vector<uint32_t> &timestamps, std::vector<std::vector<int32_t>> &outputData) const
 {
-    size_t i = 0, sizeData = this->numFields*4;
+    size_t i = 0, sizeData = numFields * sizeof(int32_t);
     std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
 
     while(i < data->count() && data->peek(i)[0] <= timestamp)
@@ -129,8 +130,7 @@ uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, std::vector<uint32_
     {
         p = data->peek(i++);
         timestamps.push_back(p[0]);
-        outputData.push_back(std::vector<int32_t>());
-        outputData.back().reserve(this->numFields);
+        outputData.emplace_back(numFields);
         memcpy(outputData.back().data(), p+1, sizeData);
     }
 

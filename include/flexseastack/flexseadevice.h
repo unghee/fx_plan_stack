@@ -22,7 +22,7 @@ public:
     const int numFields;
 
     bool hasData() const { return !data->empty(); }
-    int dataCount() const { return data->count(); }
+    size_t dataCount() const { return data->count(); }
 
     /* dataMutex should be locked while accessing data to ensure thread safety
     */
@@ -50,7 +50,7 @@ public:
     /// the width of one data is (numFields+1) and the data are stored sequentially, thus,
     ///     to access the 3rd field in the 2nd datum, you would use:  ( output + 2 * (numFields+1) )[3];
     /// note this method is faster than reading into nested std::vectors
-    uint32_t getDataAfterTime(uint32_t timeStamp, uint32_t *output, uint16_t outputSize) const;
+//    uint32_t getDataAfterTime(uint32_t timeStamp, uint32_t *output, uint16_t outputSize) const;
 
     /// \brief fills the vectors with all data whose timestamps are after timeStamp.
     /// timestamps and data are emptied and then filled as parallel vectors
