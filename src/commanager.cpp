@@ -223,25 +223,10 @@ void CommManager::close(uint16_t portIdx)
     FlexseaSerial::close(portIdx);
 }
 
-int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
+int CommManager::writeDeviceMap(const FlexseaDevice &d, uint32_t *map)
 {
-    if(!connectedDevices.count(devId)) return -1;
-
-    FlexseaDevice &d = connectedDevices.at(devId);
-    int nf = d.numFields;
-
     uint8_t cmdCode, cmdType;
-
-    uint32_t map[FX_BITMAP_WIDTH];
-    memset(map, 0, sizeof(uint32_t)*FX_BITMAP_WIDTH);
     uint16_t mapLen = 0;
-
-    for(auto&& f : fields)
-        if(f < nf)
-        {
-            SET_FIELD_HIGH(f, map);
-        }
-
     for(short i=FX_BITMAP_WIDTH-1; i >= 0; i--)
     {
         if(map[i] > 0)
@@ -250,8 +235,8 @@ int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
             break;
         }
     }
-    mapLen = mapLen > 0 ? mapLen : 1;
 
+    mapLen = mapLen > 0 ? mapLen : 1;
 
     MultiCommPeriph *cp = this->portPeriphs + d.port;
     MultiWrapper *out = &cp->out;
@@ -283,6 +268,33 @@ int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
     }
 
     return 0;
+}
+
+int CommManager::writeDeviceMap(int devId, uint32_t *map)
+{
+    if(!connectedDevices.count(devId)) return -1;
+    FlexseaDevice &d = connectedDevices.at(devId);
+    return writeDeviceMap(d, map);
+}
+
+int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
+{
+    if(!connectedDevices.count(devId)) return -1;
+    FlexseaDevice &d = connectedDevices.at(devId);
+
+    int nf = d.numFields;
+    uint32_t map[FX_BITMAP_WIDTH];
+    memset(map, 0, sizeof(uint32_t)*FX_BITMAP_WIDTH);
+
+    for(auto&& f : fields)
+    {
+        if(f < nf)
+        {
+            SET_FIELD_HIGH(f, map);
+        }
+    }
+
+    return writeDeviceMap(d, map);
 }
 
 bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)

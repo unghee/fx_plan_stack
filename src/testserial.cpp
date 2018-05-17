@@ -147,13 +147,14 @@ void TestSerial::writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, con
     testReceiveDataFromDevice(d.id, timestamp);
 }
 
-void TestSerial::setDeviceMap(const FlexseaDevice &d, uint32_t *map)
+int TestSerial::writeDeviceMap(const FlexseaDevice &d, uint32_t *map)
 {
     uint32_t *m = fieldMaps.at(d.id);
     for(unsigned short i = 0; i < FX_BITMAP_WIDTH; i++)
         m[i] = map[i];
 
     mapChangedFlags.notify();
+    return 0;
 }
 
 void TestSerial::sendDeviceWhoAmI(int port)

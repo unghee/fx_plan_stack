@@ -94,7 +94,12 @@ inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
     }
 
     if(addedDevice)
+    {
+        std::cout << "Added device\n";
+        fflush(stdout);
         deviceConnectedFlags.notify();
+    }
+
 
     return 0;
 }
@@ -120,7 +125,7 @@ inline int FlexseaSerial::updateDeviceData(uint8_t *buf)
     {
         fxDataPtr[0] = fakeTimestamp++;
         uint8_t *dataPtr = (uint8_t*)(fxDataPtr+1);
-        uint16_t j, k, fieldOffset=0, index=P_DATA1+1;
+        uint16_t j, fieldOffset=0, index=P_DATA1+1;
         for(j = 0; j < ds.numFields; j++)
         {
             if(IS_FIELD_HIGH(j, deviceBitmap))
@@ -153,7 +158,7 @@ int FlexseaSerial::sysDataParser(int port)
     if(!isMeantForPlan)
     {
         std::cout << "Received message with invalid RID, probably some kind of device-side error\n";
-        return;
+        return -1;
     }
 
     uint8_t isMetaData = msgBuf[P_DATA1];
@@ -167,7 +172,6 @@ int FlexseaSerial::sysDataParser(int port)
 
 void FlexseaSerial::processReceivedData(int port, size_t len)
 {
-
     int totalBuffered = len + circ_buff_get_size(&(portPeriphs[port].circularBuff));
     int numMessagesReceived = 0;
     int numMessagesExpected = (totalBuffered / COMM_STR_BUF_LEN);
@@ -189,7 +193,7 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
             portPeriphs[port].in.isMultiComplete = 0;
 
             MultiCommPeriph *cp = portPeriphs+port;
-            uint16_t convertedBytes = unpack_multi_payload_cb(&cp->circularBuff, &cp->in);
+            int convertedBytes = unpack_multi_payload_cb(&cp->circularBuff, &cp->in);
             error = circ_buff_move_head(&cp->circularBuff, convertedBytes);
             if(portPeriphs[port].in.isMultiComplete)
             {
@@ -204,6 +208,7 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
                 (void) parseResult;
             }
 
+            successfulParse = convertedBytes > 0 && !error;
         } while(successfulParse && numMessagesReceived < maxMessagesExpected);
 
         len -= bytesToWrite;

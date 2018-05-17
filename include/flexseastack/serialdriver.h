@@ -18,7 +18,7 @@ public:
     virtual std::vector<std::string> getAvailablePorts() const;
     virtual int isOpen(uint16_t portIdx=0) const;
     virtual void tryClose(uint16_t portIdx=0);
-    virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t portIdx=0);
+    virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t portIdx);
     virtual void flush(uint16_t portIdx=0);
     virtual void clear(uint16_t portIdx=0);
 

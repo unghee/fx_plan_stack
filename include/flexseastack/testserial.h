@@ -41,7 +41,7 @@ public:
     virtual void writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d);
 
     // overriding flexseaserial functions
-    virtual void setDeviceMap(const FlexseaDevice &d, uint32_t* map);
+    virtual int writeDeviceMap(const FlexseaDevice &d, uint32_t* map);
     virtual void sendDeviceWhoAmI(int port);
     virtual void serviceOpenPorts() {} // do nothing as data is fake received when written to
 

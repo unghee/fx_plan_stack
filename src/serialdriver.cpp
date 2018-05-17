@@ -119,6 +119,7 @@ void SerialDriver::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_
         std::cout << "Serial Exception:  " << e.what() << std::endl;
     } catch (serial::PortNotOpenedException e) {
         std::cout << "Port wasn't open" << std::endl;
+//        tryClose(portIdx);
     }
 }
 

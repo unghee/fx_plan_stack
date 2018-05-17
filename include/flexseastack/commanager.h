@@ -47,7 +47,7 @@ public:
 
     /// \brief writes a message to the device to set its active fields
     int writeDeviceMap(int devId, const std::vector<int> &fields);
-    int writeDeviceMap(int devId, const uint32_t* map){(void)devId;(void)map;return-1;}
+    int writeDeviceMap(int devId, uint32_t* map);
 
     /// \brief adds a message to a queue of messages to be written to the port periodically
     bool enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx=0);
@@ -59,6 +59,8 @@ protected:
     virtual void periodicTask();
     virtual bool wakeFromLongSleep();
     virtual bool goToLongSleep();
+
+    virtual int writeDeviceMap(const FlexseaDevice &d, uint32_t* map);
 
     virtual void serviceStreams(uint8_t milliseconds);
     uint8_t serviceCount = 0;
