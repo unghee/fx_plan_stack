@@ -37,6 +37,9 @@ extern "C" {
 
 #include <stdint.h>
 
+#define SYSDATA_REG_READ_FLAG (0xAA)
+#define SYSDATA_WHO_AM_I_FLAG (0x00)
+
 /* Functions for message passing declared below
  * */
 
@@ -60,7 +63,7 @@ void tx_cmd_sysdata_r(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
 	TODO: rename this to 'write'
 */
 void tx_cmd_sysdata_w(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
-						uint16_t *len, uint8_t *flags, uint8_t lenFlags);
+						uint16_t *len, uint32_t *flags, uint8_t lenFlags);
 
 /* Master calls this function automatically after receiving a response from slave
 */
@@ -71,10 +74,6 @@ void rx_cmd_sysdata_rr(uint8_t *msgBuf, uint8_t *info, uint8_t *responseBuf, uin
 	And it replies indicating the resulting decision
 */
 void rx_cmd_sysdata_r(uint8_t *msgBuf, uint8_t *info, uint8_t *responseBuf, uint16_t* responseLen);
-
-/* Slave calls this function after receiving a read request from master. This sends the response to master.
-*/
-void tx_cmd_sysdata_rr(uint8_t *responseBuf, uint16_t* responseLen, uint32_t *flags, uint8_t lenFlags);
 
 /* Slave calls this function automatically after receiving a write from master.
 	It determines what to do with the information passed to it,

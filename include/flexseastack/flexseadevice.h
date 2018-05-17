@@ -12,7 +12,7 @@
 class FlexseaDevice
 {
 public:
-	FlexseaDevice(int _id=-1, int _port=-1, FlexseaDeviceType _type=FX_NONE,
+    explicit FlexseaDevice(int _id=-1, int _port=-1, FlexseaDeviceType _type=FX_NONE,
 			const uint32_t* map=nullptr, const circular_buffer<FX_DataPtr>* data_=nullptr,
 			std::recursive_mutex *m=nullptr);
 

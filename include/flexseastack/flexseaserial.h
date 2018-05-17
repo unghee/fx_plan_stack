@@ -39,12 +39,9 @@ public:
     virtual ~FlexseaSerial();
 
     virtual void sendDeviceWhoAmI(int port);
-    virtual void setDeviceMap(const FlexseaDevice &d, uint32_t* map);
-    virtual void setDeviceMap(const FlexseaDevice &d, const std::vector<int> &fields);
-
     virtual void open(std::string, int portIdx);
     virtual void openCancelRequest(int portIdx);
-    virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d) {this->write(bytes_to_send, serial_tx_data, d.port);}
+    virtual void writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d);
     virtual void close(uint16_t portIdx);
 
     MultiCommPeriph *portPeriphs;
@@ -72,6 +69,9 @@ private:
 
     int defaultStringParser(int port) {(void) port; return 1; }
     int sysDataParser(int port);
+    inline int updateDeviceMetadata(int port, uint8_t *buf);
+    inline int updateDeviceData(uint8_t *buf);
+
 };
 
 class OpenAttempt {

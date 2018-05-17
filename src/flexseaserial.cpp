@@ -39,81 +39,128 @@ FlexseaSerial::~FlexseaSerial()
     portPeriphs = nullptr;
 }
 
+inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
+{
+    uint16_t i=P_DATA1+1;
+    uint8_t devType, devId, j, mapLen;
+    devType = buf[i++];
+    devId = buf[i++];
+
+    bool addedDevice = false;
+    if(!connectedDevices.count(devId))
+        addedDevice = !addDevice(devId, port, static_cast<FlexseaDeviceType>(devType));
+    else if(connectedDevices.at(devId).type != devType)
+    {
+        std::cout << "Device record's type does not match incoming message, something went wrong (two devices connected with same id?)" << std::endl;
+        removeDevice(devId);
+        addedDevice = !addDevice(devId, port, static_cast<FlexseaDeviceType>(devType));
+    }
+
+    uint32_t temp, *bitmap = fieldMaps.at(devId);
+    // if bitmap is null something is very wrong
+    bool bitmapChanged = false;
+    if(bitmap)
+    {
+        mapLen = buf[i++];
+        for(j=0;j<FX_BITMAP_WIDTH && j<mapLen; j++)
+        {
+            temp = REBUILD_UINT32(buf, &i);
+            if(temp != bitmap[j])
+                bitmapChanged = true;
+            bitmap[j] = temp;
+        }
+
+        if(bitmapChanged)
+        {
+            // need to clear old data ptrs as they are wrong size
+            std::lock_guard<std::recursive_mutex> lk(*connectedDevices.at(devId).dataMutex);
+            circular_buffer<FX_DataPtr> *cb = this->databuffers.at(devId);
+            FX_DataPtr ptr;
+            while(cb->count())
+            {
+                ptr = cb->get();
+                delete ptr;
+            }
+            ptr = nullptr;
+            mapChangedFlags.notify();
+        }
+    }
+    else
+    {
+        return -1;
+        // not sure what best practice would be here
+        // so far we've written exception free code.. so I'm opting to return error code
+        throw new std::exception();
+    }
+
+    if(addedDevice)
+        deviceConnectedFlags.notify();
+
+    return 0;
+}
+inline int FlexseaSerial::updateDeviceData(uint8_t *buf)
+{
+    uint8_t devId;
+    devId = buf[P_XID];
+    if(!connectedDevices.count(devId))
+        return -1;
+
+    FlexseaDevice &d = connectedDevices.at(devId);
+    FlexseaDeviceSpec ds = deviceSpecs[d.type];
+    std::lock_guard<std::recursive_mutex> lk(*d.dataMutex);
+    circular_buffer<FX_DataPtr> *cb = this->databuffers.at(devId);
+    FX_DataPtr fxDataPtr = cb->full() ? cb->get() : new uint32_t[d.numFields+1]{0};
+
+    //TODO: do timestamp properly
+    static uint32_t fakeTimestamp = 0;
+    uint32_t* deviceBitmap = fieldMaps.at(devId);
+
+    // read into the rest of the data like a buffer
+    if(fxDataPtr && deviceBitmap)
+    {
+        fxDataPtr[0] = fakeTimestamp++;
+        uint8_t *dataPtr = (uint8_t*)(fxDataPtr+1);
+        uint16_t j, k, fieldOffset=0, index=P_DATA1+1;
+        for(j = 0; j < ds.numFields; j++)
+        {
+            if(IS_FIELD_HIGH(j, deviceBitmap))
+            {
+                uint8_t fw = FORMAT_SIZE_MAP[ds.fieldTypes[j]];
+                memcpy(dataPtr + fieldOffset, buf + index, fw);
+                index+=fw;
+            }
+
+            fieldOffset += 4; // storing each value as a separate int32
+        }
+        cb->put(fxDataPtr);
+    }
+    else
+    {
+        std::cout << "Couldn't allocate memory for reading data into FlexseaDevice " << devId << std::endl;
+        return -1;
+    }
+
+    return 0;
+}
+
 int FlexseaSerial::sysDataParser(int port)
 {
     if(port < 0 || port >= FX_NUMPORTS) return 0;
     MultiCommPeriph *cp = portPeriphs+port;
 
     uint8_t *msgBuf = cp->in.unpacked;
-    uint16_t index=P_DATA1;
-    uint8_t lenFlags;
-    uint32_t flags[FX_BITMAP_WIDTH];
-
-    lenFlags = msgBuf[index++];
-
-    //read in our fields
-    int i, j, k, fieldOffset;
-
-    for(i=0;i<lenFlags;i++)
-        flags[i]=REBUILD_UINT32(msgBuf, &index);
-
-    uint8_t devType = msgBuf[index++];
-    uint16_t devId = msgBuf[index] + (msgBuf[index+1] << 8);
-    index+=2;
-
-    // if we haven't seen this device before we add it to our list
-    if(connectedDevices.count(devId) == 0)
-        addDevice(devId, port, static_cast<FlexseaDeviceType>(devType));
-    else if(connectedDevices.at(devId).type != devType)
+    bool isMeantForPlan = msgBuf[P_RID] / 10 == 1;
+    if(!isMeantForPlan)
     {
-        std::cout << "Device record's type does not match incoming message, something went wrong (two devices connected with same id?)" << std::endl;
-        removeDevice(devId);
-        addDevice(devId, port, static_cast<FlexseaDeviceType>(devType));
+        std::cout << "Received message with invalid RID, probably some kind of device-side error\n";
+        return;
     }
 
-    // read into the appropriate device
-    FlexseaDevice &d = connectedDevices.at(devId);
-    FlexseaDeviceSpec ds = deviceSpecs[devType];
-
-    std::lock_guard<std::recursive_mutex> lk(*d.dataMutex);
-
-    circular_buffer<FX_DataPtr> *cb = this->databuffers.at(devId);
-    FX_DataPtr fxDataPtr;
-    if(cb->full())
-        fxDataPtr = cb->get();
+    uint8_t isMetaData = msgBuf[P_DATA1];
+    if(isMetaData)
+        return updateDeviceMetadata(port, msgBuf);
     else
-        fxDataPtr = new uint32_t[d.numFields+1]{0};
-
-    //TODO: do timestamp properly
-    static uint32_t fakeTimestamp = 0;
-    fxDataPtr[0] = fakeTimestamp++;
-
-    // read into the rest of the data like a buffer
-    uint8_t *dataPtr = (uint8_t*)(fxDataPtr+1);
-    if(dataPtr)
-    {
-        // first two fields are devType and devId, we could probably skip for reading in
-        fieldOffset = 0;
-        for(j = 0; j < ds.numFields; j++)
-        {
-            if(IS_FIELD_HIGH(j, flags))
-            {
-                uint8_t fw = FORMAT_SIZE_MAP[ds.fieldTypes[j]];
-                for(k = 0; k < fw; k++)
-                    dataPtr[fieldOffset + k] = msgBuf[index++];
-            }
-
-            fieldOffset += 4; // storing each value as a separate int32
-        }
-    }
-    else
-    {
-        std::cout << "Couldn't allocate memory for reading data into FlexseaDevice " << d.id << std::endl; // log error?
-    }
-
-    cb->put(fxDataPtr);
-
-    return 1;
+        return updateDeviceData(msgBuf);
 }
 
 #define CALL_MEMBER_FN(object,ptrToMember)  ((object)->*(ptrToMember))
@@ -134,12 +181,16 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
         cbSpace = CB_BUF_LEN - circ_buff_get_size(&(portPeriphs[port].circularBuff));
         bytesToWrite = MIN(len, cbSpace);
 
-        error = circ_buff_write(&(portPeriphs[port].circularBuff), (&largeRxBuffer[bytesWritten]), (bytesToWrite));
+        error = circ_buff_write(&(portPeriphs[port].circularBuff), (largeRxBuffer+bytesWritten), bytesToWrite);
         if(error) std::cout << "circ_buff_write error:" << error << std::endl;
 
         do {
             portPeriphs[port].bytesReadyFlag = 1;
-            successfulParse = tryParse(portPeriphs + port);
+            portPeriphs[port].in.isMultiComplete = 0;
+
+            MultiCommPeriph *cp = portPeriphs+port;
+            uint16_t convertedBytes = unpack_multi_payload_cb(&cp->circularBuff, &cp->in);
+            error = circ_buff_move_head(&cp->circularBuff, convertedBytes);
             if(portPeriphs[port].in.isMultiComplete)
             {
                 uint8_t cmd = portPeriphs[port].in.unpacked[P_CMD1] >> 1;
@@ -161,7 +212,8 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
         if(CB_BUF_LEN == circ_buff_get_size(&(portPeriphs[port].circularBuff)) && len)
         {
             std::cout << "circ buffer is full with non valid frames; clearing..." << std::endl;
-            circ_buff_init(&(portPeriphs[port].circularBuff));
+            // erase all the bytes except the ones we just wrote
+            circ_buff_move_head(&(portPeriphs[port].circularBuff), CB_BUF_LEN - bytesToWrite);
         }
     }
 
@@ -222,10 +274,10 @@ void FlexseaSerial::sendDeviceWhoAmI(int port)
     tx_cmd_sysdata_r(out->unpacked + RESERVEDBYTES, &cmdCode, &cmdType, &out->unpackedIdx, &flag, lenFlags);
 
     out->unpacked[0] = FLEXSEA_PLAN_1;
-    out->unpacked[1] = FLEXSEA_MANAGE_1;
+    out->unpacked[1] = 0;   // rid miss should trigger a who am i by default
     out->unpacked[2] = 1;   // garbage ? should reuse this for timestamp
     out->unpacked[3] = (cmdCode << 1) | 0x1;
-
+    out->unpacked[4] = 0;   // gets interpreted as who am i
     out->unpackedIdx += RESERVEDBYTES;
     out->currentMultiPacket = 0;
     portPeriphs[port].in.currentMultiPacket = 0;
@@ -240,12 +292,12 @@ void FlexseaSerial::sendDeviceWhoAmI(int port)
         unsigned int frameId = 0;
         while(out->frameMap > 0)
         {
-            this->write(PACKET_WRAPPER_LEN, out->packed[frameId], port);
+            write(PACKET_WRAPPER_LEN, out->packed[frameId], port);
             out->frameMap &= (   ~(1 << frameId)   );
             frameId++;
         }
         out->isMultiComplete = 1;
-//        std::cout << "Wrote who am i message" << std::endl;
+        std::cout << "Wrote who am i message" << std::endl;
     }
 }
 
@@ -275,6 +327,11 @@ void FlexseaSerial::openCancelRequest(int portIdx)
             oa.markedToRemove = true;
     }
 }
+
+void FlexseaSerial::writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d) {
+    write(bytes_to_send, serial_tx_data, (uint16_t)(d.port));
+}
+
 
 void FlexseaSerial::close(uint16_t portIdx)
 {
@@ -323,33 +380,4 @@ void FlexseaSerial::serviceOpenAttempts(uint8_t delayed)
 
     std::lock_guard<std::mutex> pTaskLock(conditionMutex);
     haveOpenAttempts = !openAttempts.empty();
-}
-
-void FlexseaSerial::setDeviceMap(const FlexseaDevice &d, uint32_t *map)
-{
-    (void)d;
-    (void)map;
-    // not implemented
-    throw new std::exception();
-}
-
-void FlexseaSerial::setDeviceMap(const FlexseaDevice &d, const std::vector<int> &fields)
-{
-    if(!d.isValid() || !fields.size()) return;
-
-    uint32_t map[FX_BITMAP_WIDTH];
-    memset(map, 0, sizeof(uint32_t) * FX_BITMAP_WIDTH);
-
-    uint32_t i, fieldId;
-    for(i=0;i<fields.size();i++)
-    {
-        fieldId = fields.at(i);
-        if((int)fieldId < d.numFields)
-        {
-            SET_FIELD_HIGH(fieldId, map);
-        }
-    }
-
-    setDeviceMap(d, map);
-
 }

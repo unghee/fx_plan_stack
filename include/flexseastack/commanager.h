@@ -45,9 +45,11 @@ public:
     /// Returns true if the attempt was successful. May be unsuccessful if no stream for given id exists
     bool stopStreaming(int devId);
 
-//    /// \brief populates a list of device ids that are at the specified portIdx;
-//    std::vector<int> getDeviceIds(int portIdx) const;
+    /// \brief writes a message to the device to set its active fields
+    int writeDeviceMap(int devId, const std::vector<int> &fields);
+    int writeDeviceMap(int devId, const uint32_t* map){(void)devId;(void)map;return-1;}
 
+    /// \brief adds a message to a queue of messages to be written to the port periodically
     bool enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx=0);
 
     /// \brief overloaded to manage streams and connected devices
@@ -61,6 +63,7 @@ protected:
     virtual void serviceStreams(uint8_t milliseconds);
     uint8_t serviceCount = 0;
 private:
+    const uint8_t RESERVEDBYTES = 4;
 	//Variables & Objects:
     class Message;
     class CmdSlaveRecord;

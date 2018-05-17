@@ -38,7 +38,7 @@ public:
     virtual int isOpen(uint16_t portIdx=0) const;
     virtual void tryClose(uint16_t portIdx=0);
     virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t portIdx=0);
-    virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d);
+    virtual void writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d);
 
     // overriding flexseaserial functions
     virtual void setDeviceMap(const FlexseaDevice &d, uint32_t* map);

@@ -132,7 +132,7 @@ void TestSerial::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t 
     std::cout << "TestSerial::write failed to match the message to a connected device" << std::endl;
 }
 
-void TestSerial::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d)
+void TestSerial::writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d)
 {
     static uint32_t timestamp = 0;
     timestamp++;

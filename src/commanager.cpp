@@ -3,7 +3,7 @@
 #include <chrono>
 #include <thread>
 #include <iostream>
-
+#include <cstring>
 extern "C" {
     #include "flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h"
     #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
@@ -223,6 +223,68 @@ void CommManager::close(uint16_t portIdx)
     FlexseaSerial::close(portIdx);
 }
 
+int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
+{
+    if(!connectedDevices.count(devId)) return -1;
+
+    FlexseaDevice &d = connectedDevices.at(devId);
+    int nf = d.numFields;
+
+    uint8_t cmdCode, cmdType;
+
+    uint32_t map[FX_BITMAP_WIDTH];
+    memset(map, 0, sizeof(uint32_t)*FX_BITMAP_WIDTH);
+    uint16_t mapLen = 0;
+
+    for(auto&& f : fields)
+        if(f < nf)
+        {
+            SET_FIELD_HIGH(f, map);
+        }
+
+    for(short i=FX_BITMAP_WIDTH-1; i >= 0; i--)
+    {
+        if(map[i] > 0)
+        {
+            mapLen = i+1;
+            break;
+        }
+    }
+    mapLen = mapLen > 0 ? mapLen : 1;
+
+
+    MultiCommPeriph *cp = this->portPeriphs + d.port;
+    MultiWrapper *out = &cp->out;
+    out->unpackedIdx = 0;
+
+    tx_cmd_sysdata_w(out->unpacked + RESERVEDBYTES, &cmdCode, &cmdType, &out->unpackedIdx, map, mapLen);
+    out->unpacked[0] = FLEXSEA_PLAN_1;
+    out->unpacked[1] = d.id;
+    out->unpacked[2] = 0;
+    out->unpacked[3] = (cmdCode << 1);
+    out->unpackedIdx += RESERVEDBYTES;
+
+    out->currentMultiPacket++;
+    out->currentMultiPacket%=4;
+    int error = packMultiPacket(out);
+
+    if(error)
+        std::cout << "Error packing multipacket" << std::endl;
+    else
+    {
+        unsigned int frameId = 0;
+        while(out->frameMap > 0)
+        {
+            this->writeDevice(PACKET_WRAPPER_LEN, out->packed[frameId], d);
+            out->frameMap &= (   ~(1 << frameId)   );
+            frameId++;
+        }
+        out->isMultiComplete = 1;
+    }
+
+    return 0;
+}
+
 bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
 {
 	//If we are over a max size, clear the queue
@@ -273,12 +335,12 @@ void CommManager::sendSysDataRead(uint8_t slaveId)
 {
     const FlexseaDevice &d = this->getDevice(slaveId);
 
-    if(d.id != slaveId) return;
+    // if there's something wrong with this device or we didn't find it we give up
+    if(!d.isValid()) return;
 
     MultiCommPeriph *cp = this->portPeriphs + d.port;
     MultiWrapper *out = &cp->out;
 
-    const uint8_t RESERVEDBYTES = 4;
     uint8_t cmdCode, cmdType;
     out->unpackedIdx = 0;
 
@@ -290,7 +352,7 @@ void CommManager::sendSysDataRead(uint8_t slaveId)
     // NOTE: in a response, we need to reserve bytes for XID, RID, CMD, and TIMESTAMP
     tx_cmd_sysdata_r(out->unpacked + RESERVEDBYTES, &cmdCode, &cmdType, &out->unpackedIdx, &flag, lenFlags);
     out->unpacked[0] = FLEXSEA_PLAN_1;
-    out->unpacked[1] = FLEXSEA_MANAGE_1;
+    out->unpacked[1] = d.id;
     out->unpacked[2] = 0;
     out->unpacked[3] = (cmdCode << 1) | 0x1;
     out->unpackedIdx += RESERVEDBYTES;
@@ -306,7 +368,7 @@ void CommManager::sendSysDataRead(uint8_t slaveId)
         unsigned int frameId = 0;
         while(out->frameMap > 0)
         {
-            this->write(PACKET_WRAPPER_LEN, out->packed[frameId], d);
+            this->writeDevice(PACKET_WRAPPER_LEN, out->packed[frameId], d);
             out->frameMap &= (   ~(1 << frameId)   );
             frameId++;
         }
