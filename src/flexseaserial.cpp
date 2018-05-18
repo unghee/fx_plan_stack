@@ -119,7 +119,6 @@ inline int FlexseaSerial::updateDeviceData(uint8_t *buf)
     //TODO: do timestamp properly
     static uint32_t fakeTimestamp = 0;
     uint32_t* deviceBitmap = fieldMaps.at(devId);
-    const uint8_t SIGNBIT_MASK = 1 << 7;
 
     // read into the rest of the data like a buffer
     if(fxDataPtr && deviceBitmap)
@@ -137,7 +136,7 @@ inline int FlexseaSerial::updateDeviceData(uint8_t *buf)
 
                 if( ft == FORMAT_16S || ft == FORMAT_8S )
                 {
-                    uint8_t val = *(dataPtr + fieldOffset + fw - 1) & SIGNBIT_MASK ? 0xFF : 0;
+                    uint8_t val = ( *(dataPtr + fieldOffset + fw - 1) >> 7 ) ? 0xFF : 0;
                     memset( dataPtr + fieldOffset + fw, val, sizeof(int32_t) - fw);
                 }
 
@@ -359,7 +358,10 @@ void FlexseaSerial::close(uint16_t portIdx)
     }
 
     for(const int &id : idsToRemove)
+    {
         this->removeDevice(id);
+        std::cout << "Removed device : id\n";
+    }
 
     tryClose(portIdx);
 }
