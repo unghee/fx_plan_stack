@@ -45,6 +45,9 @@ public:
     virtual void sendDeviceWhoAmI(int port);
     virtual void serviceOpenPorts() {} // do nothing as data is fake received when written to
 
+    // overriding commmanager functions
+    virtual bool startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto);
+
 private:
     /* Three "Test Cases" */
 

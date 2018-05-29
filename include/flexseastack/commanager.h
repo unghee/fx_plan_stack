@@ -31,7 +31,7 @@ public:
     /// Returns true if the the attempt was successful. May be unsuccessful if:
     ///     no device exists with device id == devId
     ///     freq not in getStreamingFrequences()
-    bool startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto);
+    virtual bool startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto);
 
     /// \brief Tries to start streaming from the selected device with the given parameters.
     /// Streams all fields if fieldIds is empty. Otherwise only streams ids in fieldIds
@@ -39,7 +39,6 @@ public:
     ///     no device exists with device id == devId
     ///     freq not in getStreamingFrequences()
     ///     fieldIds contains an invalid id
-    bool startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto, const std::vector<int> &fieldIds);
 
     /// \brief Tries to stop streaming from the selected device with the given parameters.
     /// Returns true if the attempt was successful. May be unsuccessful if no stream for given id exists

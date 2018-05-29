@@ -166,6 +166,13 @@ void TestSerial::sendDeviceWhoAmI(int port)
         testConnectDevice(port);
 }
 
+bool TestSerial::startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto)
+{
+    (void) shouldAuto;
+    std::cout << "TestSerial only supports regular streaming..." <<std::endl;
+    return CommManager::startStreaming(devId, freq, shouldLog, false);
+}
+
 void TestSerial::randomConnections()
 {
     std::cout << TAB << "Connecting Device..." <<std::endl;
