@@ -63,6 +63,9 @@ public:
     void getBitmap(uint32_t* out) const;
     bool isValid() const { return this->id != -1; }
 
+    /// \brief Returns the rate at which this device is/was receiving data in Hz
+    double getDataRate() const;
+
 protected:
 
     /// bitmap indicating which fields are active for the device with specified id

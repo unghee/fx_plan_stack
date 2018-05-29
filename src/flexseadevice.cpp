@@ -158,6 +158,18 @@ int FlexseaDevice::getNumActiveFields() const
     return count;
 }
 
+double FlexseaDevice::getDataRate() const
+{
+    std::lock_guard<std::recursive_mutex> lk(*dataMutex);
+    const int AVG_OVER = 10;
+    if(data->count() < AVG_OVER)
+        return -1;
+
+    size_t i = data->count() - AVG_OVER;
+    double avg_period = ((double)(data->peekBack()[0] - data->peek(i)[0])) / AVG_OVER;
+    return 1000.0 / avg_period;
+}
+
 std::string FlexseaDevice::getName() const
 {
     if(this->type < NUM_DEVICE_TYPES && this->type != FX_NONE)
