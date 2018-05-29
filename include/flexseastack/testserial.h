@@ -91,7 +91,7 @@ private:
     void printDeviceMaps(const std::vector<int>& deviceIds, const std::unordered_map<int, FlexseaDevice> &connectedDevices);
     const char TAB = '\t';
 
-    std::vector<std::string> fakePortList = {"COM1", "COM2", "ttyACM0", "ttyACM1", "ttyACM2" };
+    std::vector<std::string> fakePortList = {"COM3", "COM2", "ttyACM0", "ttyACM1", "ttyACM2" };
     int portMapping[FX_NUMPORTS] = {-1, -1, -1, -1};
 };
 
