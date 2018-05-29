@@ -41,7 +41,7 @@ FlexseaSerial::~FlexseaSerial()
 
 inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
 {
-    uint16_t i=P_DATA1+1;
+    uint16_t i=MP_DATA1+1;
     uint8_t devType, devId, j, mapLen;
     devType = buf[i++];
     devId = buf[i++];
@@ -106,7 +106,7 @@ inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
 inline int FlexseaSerial::updateDeviceData(uint8_t *buf)
 {
     uint8_t devId;
-    devId = buf[P_XID];
+    devId = buf[MP_XID];
     if(!connectedDevices.count(devId))
         return -1;
 
@@ -116,17 +116,14 @@ inline int FlexseaSerial::updateDeviceData(uint8_t *buf)
     circular_buffer<FX_DataPtr> *cb = this->databuffers.at(devId);
     FX_DataPtr fxDataPtr = cb->full() ? cb->get() : new uint32_t[d.numFields+1]{0};
 
-    //TODO: do timestamp properly
-    static uint32_t fakeTimestamp = 0;
     uint32_t* deviceBitmap = fieldMaps.at(devId);
-    const uint8_t SIGNBIT_MASK = 1 << 7;
 
     // read into the rest of the data like a buffer
     if(fxDataPtr && deviceBitmap)
     {
-        fxDataPtr[0] = fakeTimestamp++;
+        memcpy(fxDataPtr, buf+MP_TSTP, sizeof(uint32_t));
         uint8_t *dataPtr = (uint8_t*)(fxDataPtr+1);
-        uint16_t j, fieldOffset=0, index=P_DATA1+1;
+        uint16_t j, fieldOffset=0, index=MP_DATA1+1;
         for(j = 0; j < ds.numFields; j++)
         {
             if(IS_FIELD_HIGH(j, deviceBitmap))
@@ -137,7 +134,7 @@ inline int FlexseaSerial::updateDeviceData(uint8_t *buf)
 
                 if( ft == FORMAT_16S || ft == FORMAT_8S )
                 {
-                    uint8_t val = *(dataPtr + fieldOffset + fw - 1) & SIGNBIT_MASK ? 0xFF : 0;
+                    uint8_t val = ( *(dataPtr + fieldOffset + fw - 1) >> 7 ) ? 0xFF : 0;
                     memset( dataPtr + fieldOffset + fw, val, sizeof(int32_t) - fw);
                 }
 
@@ -163,14 +160,14 @@ int FlexseaSerial::sysDataParser(int port)
     MultiCommPeriph *cp = portPeriphs+port;
 
     uint8_t *msgBuf = cp->in.unpacked;
-    bool isMeantForPlan = msgBuf[P_RID] / 10 == 1;
+    bool isMeantForPlan = msgBuf[MP_RID] / 10 == 1;
     if(!isMeantForPlan)
     {
         std::cout << "Received message with invalid RID, probably some kind of device-side error\n";
         return -1;
     }
 
-    uint8_t isMetaData = msgBuf[P_DATA1];
+    uint8_t isMetaData = msgBuf[MP_DATA1];
     if(isMetaData)
         return updateDeviceMetadata(port, msgBuf);
     else
@@ -206,7 +203,7 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
             error = circ_buff_move_head(&cp->circularBuff, convertedBytes);
             if(portPeriphs[port].in.isMultiComplete)
             {
-                uint8_t cmd = portPeriphs[port].in.unpacked[P_CMD1] >> 1;
+                uint8_t cmd = MULTI_GET_CMD7(portPeriphs[port].in.unpacked);
                 int parseResult;
                 if(highjackedCmds[cmd])
                     parseResult = CALL_MEMBER_FN(this, stringParsers[cmd])(port);
@@ -282,18 +279,16 @@ void FlexseaSerial::sendDeviceWhoAmI(int port)
     uint8_t lenFlags = 1, error;
 
     // NOTE: in a response, we need to reserve bytes for XID, RID, CMD, and TIMESTAMP
-    const uint8_t RESERVEDBYTES = 4;
+
     uint8_t cmdCode, cmdType;
     MultiWrapper *out = &portPeriphs[port].out;
-    tx_cmd_sysdata_r(out->unpacked + RESERVEDBYTES, &cmdCode, &cmdType, &out->unpackedIdx, &flag, lenFlags);
 
-    out->unpacked[0] = FLEXSEA_PLAN_1;
-    out->unpacked[1] = 0;   // rid miss should trigger a who am i by default
-    out->unpacked[2] = 1;   // garbage ? should reuse this for timestamp
-    out->unpacked[3] = (cmdCode << 1) | 0x1;
-    out->unpacked[4] = 0;   // gets interpreted as who am i
-    out->unpackedIdx += RESERVEDBYTES;
-    out->currentMultiPacket = 0;
+    out->unpackedIdx = 0;
+    tx_cmd_sysdata_r(out->unpacked + MP_DATA1, &cmdCode, &cmdType, &out->unpackedIdx, &flag, lenFlags);
+    setMsgInfo(out->unpacked, FLEXSEA_PLAN_1, 0, cmdCode, RX_PTYPE_READ, 0);
+    out->unpackedIdx += MULTI_PACKET_OVERHEAD;
+
+    out->currentMultiPacket = (out->currentMultiPacket+1)%4;
     portPeriphs[port].in.currentMultiPacket = 0;
     portPeriphs[port].in.unpackedIdx = 0;
 
@@ -359,7 +354,10 @@ void FlexseaSerial::close(uint16_t portIdx)
     }
 
     for(const int &id : idsToRemove)
+    {
         this->removeDevice(id);
+        std::cout << "Removed device : id\n";
+    }
 
     tryClose(portIdx);
 }

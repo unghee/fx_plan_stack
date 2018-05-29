@@ -65,7 +65,6 @@ protected:
     virtual void serviceStreams(uint8_t milliseconds);
     uint8_t serviceCount = 0;
 private:
-    const uint8_t RESERVEDBYTES = 4;
 	//Variables & Objects:
     class Message;
     class CmdSlaveRecord;
@@ -81,6 +80,7 @@ private:
     float msSinceLast[NUM_TIMER_FREQS] = {0};
 
     void sendCommands(int index);
+    void sendAutoStream(int devId, int cmd, int period, bool start);
     void sendSysDataRead(uint8_t slaveId);
 
     uint8_t streamCount;

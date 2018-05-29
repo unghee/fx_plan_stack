@@ -41,6 +41,7 @@ void init_flexsea_payload_ptr_stream(void);
 void tx_cmd_stream_w(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
 						uint16_t *len, uint8_t cmdToStream, uint8_t periodInMS, \
 						uint8_t startStop, uint8_t firstIndex, uint8_t lastIndex);
+
 void tx_cmd_stream_r(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
 						uint16_t *len);
 

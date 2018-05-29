@@ -11,7 +11,6 @@ SerialDriver::SerialDriver(int n) :
 
 SerialDriver::~SerialDriver()
 {
-    std::lock_guard<std::mutex> lk(_portsMutex);
     openPorts = 0;
 
     for(int i = 0; i <_NUMPORTS; i++)
@@ -33,7 +32,9 @@ std::vector<std::string> SerialDriver::getAvailablePorts() const
     return result;
 }
 
-int SerialDriver::isOpen(uint16_t portIdx) const { return ports[portIdx].isOpen(); }
+int SerialDriver::isOpen(uint16_t portIdx) const {
+    return ports[portIdx].isOpen();
+}
 
 bool SerialDriver::tryOpen(const std::string &portName, uint16_t portIdx) {
 
@@ -77,14 +78,14 @@ void SerialDriver::tryClose(uint16_t portIdx) {
         return;
     }
 
-    if(ports[portIdx].isOpen())
+    if(!ports[portIdx].isOpen())
     {
         std::cout << "Port " << portIdx << " already closed" << std::endl;
         return;
     }
 
     ports[portIdx].close();
-    if(ports[portIdx].isOpen())
+    if(!ports[portIdx].isOpen())
     {
         std::cout << "Closed port " << portIdx << "." << std::endl;
         std::lock_guard<std::mutex> lk(_portsMutex);
@@ -119,6 +120,7 @@ void SerialDriver::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_
         std::cout << "Serial Exception:  " << e.what() << std::endl;
     } catch (serial::PortNotOpenedException e) {
         std::cout << "Port wasn't open" << std::endl;
+        close();
 //        tryClose(portIdx);
     }
 }

@@ -40,16 +40,16 @@ CommManager::~CommManager(){}
 
 int CommManager::getIndexOfFrequency(int freq)
 {
-	int indexOfFreq = -1;
-	for(int i = 0; i < NUM_TIMER_FREQS; i++)
-	{
-		if(freq == timerFrequencies[i])
-		{
-			indexOfFreq = i;
-			i = NUM_TIMER_FREQS;
-		}
-	}
-	return indexOfFreq;
+    int indexOfFreq = -1;
+    for(int i = 0; i < NUM_TIMER_FREQS; i++)
+    {
+        if(freq == timerFrequencies[i])
+        {
+            indexOfFreq = i;
+            i = NUM_TIMER_FREQS;
+        }
+    }
+    return indexOfFreq;
 }
 
 std::vector<int> CommManager::getStreamingFrequencies() const
@@ -63,7 +63,7 @@ std::vector<int> CommManager::getStreamingFrequencies() const
 
 bool CommManager::startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto)
 {
-	int indexOfFreq = getIndexOfFrequency(freq);
+    int indexOfFreq = getIndexOfFrequency(freq);
 
     if(indexOfFreq < 0 || indexOfFreq >= NUM_TIMER_FREQS)
     {
@@ -71,17 +71,19 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, bool shoul
         return false;
     }
 
-    if(!this->getDevice(devId).isValid())
+    const FlexseaDevice &d = this->getDevice(devId);
+    if(!d.isValid())
     {
         std::cout << "Invalid device id" << std::endl;
         return false;
     }
 
-    CmdSlaveRecord record(CMD_SYSDATA, devId, shouldLog);
-
     std::cout << "Started " << (shouldLog ? " logged " : "") << (shouldAuto ? "auto" : "") << "streaming cmd: " << CMD_SYSDATA << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
     if(shouldAuto)
+    {
+        sendAutoStream(devId, CMD_SYSDATA, 1000 / freq, true);
         autoStreamLists[indexOfFreq].emplace_back(CMD_SYSDATA, devId, shouldLog);
+    }
     else
         streamLists[indexOfFreq].emplace_back(CMD_SYSDATA, devId, shouldLog);
 
@@ -121,7 +123,7 @@ bool CommManager::stopStreaming(int devId)
 
                     if(listIndex == 0)
                     {
-                        //packAndSendStopStreaming(cmd, devId);
+                        sendAutoStream(devId, CMD_SYSDATA, 1000 / timerFrequencies[indexOfFreq], false);
                     }
                     else
                     {
@@ -199,17 +201,6 @@ bool CommManager::goToLongSleep()
 
 void CommManager::close(uint16_t portIdx)
 {
-
-    for(auto &l : autoStreamLists)
-    {
-        for(CmdSlaveRecord &r : l)
-        {
-            FlexseaDevice &d = connectedDevices.at(r.slaveIndex);
-            if(d.port == portIdx)
-                stopStreaming(d.id);
-        }
-    }
-
     for(auto &l : streamLists)
     {
         for(CmdSlaveRecord &r : l)
@@ -240,14 +231,11 @@ int CommManager::writeDeviceMap(const FlexseaDevice &d, uint32_t *map)
 
     MultiCommPeriph *cp = this->portPeriphs + d.port;
     MultiWrapper *out = &cp->out;
-    out->unpackedIdx = 0;
 
-    tx_cmd_sysdata_w(out->unpacked + RESERVEDBYTES, &cmdCode, &cmdType, &out->unpackedIdx, map, mapLen);
-    out->unpacked[0] = FLEXSEA_PLAN_1;
-    out->unpacked[1] = d.id;
-    out->unpacked[2] = 0;
-    out->unpacked[3] = (cmdCode << 1);
-    out->unpackedIdx += RESERVEDBYTES;
+    out->unpackedIdx = 0;
+    tx_cmd_sysdata_w(out->unpacked + MP_DATA1, &cmdCode, &cmdType, &out->unpackedIdx, map, mapLen);
+    setMsgInfo(out->unpacked, FLEXSEA_PLAN_1, d.id, cmdCode, RX_PTYPE_WRITE, 0);
+    out->unpackedIdx += MULTI_PACKET_OVERHEAD;
 
     out->currentMultiPacket++;
     out->currentMultiPacket%=4;
@@ -299,15 +287,15 @@ int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
 
 bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
 {
-	//If we are over a max size, clear the queue
-	const unsigned int MAX_Q_SIZE = 200;
+    //If we are over a max size, clear the queue
+    const unsigned int MAX_Q_SIZE = 200;
 
-	if(outgoingBuffer.size() > MAX_Q_SIZE)
-	{
+    if(outgoingBuffer.size() > MAX_Q_SIZE)
+    {
         std::cout << "ComManager::enqueueCommand, queue is above max size (" << MAX_Q_SIZE  << "), clearing queue..." << std::endl;
-		while(outgoingBuffer.size())
-			outgoingBuffer.pop();
-	}
+        while(outgoingBuffer.size())
+            outgoingBuffer.pop();
+    }
 
     outgoingBuffer.push(Message(numb, dataPacket, portIdx));
 
@@ -324,23 +312,57 @@ bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
 
 void CommManager::sendCommands(int index)
 {
-	if(index < 0 || index >= NUM_TIMER_FREQS) return;
+    if(index < 0 || index >= NUM_TIMER_FREQS) return;
 
-	for(unsigned int i = 0; i < streamLists[index].size(); i++)
-	{
-		CmdSlaveRecord record = streamLists[index].at(i);
-		switch(record.cmdType)
+    for(unsigned int i = 0; i < streamLists[index].size(); i++)
+    {
+        CmdSlaveRecord record = streamLists[index].at(i);
+        switch(record.cmdType)
         {
         case CMD_SYSDATA:
             sendSysDataRead(record.slaveIndex);
             break;
 
-			default:
+            default:
                 std::cout<< "Unsupported command was given: " << record.cmdType << std::endl;
                 //stopStreaming(record.cmdType, record.slaveIndex, timerFrequencies[index]);
-				break;
-		}
-	}
+                break;
+        }
+    }
+}
+
+void CommManager::sendAutoStream(int devId, int cmd, int period, bool start)
+{
+    FlexseaDevice &d = connectedDevices.at(devId);
+    if(!d.isValid())return;
+
+    MultiCommPeriph *cp = this->portPeriphs + d.port;
+    MultiWrapper *out = &cp->out;
+
+    out->unpackedIdx = 0;
+    tx_cmd_stream_w(out->unpacked + MP_DATA1, &cmdCode, &cmdType, &out->unpackedIdx,
+                    cmd, period, start, 0, 0 );
+
+    setMsgInfo(out->unpacked, FLEXSEA_PLAN_1, devId, cmdCode, RX_PTYPE_WRITE, 0);
+    out->unpackedIdx += MULTI_PACKET_OVERHEAD;
+
+    out->currentMultiPacket++;
+    out->currentMultiPacket%=4;
+    bool error = packMultiPacket(out);
+
+    if(error)
+        std::cout << "Error packing multipacket" << std::endl;
+    else
+    {
+        unsigned int frameId = 0;
+        while(out->frameMap > 0)
+        {
+            this->writeDevice(PACKET_WRAPPER_LEN, out->packed[frameId], d);
+            out->frameMap &= (   ~(1 << frameId)   );
+            frameId++;
+        }
+        out->isMultiComplete = 1;
+    }
 }
 
 void CommManager::sendSysDataRead(uint8_t slaveId)
@@ -361,13 +383,10 @@ void CommManager::sendSysDataRead(uint8_t slaveId)
     uint32_t flag = bitmap[0];
     uint8_t lenFlags = 1, error;
 
-    // NOTE: in a response, we need to reserve bytes for XID, RID, CMD, and TIMESTAMP
-    tx_cmd_sysdata_r(out->unpacked + RESERVEDBYTES, &cmdCode, &cmdType, &out->unpackedIdx, &flag, lenFlags);
-    out->unpacked[0] = FLEXSEA_PLAN_1;
-    out->unpacked[1] = d.id;
-    out->unpacked[2] = 0;
-    out->unpacked[3] = (cmdCode << 1) | 0x1;
-    out->unpackedIdx += RESERVEDBYTES;
+    out->unpackedIdx = 0;
+    tx_cmd_sysdata_r(out->unpacked + MP_DATA1, &cmdCode, &cmdType, &out->unpackedIdx, &flag, lenFlags);
+    setMsgInfo(out->unpacked, FLEXSEA_PLAN_1, d.id, cmdCode, RX_PTYPE_READ, 0);
+    out->unpackedIdx += MULTI_PACKET_OVERHEAD;
 
     out->currentMultiPacket++;
     out->currentMultiPacket%=4;
