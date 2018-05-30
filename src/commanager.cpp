@@ -163,30 +163,29 @@ void CommManager::serviceStreams(uint8_t milliseconds)
 {
     const float TOLERANCE = 0.0001;
     int i;
+
+    for(i = 0; i < NUM_TIMER_FREQS; i++)
+    {
+        if(!streamLists[i].size()) continue;
+
+        //received clocks comes in at 5ms/clock
+        msSinceLast[i] += milliseconds;
+
+        float timerInterval = timerIntervals[i];
+        if((msSinceLast[i] + TOLERANCE) > timerInterval)
+        {
+            sendCommands(i);
+
+            while((msSinceLast[i] + TOLERANCE) > timerInterval)
+                msSinceLast[i] -= timerInterval;
+        }
+    }
+
     if(outgoingBuffer.size())
     {
         Message m = outgoingBuffer.front();
         outgoingBuffer.pop();
         this->write(m.numBytes, m.dataPacket.get(), 0);
-    }
-    else
-    {
-        for(i = 0; i < NUM_TIMER_FREQS; i++)
-        {
-            if(!streamLists[i].size()) continue;
-
-            //received clocks comes in at 5ms/clock
-            msSinceLast[i] += milliseconds;
-
-            float timerInterval = timerIntervals[i];
-            if((msSinceLast[i] + TOLERANCE) > timerInterval)
-            {
-                sendCommands(i);
-
-                while((msSinceLast[i] + TOLERANCE) > timerInterval)
-                    msSinceLast[i] -= timerInterval;
-            }
-        }
     }
 }
 
@@ -285,11 +284,34 @@ int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
     return writeDeviceMap(d, map);
 }
 
+int CommManager::enqueueMultiPacket(int devId, MultiWrapper *out)
+{
+    if(!connectedDevices.count(devId)) return -1;
+    FlexseaDevice &d = connectedDevices.at(devId);
+
+    uint8_t frameId = 0;
+    while(out->frameMap > 0)
+    {
+        outgoingBuffer.push(Message(
+//                                SIZE_OF_MULTIFRAME(out->packed[frameId]) ,
+                                PACKET_WRAPPER_LEN,
+                                out->packed[frameId]  , d.port  ));
+
+        out->frameMap &= (   ~(1 << frameId)   );
+        frameId++;
+    }
+
+    out->isMultiComplete = 1;
+
+    while(outgoingBuffer.size() > MAX_Q_SIZE)
+        outgoingBuffer.pop();
+
+    return 0;
+}
+
 bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
 {
     //If we are over a max size, clear the queue
-    const unsigned int MAX_Q_SIZE = 200;
-
     if(outgoingBuffer.size() > MAX_Q_SIZE)
     {
         std::cout << "ComManager::enqueueCommand, queue is above max size (" << MAX_Q_SIZE  << "), clearing queue..." << std::endl;
@@ -353,16 +375,18 @@ void CommManager::sendAutoStream(int devId, int cmd, int period, bool start)
     if(error)
         std::cout << "Error packing multipacket" << std::endl;
     else
-    {
-        unsigned int frameId = 0;
-        while(out->frameMap > 0)
-        {
-            this->writeDevice(PACKET_WRAPPER_LEN, out->packed[frameId], d);
-            out->frameMap &= (   ~(1 << frameId)   );
-            frameId++;
-        }
-        out->isMultiComplete = 1;
-    }
+        enqueueMultiPacket(devId, out);
+
+//    {
+//        unsigned int frameId = 0;
+//        while(out->frameMap > 0)
+//        {
+//            this->writeDevice(PACKET_WRAPPER_LEN, out->packed[frameId], d);
+//            out->frameMap &= (   ~(1 << frameId)   );
+//            frameId++;
+//        }
+//        out->isMultiComplete = 1;
+//    }
 }
 
 void CommManager::sendSysDataRead(uint8_t slaveId)
@@ -395,15 +419,16 @@ void CommManager::sendSysDataRead(uint8_t slaveId)
     if(error)
         std::cout << "Error packing multipacket" << std::endl;
     else
-    {
-        unsigned int frameId = 0;
-        while(out->frameMap > 0)
-        {
-            this->writeDevice(PACKET_WRAPPER_LEN, out->packed[frameId], d);
-            out->frameMap &= (   ~(1 << frameId)   );
-            frameId++;
-        }
-        out->isMultiComplete = 1;
-    }
+        enqueueMultiPacket(slaveId, out);
+//    {
+//        unsigned int frameId = 0;
+//        while(out->frameMap > 0)
+//        {
+//            this->writeDevice(PACKET_WRAPPER_LEN, out->packed[frameId], d);
+//            out->frameMap &= (   ~(1 << frameId)   );
+//            frameId++;
+//        }
+//        out->isMultiComplete = 1;
+//    }
 }
 

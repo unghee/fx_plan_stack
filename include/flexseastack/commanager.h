@@ -12,7 +12,8 @@
 #include "flexseaserial.h"
 #include "periodictask.h"
 
-
+struct MultiWrapper_struct;
+typedef MultiWrapper_struct MultiWrapper;
 
 class CommManager : virtual public PeriodicTask, public FlexseaSerial
 {
@@ -54,12 +55,19 @@ public:
     /// \brief overloaded to manage streams and connected devices
     virtual void close(uint16_t portIdx);
 
+    void registerMessageReceivedCounter(int devId, uint16_t *counter) const { messageReceivedCounters.insert({devId, counter}); }
+    void deregisterMessageReceivedCounter(int devId) const { messageReceivedCounters.erase(devId); }
+
+    void registerMessageSentCounter(int devId, uint16_t *counter) const { messageSentCounters.insert({devId, counter}); }
+    void deregisterMessageSentCounter(int devId) const { messageSentCounters.erase(devId); }
+
 protected:
     virtual void periodicTask();
     virtual bool wakeFromLongSleep();
     virtual bool goToLongSleep();
 
     virtual int writeDeviceMap(const FlexseaDevice &d, uint32_t* map);
+    virtual int enqueueMultiPacket(int devId, MultiWrapper *out);
 
     virtual void serviceStreams(uint8_t milliseconds);
     uint8_t serviceCount = 0;
@@ -68,6 +76,7 @@ private:
     class Message;
     class CmdSlaveRecord;
 	std::queue<Message> outgoingBuffer;
+    const unsigned int MAX_Q_SIZE = 200;
 
 	std::vector<CmdSlaveRecord> autoStreamLists[NUM_TIMER_FREQS];
 	std::vector<CmdSlaveRecord> streamLists[NUM_TIMER_FREQS];
@@ -83,6 +92,9 @@ private:
     void sendSysDataRead(uint8_t slaveId);
 
     uint8_t streamCount;
+
+    mutable std::unordered_map<int, uint16_t*> messageReceivedCounters;
+    mutable std::unordered_map<int, uint16_t*> messageSentCounters;
 };
 
 class CommManager::Message {

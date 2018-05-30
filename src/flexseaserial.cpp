@@ -5,6 +5,7 @@
 #include "flexseastack/flexseaserial.h"
 #include "serial/serial.h"
 #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
+#include "flexseastack/flexsea-comm/inc/flexsea_multi_frame_packet_def.h"
 
 extern "C" {
     #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
