@@ -4,22 +4,15 @@
 #include <thread>
 #include <iostream>
 #include <cstring>
+#include "flexseastack/comm_string_generation.h"
+
 extern "C" {
     #include "flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h"
     #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
 }
 #include "flexseastack/flexsea-system/inc/flexsea_system.h"
 
-
-//extern "C" {
-//    #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
-//    #include "flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h"
-//}
-//    #include "flexseastack/flexsea-comm/inc/flexsea.h"
-//    #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
-//    #include "flexseastack/flexsea-system/inc/flexsea_system.h"
-//    #include "flexseastack/flexsea_board.h"
-//#endif
+namespace csg = CommStringGeneration;
 
 CommManager::CommManager() : PeriodicTask(), FlexseaSerial()
 {
@@ -228,31 +221,10 @@ int CommManager::writeDeviceMap(const FlexseaDevice &d, uint32_t *map)
 
     mapLen = mapLen > 0 ? mapLen : 1;
 
-    MultiCommPeriph *cp = this->portPeriphs + d.port;
-    MultiWrapper *out = &cp->out;
-
-    out->unpackedIdx = 0;
-    tx_cmd_sysdata_w(out->unpacked + MP_DATA1, &cmdCode, &cmdType, &out->unpackedIdx, map, mapLen);
-    setMsgInfo(out->unpacked, FLEXSEA_PLAN_1, d.id, cmdCode, RX_PTYPE_WRITE, 0);
-    out->unpackedIdx += MULTI_PACKET_OVERHEAD;
-
-    out->currentMultiPacket++;
-    out->currentMultiPacket%=4;
-    int error = packMultiPacket(out);
-
-    if(error)
-        std::cout << "Error packing multipacket" << std::endl;
-    else
-    {
-        unsigned int frameId = 0;
-        while(out->frameMap > 0)
-        {
-            this->writeDevice(PACKET_WRAPPER_LEN, out->packed[frameId], d);
-            out->frameMap &= (   ~(1 << frameId)   );
-            frameId++;
-        }
-        out->isMultiComplete = 1;
-    }
+    enqueueCommand(d,
+                   tx_cmd_sysdata_w,
+                   map, mapLen
+                   );
 
     return 0;
 }
@@ -293,9 +265,8 @@ int CommManager::enqueueMultiPacket(int devId, MultiWrapper *out)
     while(out->frameMap > 0)
     {
         outgoingBuffer.push(Message(
-//                                SIZE_OF_MULTIFRAME(out->packed[frameId]) ,
-                                PACKET_WRAPPER_LEN,
-                                out->packed[frameId]  , d.port  ));
+                                SIZE_OF_MULTIFRAME(out->packed[frameId])
+                                ,out->packed[frameId]  , d.port  ));
 
         out->frameMap &= (   ~(1 << frameId)   );
         frameId++;
@@ -332,6 +303,24 @@ bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
     return true;
 }
 
+template<typename T, typename... Args>
+bool CommManager::enqueueCommand(const FlexseaDevice &d, T tx_func, Args&&... tx_args)
+{
+    if(!d.isValid()) return false;
+    MultiWrapper *out = &(portPeriphs[d.port].out);
+
+    bool error = csg::generateCommString(d.id, out,
+                                                   tx_func,
+                                                   std::forward<Args>(tx_args)...);
+    if(error)
+    {
+        std::cout << "Error packing multipacket" << std::endl;
+        return false;
+    }
+
+    return !enqueueMultiPacket(d.id, out);
+}
+
 void CommManager::sendCommands(int index)
 {
     if(index < 0 || index >= NUM_TIMER_FREQS) return;
@@ -355,80 +344,15 @@ void CommManager::sendCommands(int index)
 
 void CommManager::sendAutoStream(int devId, int cmd, int period, bool start)
 {
-    FlexseaDevice &d = connectedDevices.at(devId);
-    if(!d.isValid())return;
-
-    MultiCommPeriph *cp = this->portPeriphs + d.port;
-    MultiWrapper *out = &cp->out;
-
-    out->unpackedIdx = 0;
-    tx_cmd_stream_w(out->unpacked + MP_DATA1, &cmdCode, &cmdType, &out->unpackedIdx,
-                    cmd, period, start, 0, 0 );
-
-    setMsgInfo(out->unpacked, FLEXSEA_PLAN_1, devId, cmdCode, RX_PTYPE_WRITE, 0);
-    out->unpackedIdx += MULTI_PACKET_OVERHEAD;
-
-    out->currentMultiPacket++;
-    out->currentMultiPacket%=4;
-    bool error = packMultiPacket(out);
-
-    if(error)
-        std::cout << "Error packing multipacket" << std::endl;
-    else
-        enqueueMultiPacket(devId, out);
-
-//    {
-//        unsigned int frameId = 0;
-//        while(out->frameMap > 0)
-//        {
-//            this->writeDevice(PACKET_WRAPPER_LEN, out->packed[frameId], d);
-//            out->frameMap &= (   ~(1 << frameId)   );
-//            frameId++;
-//        }
-//        out->isMultiComplete = 1;
-//    }
+    enqueueCommand(devId,
+                   tx_cmd_stream_w,
+                   cmd, period, start, 0, 0);
 }
 
 void CommManager::sendSysDataRead(uint8_t slaveId)
 {
-    const FlexseaDevice &d = this->getDevice(slaveId);
-
-    // if there's something wrong with this device or we didn't find it we give up
-    if(!d.isValid()) return;
-
-    MultiCommPeriph *cp = this->portPeriphs + d.port;
-    MultiWrapper *out = &cp->out;
-
-    uint8_t cmdCode, cmdType;
-    out->unpackedIdx = 0;
-
-    uint32_t bitmap[3];
-    d.getBitmap(bitmap);
-    uint32_t flag = bitmap[0];
-    uint8_t lenFlags = 1, error;
-
-    out->unpackedIdx = 0;
-    tx_cmd_sysdata_r(out->unpacked + MP_DATA1, &cmdCode, &cmdType, &out->unpackedIdx, &flag, lenFlags);
-    setMsgInfo(out->unpacked, FLEXSEA_PLAN_1, d.id, cmdCode, RX_PTYPE_READ, 0);
-    out->unpackedIdx += MULTI_PACKET_OVERHEAD;
-
-    out->currentMultiPacket++;
-    out->currentMultiPacket%=4;
-    error = packMultiPacket(out);
-
-    if(error)
-        std::cout << "Error packing multipacket" << std::endl;
-    else
-        enqueueMultiPacket(slaveId, out);
-//    {
-//        unsigned int frameId = 0;
-//        while(out->frameMap > 0)
-//        {
-//            this->writeDevice(PACKET_WRAPPER_LEN, out->packed[frameId], d);
-//            out->frameMap &= (   ~(1 << frameId)   );
-//            frameId++;
-//        }
-//        out->isMultiComplete = 1;
-//    }
+    enqueueCommand(slaveId,
+                   tx_cmd_sysdata_r,
+                   nullptr, 0);
 }
 

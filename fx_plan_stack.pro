@@ -50,7 +50,8 @@ HEADERS += \
         include/flexseastack/flexsea-system/inc/flexsea_sys_def.h \
     include/flexseastack/serialdriver.h \
     include/flexseastack/flexseadeviceprovider.h \
-    include/flexseastack/commtester.h
+    include/flexseastack/commtester.h \
+    include/flexseastack/comm_string_generation.h
 
 #flexsea stack headers
 HEADERS += \

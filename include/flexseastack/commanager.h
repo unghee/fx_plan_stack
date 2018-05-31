@@ -61,6 +61,9 @@ public:
     void registerMessageSentCounter(int devId, uint16_t *counter) const { messageSentCounters.insert({devId, counter}); }
     void deregisterMessageSentCounter(int devId) const { messageSentCounters.erase(devId); }
 
+    template<typename T, typename... Args>
+    bool enqueueCommand(int devId, T tx_func, Args&&... tx_args) { return enqueueCommand(connectedDevices.at(devId), tx_func, std::forward<Args>(tx_args)...); }
+
 protected:
     virtual void periodicTask();
     virtual bool wakeFromLongSleep();
@@ -71,6 +74,10 @@ protected:
 
     virtual void serviceStreams(uint8_t milliseconds);
     uint8_t serviceCount = 0;
+
+    template<typename T, typename... Args>
+    bool enqueueCommand(const FlexseaDevice &d, T tx_func, Args&&... tx_args);
+
 private:
 	//Variables & Objects:
     class Message;

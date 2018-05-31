@@ -6,6 +6,7 @@
 #include "serial/serial.h"
 #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
 #include "flexseastack/flexsea-comm/inc/flexsea_multi_frame_packet_def.h"
+#include "flexseastack/comm_string_generation.h"
 
 extern "C" {
     #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
@@ -279,21 +280,8 @@ void FlexseaSerial::sendDeviceWhoAmI(int port)
     uint32_t flag = 0;
     uint8_t lenFlags = 1, error;
 
-    // NOTE: in a response, we need to reserve bytes for XID, RID, CMD, and TIMESTAMP
-
-    uint8_t cmdCode, cmdType;
     MultiWrapper *out = &portPeriphs[port].out;
-
-    out->unpackedIdx = 0;
-    tx_cmd_sysdata_r(out->unpacked + MP_DATA1, &cmdCode, &cmdType, &out->unpackedIdx, &flag, lenFlags);
-    setMsgInfo(out->unpacked, FLEXSEA_PLAN_1, 0, cmdCode, RX_PTYPE_READ, 0);
-    out->unpackedIdx += MULTI_PACKET_OVERHEAD;
-
-    out->currentMultiPacket = (out->currentMultiPacket+1)%4;
-    portPeriphs[port].in.currentMultiPacket = 0;
-    portPeriphs[port].in.unpackedIdx = 0;
-
-    error = packMultiPacket(out);
+    error = CommStringGeneration::generateCommString(0, out, tx_cmd_sysdata_r, &flag, lenFlags);
 
     if(error)
         std::cout << "Error packing multipacket" << std::endl;
