@@ -11,6 +11,7 @@
 
 #include "flexseaserial.h"
 #include "periodictask.h"
+#include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
 
 struct MultiWrapper_struct;
 typedef MultiWrapper_struct MultiWrapper;
@@ -32,7 +33,7 @@ public:
     /// Returns true if the the attempt was successful. May be unsuccessful if:
     ///     no device exists with device id == devId
     ///     freq not in getStreamingFrequences()
-    virtual bool startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto);
+    virtual bool startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto, uint8_t cmdCode=CMD_SYSDATA);
 
     /// \brief Tries to start streaming from the selected device with the given parameters.
     /// Streams all fields if fieldIds is empty. Otherwise only streams ids in fieldIds

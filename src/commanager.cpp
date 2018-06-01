@@ -54,7 +54,7 @@ std::vector<int> CommManager::getStreamingFrequencies() const
     return r;
 }
 
-bool CommManager::startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto)
+bool CommManager::startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto, uint8_t cmdCode)
 {
     int indexOfFreq = getIndexOfFrequency(freq);
 
@@ -71,14 +71,14 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, bool shoul
         return false;
     }
 
-    std::cout << "Started " << (shouldLog ? " logged " : "") << (shouldAuto ? "auto" : "") << "streaming cmd: " << CMD_SYSDATA << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
+    std::cout << "Started " << (shouldLog ? " logged " : "") << (shouldAuto ? "auto" : "") << "streaming cmd: " << cmdCode << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
     if(shouldAuto)
     {
-        sendAutoStream(devId, CMD_SYSDATA, 1000 / freq, true);
-        autoStreamLists[indexOfFreq].emplace_back(CMD_SYSDATA, devId, shouldLog);
+        sendAutoStream(devId, cmdCode, 1000 / freq, true);
+        autoStreamLists[indexOfFreq].emplace_back(cmdCode, devId, shouldLog);
     }
     else
-        streamLists[indexOfFreq].emplace_back(CMD_SYSDATA, devId, shouldLog);
+        streamLists[indexOfFreq].emplace_back(cmdCode, devId, shouldLog);
 
     // increase stream count only for regular streaming
     bool doNotify = false;
@@ -116,7 +116,7 @@ bool CommManager::stopStreaming(int devId)
 
                     if(listIndex == 0)
                     {
-                        sendAutoStream(devId, CMD_SYSDATA, 1000 / timerFrequencies[indexOfFreq], false);
+                        sendAutoStream(devId, record.cmdType, 1000 / timerFrequencies[indexOfFreq], false);
                     }
                     else
                     {
