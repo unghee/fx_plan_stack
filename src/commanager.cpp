@@ -22,8 +22,8 @@ CommManager::CommManager() : PeriodicTask(), FlexseaSerial()
     {
         timerFrequencies[i] = timerFreqsInHz[i];
         timerIntervals[i] = 1000.0f / timerFreqsInHz[i];
-        autoStreamLists[i] = std::vector<CmdSlaveRecord>();
-        streamLists[i] = std::vector<CmdSlaveRecord>();
+        autoStreamLists[i] = StreamList();
+        streamLists[i] = StreamList();
     }
 
     streamCount = 0;
@@ -54,7 +54,7 @@ std::vector<int> CommManager::getStreamingFrequencies() const
     return r;
 }
 
-bool CommManager::startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto, uint8_t cmdCode)
+bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode)
 {
     int indexOfFreq = getIndexOfFrequency(freq);
 
@@ -71,14 +71,14 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, bool shoul
         return false;
     }
 
-    std::cout << "Started " << (shouldLog ? " logged " : "") << (shouldAuto ? "auto" : "") << "streaming cmd: " << cmdCode << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
+    std::cout << "Started " << (shouldLog ? " logged " : "") << (shouldAuto ? "auto" : "") << "streaming cmd: " << (int)cmdCode << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
     if(shouldAuto)
     {
         sendAutoStream(devId, cmdCode, 1000 / freq, true);
-        autoStreamLists[indexOfFreq].emplace_back(cmdCode, devId, shouldLog);
+        autoStreamLists[indexOfFreq].emplace_back(devId, (int)cmdCode, nullptr);
     }
     else
-        streamLists[indexOfFreq].emplace_back(cmdCode, devId, shouldLog);
+        streamLists[indexOfFreq].emplace_back(devId, (int)cmdCode, nullptr);
 
     // increase stream count only for regular streaming
     bool doNotify = false;
@@ -95,28 +95,39 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, bool shoul
     return true;
 }
 
+bool CommManager::startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc)
+{
+    int idx = getIndexOfFrequency(freq);
+    if(idx < 0 && !connectedDevices.count(devId))
+        return false;
+    std::cout << "Started " << (shouldLog ? " logged " : "") << "streaming cmd: custom for slave id: " << devId << " at frequency: " << freq << std::endl;
+    streamLists[idx].emplace_back(devId, -1, new StreamFunc(streamFunc));
+    return true;
+}
+
 bool CommManager::stopStreaming(int devId)
 {
-    std::vector<CmdSlaveRecord>* listArray[2] = {autoStreamLists, streamLists};
+    StreamList* listArray[2] = {autoStreamLists, streamLists};
 
     bool found = false;
 
     for(int listIndex = 0; listIndex < 2; listIndex++)
     {
-        std::vector<CmdSlaveRecord> *l = listArray[listIndex];
+        StreamList *l = listArray[listIndex];
 
         for(int indexOfFreq = 0; indexOfFreq < NUM_TIMER_FREQS; indexOfFreq++)
         {
             for(unsigned int i = 0; i < (l)[indexOfFreq].size(); /* no increment */)
             {
-                CmdSlaveRecord record = (l)[indexOfFreq].at(i);
-                if(record.slaveIndex == devId)
+                auto record = (l)[indexOfFreq].at(i);
+                if(record.devId == devId)
                 {
+                    if(record.func) delete record.func;
                     (l)[indexOfFreq].erase( (l)[indexOfFreq].begin() + i);
 
                     if(listIndex == 0)
                     {
-                        sendAutoStream(devId, record.cmdType, 1000 / timerFrequencies[indexOfFreq], false);
+                        sendAutoStream(devId, record.cmdCode, 1000 / timerFrequencies[indexOfFreq], false);
                     }
                     else
                     {
@@ -124,11 +135,14 @@ bool CommManager::stopStreaming(int devId)
                         streamCount--;
                     }
 
-                    std::cout << "Stopped " << (listIndex == 0 ? "autostreaming" : "streaming")
-                              << " cmd: " << record.cmdType
-                              << ", for slave id: " << devId
-                              << " at frequency: " << timerFrequencies[indexOfFreq] << std::endl;
-                    found = true;
+                        std::cout << "Stopped " << (listIndex == 0 ? "autostreaming" : "streaming");
+                        if(record.cmdCode > 0) std::cout << " cmd: " << record.cmdCode;
+                        else std::cout << " cmd: custom";
+
+                        std::cout << ", for slave id: " << devId
+                                  << " at frequency: " << timerFrequencies[indexOfFreq] << std::endl;
+
+                        found = true;
                 }
                 else    //only increment i if we aren't erasing from the vector
                     i++;
@@ -193,14 +207,10 @@ bool CommManager::goToLongSleep()
 
 void CommManager::close(uint16_t portIdx)
 {
-    for(auto &l : streamLists)
+    for(auto &kvp : connectedDevices)
     {
-        for(CmdSlaveRecord &r : l)
-        {
-            FlexseaDevice &d = connectedDevices.at(r.slaveIndex);
-            if(d.port == portIdx)
-                stopStreaming(d.id);
-        }
+        if(kvp.second.port == portIdx)
+            stopStreaming(kvp.second.id);
     }
 
     FlexseaSerial::close(portIdx);
@@ -208,7 +218,6 @@ void CommManager::close(uint16_t portIdx)
 
 int CommManager::writeDeviceMap(const FlexseaDevice &d, uint32_t *map)
 {
-    uint8_t cmdCode, cmdType;
     uint16_t mapLen = 0;
     for(short i=FX_BITMAP_WIDTH-1; i >= 0; i--)
     {
@@ -324,18 +333,23 @@ bool CommManager::enqueueCommand(const FlexseaDevice &d, T tx_func, Args&&... tx
 void CommManager::sendCommands(int index)
 {
     if(index < 0 || index >= NUM_TIMER_FREQS) return;
-
+    StreamFunc *f;
     for(unsigned int i = 0; i < streamLists[index].size(); i++)
     {
-        CmdSlaveRecord record = streamLists[index].at(i);
-        switch(record.cmdType)
+        auto& record = streamLists[index].at(i);
+        switch(record.cmdCode)
         {
+        case -1:
+            f = record.func;
+            if(f) enqueueCommand(record.devId, *f);
+            break;
+
         case CMD_SYSDATA:
-            sendSysDataRead(record.slaveIndex);
+            sendSysDataRead(record.devId);
             break;
 
             default:
-                std::cout<< "Unsupported command was given: " << record.cmdType << std::endl;
+                std::cout<< "Unsupported command was given: " << record.cmdCode << std::endl;
                 //stopStreaming(record.cmdType, record.slaveIndex, timerFrequencies[index]);
                 break;
         }

@@ -46,7 +46,7 @@ public:
     virtual void serviceOpenPorts() {} // do nothing as data is fake received when written to
 
     // overriding commmanager functions
-    virtual bool startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto);
+    virtual bool startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode=CMD_SYSDATA);
 
 private:
     /* Three "Test Cases" */

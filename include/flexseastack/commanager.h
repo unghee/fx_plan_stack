@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <vector>
 #include <string>
+#include <functional>
 
 #include "flexseaserial.h"
 #include "periodictask.h"
@@ -15,6 +16,7 @@
 
 struct MultiWrapper_struct;
 typedef MultiWrapper_struct MultiWrapper;
+typedef std::function<void(uint8_t*, uint8_t*, uint8_t*, uint16_t*)> StreamFunc;
 
 class CommManager : virtual public PeriodicTask, public FlexseaSerial
 {
@@ -33,7 +35,13 @@ public:
     /// Returns true if the the attempt was successful. May be unsuccessful if:
     ///     no device exists with device id == devId
     ///     freq not in getStreamingFrequences()
-    virtual bool startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto, uint8_t cmdCode=CMD_SYSDATA);
+    virtual bool startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode=CMD_SYSDATA);
+
+    /// \brief Tries to start streaming from the selected device using a custom function to build comm msgs.
+    /// Returns true if the the attempt was successful. May be unsuccessful if:
+    ///     no device exists with device id == devId
+    ///     freq not in getStreamingFrequences()
+    bool startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc);
 
     /// \brief Tries to start streaming from the selected device with the given parameters.
     /// Streams all fields if fieldIds is empty. Otherwise only streams ids in fieldIds
@@ -82,12 +90,14 @@ protected:
 private:
 	//Variables & Objects:
     class Message;
-    class CmdSlaveRecord;
-	std::queue<Message> outgoingBuffer;
+    struct StreamRcd;
+    typedef std::vector<StreamRcd> StreamList;
+
+    std::queue<Message> outgoingBuffer;
     const unsigned int MAX_Q_SIZE = 200;
 
-	std::vector<CmdSlaveRecord> autoStreamLists[NUM_TIMER_FREQS];
-	std::vector<CmdSlaveRecord> streamLists[NUM_TIMER_FREQS];
+    StreamList autoStreamLists[NUM_TIMER_FREQS];
+    StreamList streamLists[NUM_TIMER_FREQS];
 
     int getIndexOfFrequency(int freq);
 
@@ -99,7 +109,7 @@ private:
     void sendAutoStream(int devId, int cmd, int period, bool start);
     void sendSysDataRead(uint8_t slaveId);
 
-    uint8_t streamCount;
+    int streamCount;
 
     mutable std::unordered_map<int, uint16_t*> messageReceivedCounters;
     mutable std::unordered_map<int, uint16_t*> messageSentCounters;
@@ -124,16 +134,15 @@ public:
     int portIdx;
 };
 
-class CommManager::CmdSlaveRecord
-{
-public:
-    CmdSlaveRecord(int c, int s, bool l):
-        cmdType(c), slaveIndex(s), shouldLog(l){}
-    int cmdType;
-    int slaveIndex;
-    bool shouldLog;
-    clock_t initialTime;
-    std::string date;
+struct CommManager::StreamRcd {
+
+    StreamRcd(int id=-1, int cc=-1, StreamFunc* fc=nullptr) : devId(id), cmdCode(cc), func(fc) {}
+
+    int devId;
+    int cmdCode;
+    StreamFunc* func;
+
 };
+
 
 #endif // STREAMMANAGER_H

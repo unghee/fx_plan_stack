@@ -10,7 +10,7 @@
 #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
 #include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
 #include "flexseastack/flexseadevicetypes.h"
-
+#include "flexseastack/flexsea-comm/inc/flexsea_multi_frame_packet_def.h"
 #include "flexseastack/testserial.h"
 
 
@@ -113,15 +113,13 @@ int doesRidMatchType(int rid, int type)
 void TestSerial::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t portIdx)
 {
     (void)bytes_to_send;
+    (void)portIdx;
     static uint32_t timestamp = 0;
     timestamp++;
 
-    // for now we will just figure out which slave this is meant to go to, and pretend to receive from that slave
-    uint8_t rid = serial_tx_data[4];
-
     for(const auto &x : connectedDevices)
     {
-        if(x.second.port == portIdx && doesRidMatchType(rid, x.second.type))
+        if(x.second.id == serial_tx_data[MULTI_DATA_OFFSET + MP_RID]) //portIdx && doesRidMatchType(rid, x.second.type))
         {
             //we found our device
             testReceiveDataFromDevice(x.second.id, timestamp);
@@ -166,11 +164,11 @@ void TestSerial::sendDeviceWhoAmI(int port)
         testConnectDevice(port);
 }
 
-bool TestSerial::startStreaming(int devId, int freq, bool shouldLog, bool shouldAuto)
+bool TestSerial::startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode)
 {
     (void) shouldAuto;
     std::cout << "TestSerial only supports regular streaming..." <<std::endl;
-    return CommManager::startStreaming(devId, freq, shouldLog, false);
+    return CommManager::startStreaming(devId, freq, shouldLog, false, cmdCode);
 }
 
 void TestSerial::randomConnections()
