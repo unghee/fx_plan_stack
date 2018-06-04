@@ -52,6 +52,12 @@ extern "C" {
 #include "flexsea_cmd_tools.h"
 #include "flexsea_cmd_in_control.h"
 
+//Include the user files:
+#ifndef BOARD_TYPE_FLEXSEA_PLAN
+#include "flexsea_cmd_user.h"
+#include "flexsea_user_structs.h"
+#endif
+
 //****************************************************************************
 // Prototype(s):
 //****************************************************************************
