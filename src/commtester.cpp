@@ -84,12 +84,18 @@ float CommTester::getQualityRate() const {
 }
 
 float CommTester::getSendRate() const {
+    if(!_commManager.getDevice(testId).isValid())
+        isTesting = false;
+
     if(isTesting)
         return (1000.0f * (sentPackets - prevSent)) / std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - this->testStartTime).count();
 
     return 0;
 }
 float CommTester::getReceiveRate() const {
+    if(!_commManager.getDevice(testId).isValid())
+        isTesting = false;
+
     if(isTesting)
         return (1000.0f * (goodPackets+badPackets - prevReceived)) / std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - this->testStartTime).count();
 

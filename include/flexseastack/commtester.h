@@ -40,7 +40,7 @@ public:
 private:
     CommManager &_commManager;
 
-    bool isTesting = false;
+    mutable bool isTesting = false;
     int packetIndex = 0;
     int testId=-1;
 
