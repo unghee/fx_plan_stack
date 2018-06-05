@@ -91,7 +91,7 @@ private:
 
     void printData(int id,  int numFields, FX_DataPtr data);
     void printBitMap(const uint32_t* map, int numFields);
-    void printDeviceMaps(const std::vector<int>& deviceIds, const std::unordered_map<int, FlexseaDevice> &connectedDevices);
+    void printDeviceMaps(const std::vector<int>& deviceIds, const std::unordered_map<int, FxDevicePtr> &connectedDevices);
     const char TAB = '\t';
 
     std::vector<std::string> fakePortList = {"COM3", "COM2", "ttyACM0", "ttyACM1", "ttyACM2" };

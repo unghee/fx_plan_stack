@@ -30,8 +30,7 @@ CommTester::~CommTester()
 
 void CommTester::startTest(int devId, const CommTestParams& params)
 {
-    const FlexseaDevice &d = _commManager.getDevice(devId);
-    if(!d.isValid())    return;
+    if(!_commManager.haveDevice(devId))    return;
 
     testStartTime = std::chrono::system_clock::now();
 
@@ -84,7 +83,7 @@ float CommTester::getQualityRate() const {
 }
 
 float CommTester::getSendRate() const {
-    if(!_commManager.getDevice(testId).isValid())
+    if(!_commManager.haveDevice(testId))
         isTesting = false;
 
     if(isTesting)
@@ -93,7 +92,7 @@ float CommTester::getSendRate() const {
     return 0;
 }
 float CommTester::getReceiveRate() const {
-    if(!_commManager.getDevice(testId).isValid())
+    if(!_commManager.haveDevice(testId))
         isTesting = false;
 
     if(isTesting)

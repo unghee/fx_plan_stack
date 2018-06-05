@@ -78,14 +78,14 @@ protected:
     virtual bool wakeFromLongSleep();
     virtual bool goToLongSleep();
 
-    virtual int writeDeviceMap(const FlexseaDevice &d, uint32_t* map);
+    virtual int writeDeviceMap(const FxDevicePtr d, uint32_t* map);
     virtual int enqueueMultiPacket(int devId, MultiWrapper *out);
 
     virtual void serviceStreams(uint8_t milliseconds);
     uint8_t serviceCount = 0;
 
     template<typename T, typename... Args>
-    bool enqueueCommand(const FlexseaDevice &d, T tx_func, Args&&... tx_args);
+    bool enqueueCommand(const FxDevicePtr d, T tx_func, Args&&... tx_args);
 
 private:
 	//Variables & Objects:

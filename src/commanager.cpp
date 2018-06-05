@@ -64,8 +64,7 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int should
         return false;
     }
 
-    const FlexseaDevice &d = this->getDevice(devId);
-    if(!d.isValid())
+    if(!haveDevice(devId))
     {
         std::cout << "Invalid device id" << std::endl;
         return false;
@@ -210,14 +209,14 @@ void CommManager::close(uint16_t portIdx)
 {
     for(auto &kvp : connectedDevices)
     {
-        if(kvp.second.port == portIdx)
-            stopStreaming(kvp.second.id);
+        if(kvp.second->port == portIdx)
+            stopStreaming(kvp.second->id);
     }
 
     FlexseaSerial::close(portIdx);
 }
 
-int CommManager::writeDeviceMap(const FlexseaDevice &d, uint32_t *map)
+int CommManager::writeDeviceMap(const FxDevicePtr d, uint32_t *map)
 {
     uint16_t mapLen = 0;
     for(short i=FX_BITMAP_WIDTH-1; i >= 0; i--)
@@ -242,16 +241,16 @@ int CommManager::writeDeviceMap(const FlexseaDevice &d, uint32_t *map)
 int CommManager::writeDeviceMap(int devId, uint32_t *map)
 {
     if(!connectedDevices.count(devId)) return -1;
-    FlexseaDevice &d = connectedDevices.at(devId);
+    FxDevicePtr d = connectedDevices.at(devId);
     return writeDeviceMap(d, map);
 }
 
 int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
 {
     if(!connectedDevices.count(devId)) return -1;
-    FlexseaDevice &d = connectedDevices.at(devId);
+    FxDevicePtr d = connectedDevices.at(devId);
 
-    int nf = d.numFields;
+    int nf = d->numFields;
     uint32_t map[FX_BITMAP_WIDTH];
     memset(map, 0, sizeof(uint32_t)*FX_BITMAP_WIDTH);
 
@@ -269,14 +268,14 @@ int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
 int CommManager::enqueueMultiPacket(int devId, MultiWrapper *out)
 {
     if(!connectedDevices.count(devId)) return -1;
-    FlexseaDevice &d = connectedDevices.at(devId);
+    FxDevicePtr d = connectedDevices.at(devId);
 
     uint8_t frameId = 0;
     while(out->frameMap > 0)
     {
         outgoingBuffer.push(Message(
                                 SIZE_OF_MULTIFRAME(out->packed[frameId])
-                                ,out->packed[frameId]  , d.port  ));
+                                ,out->packed[frameId]  , d->port  ));
 
         out->frameMap &= (   ~(1 << frameId)   );
         frameId++;
@@ -314,12 +313,12 @@ bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
 }
 
 template<typename T, typename... Args>
-bool CommManager::enqueueCommand(const FlexseaDevice &d, T tx_func, Args&&... tx_args)
+bool CommManager::enqueueCommand(const FxDevicePtr d, T tx_func, Args&&... tx_args)
 {
-    if(!d.isValid()) return false;
-    MultiWrapper *out = &(portPeriphs[d.port].out);
+    if(!d->isValid()) return false;
+    MultiWrapper *out = &(portPeriphs[d->port].out);
 
-    bool error = csg::generateCommString(d.id, out,
+    bool error = csg::generateCommString(d->id, out,
                                                    tx_func,
                                                    std::forward<Args>(tx_args)...);
     if(error)
@@ -328,7 +327,7 @@ bool CommManager::enqueueCommand(const FlexseaDevice &d, T tx_func, Args&&... tx
         return false;
     }
 
-    return !enqueueMultiPacket(d.id, out);
+    return !enqueueMultiPacket(d->id, out);
 }
 
 void CommManager::sendCommands(int index)

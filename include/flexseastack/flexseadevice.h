@@ -12,9 +12,8 @@
 class FlexseaDevice
 {
 public:
-    explicit FlexseaDevice(int _id=-1, int _port=-1, FlexseaDeviceType _type=FX_NONE,
-			const uint32_t* map=nullptr, const circular_buffer<FX_DataPtr>* data_=nullptr,
-			std::recursive_mutex *m=nullptr);
+    explicit FlexseaDevice(int _id=-1, int _port=-1, FlexseaDeviceType _type=FX_NONE, int dataBuffSize=FX_DATA_BUFFER_SIZE);
+    ~FlexseaDevice();
 
     const int id;
     const int port;
@@ -61,10 +60,14 @@ public:
     int getNumActiveFields() const;
     std::string getName() const;
     void getBitmap(uint32_t* out) const;
+    void setBitmap(uint32_t* in);
+
     bool isValid() const { return this->id != -1; }
 
     /// \brief Returns the rate at which this device is/was receiving data in Hz
     double getDataRate() const;
+
+    circular_buffer<FX_DataPtr>* getCircBuff() { return data; }
 
 protected:
 
@@ -73,7 +76,7 @@ protected:
     /// so if (0x01 & active()[0]) then field 0 is active
     /// if (0x01 & active()[1]) then field 32 is active
     /// or in general if (1 << x) & active()[y] then field 32*y+x is active
-    const uint32_t* bitmap;
+    uint32_t bitmap[FX_BITMAP_WIDTH];
 
     //mutable because they're used for caching
     mutable uint32_t lastFieldLabelMap[FX_BITMAP_WIDTH] = {0};
@@ -82,7 +85,7 @@ protected:
     /* data gives access to data thats come into this device.
      * The actual buffer is managed by whichever object created this FlexseaDevice object
     */
-    const circular_buffer<FX_DataPtr>* data;
+    circular_buffer<FX_DataPtr>* data;
 };
 
 #endif // FLEXSEADEVICE_H

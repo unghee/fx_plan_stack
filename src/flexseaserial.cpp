@@ -51,48 +51,43 @@ inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
     bool addedDevice = false;
     if(!connectedDevices.count(devId))
         addedDevice = !addDevice(devId, port, static_cast<FlexseaDeviceType>(devType));
-    else if(connectedDevices.at(devId).type != devType)
+    else if(connectedDevices.at(devId)->type != devType)
     {
         std::cout << "Device record's type does not match incoming message, something went wrong (two devices connected with same id?)" << std::endl;
         removeDevice(devId);
         addedDevice = !addDevice(devId, port, static_cast<FlexseaDeviceType>(devType));
     }
 
-    uint32_t temp, *bitmap = fieldMaps.at(devId);
+    uint32_t bitmap[FX_BITMAP_WIDTH];
+    auto dev = connectedDevices.at(devId);
+    dev->getBitmap(bitmap);
+    uint32_t temp;
     // if bitmap is null something is very wrong
     bool bitmapChanged = false;
-    if(bitmap)
-    {
-        mapLen = buf[i++];
-        for(j=0;j<FX_BITMAP_WIDTH && j<mapLen; j++)
-        {
-            temp = REBUILD_UINT32(buf, &i);
-            if(temp != bitmap[j])
-                bitmapChanged = true;
-            bitmap[j] = temp;
-        }
 
-        if(bitmapChanged)
-        {
-            // need to clear old data ptrs as they are wrong size
-            std::lock_guard<std::recursive_mutex> lk(*connectedDevices.at(devId).dataMutex);
-            circular_buffer<FX_DataPtr> *cb = this->databuffers.at(devId);
-            FX_DataPtr ptr;
-            while(cb->count())
-            {
-                ptr = cb->get();
-                delete ptr;
-            }
-            ptr = nullptr;
-            mapChangedFlags.notify();
-        }
-    }
-    else
+    mapLen = buf[i++];
+    for(j=0;j<FX_BITMAP_WIDTH && j<mapLen; j++)
     {
-        return -1;
-        // not sure what best practice would be here
-        // so far we've written exception free code.. so I'm opting to return error code
-        throw new std::exception();
+        temp = REBUILD_UINT32(buf, &i);
+        if(temp != bitmap[j])
+            bitmapChanged = true;
+        bitmap[j] = temp;
+    }
+
+    if(bitmapChanged)
+    {
+        // need to clear old data ptrs as they are wrong size
+        std::lock_guard<std::recursive_mutex> lk(*(dev->dataMutex));
+        dev->setBitmap(bitmap);
+        circular_buffer<FX_DataPtr> *cb = dev->getCircBuff();
+        FX_DataPtr ptr;
+        while(cb->count())
+        {
+            ptr = cb->get();
+            delete ptr;
+        }
+        ptr = nullptr;
+        mapChangedFlags.notify();
     }
 
     if(addedDevice)
@@ -112,16 +107,17 @@ inline int FlexseaSerial::updateDeviceData(uint8_t *buf)
     if(!connectedDevices.count(devId))
         return -1;
 
-    FlexseaDevice &d = connectedDevices.at(devId);
-    FlexseaDeviceSpec ds = deviceSpecs[d.type];
-    std::lock_guard<std::recursive_mutex> lk(*d.dataMutex);
-    circular_buffer<FX_DataPtr> *cb = this->databuffers.at(devId);
-    FX_DataPtr fxDataPtr = cb->full() ? cb->get() : new uint32_t[d.numFields+1]{0};
+    FxDevicePtr d = connectedDevices.at(devId);
+    FlexseaDeviceSpec ds = deviceSpecs[d->type];
+    std::lock_guard<std::recursive_mutex> lk(*(d->dataMutex));
+    circular_buffer<FX_DataPtr> *cb = d->getCircBuff();
+    FX_DataPtr fxDataPtr = cb->full() ? cb->get() : new uint32_t[d->numFields+1]{0};
 
-    uint32_t* deviceBitmap = fieldMaps.at(devId);
+    uint32_t deviceBitmap[FX_BITMAP_WIDTH];
+    d->getBitmap(deviceBitmap);
 
     // read into the rest of the data like a buffer
-    if(fxDataPtr && deviceBitmap)
+    if(fxDataPtr)
     {
         memcpy(fxDataPtr, buf+MP_TSTP, sizeof(uint32_t));
         uint8_t *dataPtr = (uint8_t*)(fxDataPtr+1);
@@ -338,7 +334,7 @@ void FlexseaSerial::close(uint16_t portIdx)
 
     for(const auto &d : connectedDevices)
     {
-        if(d.second.port == portIdx)
+        if(d.second->port == portIdx)
             idsToRemove.push_back(d.first);
     }
 

@@ -3,15 +3,36 @@
 #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
 
 
-FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, const uint32_t* map, const circular_buffer<FX_DataPtr>* data_, std::recursive_mutex *m):
+FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int dataBuffSize):
     id(_id)
     , port(_port)
     , type(_type)
     , numFields( deviceSpecs[_type].numFields )
-    , dataMutex(m)
-    , bitmap(map)
-    , data(data_)
-{}
+{
+    data = new circular_buffer<FX_DataPtr>(dataBuffSize);
+    dataMutex = new std::recursive_mutex();
+    memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
+}
+
+FlexseaDevice::~FlexseaDevice()
+{
+    //deallocate the circular buffer
+    dataMutex->lock();
+
+    FX_DataPtr dataptr;
+    while(data->count())
+    {
+        dataptr = data->get();
+        if(dataptr)
+            delete dataptr;
+    }
+
+    delete data;
+    data=nullptr;
+
+    delete dataMutex;
+    dataMutex=nullptr;
+}
 
 /* Returns a vector of strings which describe the fields specified by map  */
 const std::vector<std::string>& FlexseaDevice::getFieldLabels() const
@@ -181,4 +202,9 @@ std::string FlexseaDevice::getName() const
 void FlexseaDevice::getBitmap(uint32_t* out) const {
     for(uint16_t i=0;i<FX_BITMAP_WIDTH;i++)
         out[i]=bitmap[i];
+}
+
+void FlexseaDevice::setBitmap(uint32_t* in) {
+    for(uint16_t i=0;i<FX_BITMAP_WIDTH;i++)
+        bitmap[i] = in[i];
 }

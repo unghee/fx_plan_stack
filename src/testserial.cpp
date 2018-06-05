@@ -6,7 +6,7 @@
 #include <chrono>
 #include <iostream>
 #include <assert.h>
-
+#include <cstring>
 #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
 #include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
 #include "flexseastack/flexseadevicetypes.h"
@@ -117,12 +117,12 @@ void TestSerial::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t 
     static uint32_t timestamp = 0;
     timestamp++;
 
-    for(const auto &x : connectedDevices)
+    for(auto &x : connectedDevices)
     {
-        if(x.second.id == serial_tx_data[MULTI_DATA_OFFSET + MP_RID]) //portIdx && doesRidMatchType(rid, x.second.type))
+        if(x.second->id == serial_tx_data[MULTI_DATA_OFFSET + MP_RID]) //portIdx && doesRidMatchType(rid, x.second.type))
         {
             //we found our device
-            testReceiveDataFromDevice(x.second.id, timestamp);
+            testReceiveDataFromDevice(x.second->id, timestamp);
             return;
         }
     }
@@ -147,10 +147,7 @@ void TestSerial::writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, con
 
 int TestSerial::writeDeviceMap(const FlexseaDevice &d, uint32_t *map)
 {
-    uint32_t *m = fieldMaps.at(d.id);
-    for(unsigned short i = 0; i < FX_BITMAP_WIDTH; i++)
-        m[i] = map[i];
-
+    connectedDevices.at(d.id)->setBitmap(map);
     mapChangedFlags.notify();
     return 0;
 }
@@ -209,8 +206,6 @@ void TestSerial::randomConnections()
 
     assert(deviceIds.size() == 0);
     assert(connectedDevices.empty());
-    assert(fieldMaps.empty());
-    assert(this->databuffers.empty());
 }
 
 void TestSerial::randomDeviceMapChanges()
@@ -227,7 +222,7 @@ void TestSerial::randomDeviceMapChanges()
     for(idx=0;idx<deviceIds.size();idx++)
     {
         id = deviceIds.at(idx);
-        if(connectedDevices.at(id).numFields > 0)
+        if(connectedDevices.at(id)->numFields > 0)
         {
             existsNonTrivialDevice = true;
             break;
@@ -328,13 +323,15 @@ void TestSerial::testConnectDevice(int port)
             std::cout << TAB << "Added device: { id=" << id << ", port=" << port << ", type=" << std::string(deviceSpecs[(int)type].fieldLabels[0]) << " }" << std::endl;
 
         // set the map randomly
-        uint32_t* map = fieldMaps.at(id);
-        int numFields = this->getDevice(id).numFields;
-
-        if(numFields)
-            map[0] = (rand() % (int)(pow(2, numFields) - 1));
-
-        mapChangedFlags.notify();
+        FxDevicePtr dev = getDevicePtr(id);
+        if(dev->numFields)
+        {
+            uint32_t map[FX_BITMAP_WIDTH];
+            memset(map, 0, FX_BITMAP_WIDTH*sizeof(uint32_t));
+            map[0] = (rand() % (int)(pow(2, dev->numFields) - 1));
+            dev->setBitmap(map);
+            mapChangedFlags.notify();
+        }
     }
 }
 
@@ -364,19 +361,24 @@ void TestSerial::testChangeDeviceMap()
     do {
         idx = rand() % deviceIds.size();
         id = deviceIds.at(idx);
-    } while(connectedDevices.at(id).numFields == 0);
+    } while(connectedDevices.at(id)->numFields == 0);
 
     // get their map
-    uint32_t* map = fieldMaps.at(id);
+    FxDevicePtr dev = connectedDevices.at(id);
 
     // figure out how many fields the device actually has
-    int numFields = connectedDevices.at(id).numFields;
+    int numFields = dev->numFields;
+    if(numFields)
+    {
+        uint32_t map[FX_BITMAP_WIDTH];
+        memset(map, 0, FX_BITMAP_WIDTH*sizeof(uint32_t));
+        // randomly flip some bits  (only actually hitting the first 32 fields... my guess is that's fine)
+        map[0] ^= (rand() % (int)(pow(2, numFields) - 1));
 
-    // randomly flip some bits  (only actually hitting the first 32 fields... my guess is that's fine)
-    map[0] ^= (rand() % (int)(pow(2, numFields) - 1));
-
-    //Notify device connected
-    mapChangedFlags.notify();
+        dev->setBitmap(map);
+        //Notify device connected
+        mapChangedFlags.notify();
+    }
 }
 
 void TestSerial::printData(int id,  int numFields, FX_DataPtr data)
@@ -404,18 +406,18 @@ void TestSerial::testReceiveData()
 
 void TestSerial::testReceiveDataFromDevice(int id, uint32_t timestamp)
 {
-    FlexseaDevice d = connectedDevices.at(id);
+    FxDevicePtr d = connectedDevices.at(id);
     double x = (double)timestamp * (double)(2 * M_PI / 1000); // 1 cycle per 10 second about
 
     //if the device has no fields we can skip it
-    if(d.numFields < 1)
+    if(d->numFields < 1)
         return;
 
     //lock the mutex before accessing data buffer
-    std::lock_guard<std::recursive_mutex> lk(*d.dataMutex);
+    std::lock_guard<std::recursive_mutex> lk(*(d->dataMutex));
 
     //get the data buffer for this device
-    circular_buffer<FX_DataPtr> *cb = databuffers.at(id);
+    circular_buffer<FX_DataPtr> *cb = d->getCircBuff();
     if(!cb) return;
     FX_DataPtr dataptr;
 
@@ -423,22 +425,22 @@ void TestSerial::testReceiveDataFromDevice(int id, uint32_t timestamp)
     if(cb->full())
         dataptr = cb->get();
     else
-        dataptr = new uint32_t[d.numFields+1]{0};
+        dataptr = new uint32_t[d->numFields+1]{0};
 
     dataptr[0] = timestamp;
-    dataptr[1] = d.type;
-    dataptr[2] = d.id;
-    if(d.numFields > 2) dataptr[3] = (sin(x) + 1)*1000;
-    if(d.numFields > 3) dataptr[4] = (cos(x) + 1)*1000;
-    if(d.numFields > 4) dataptr[5] = sin(x)*sin(x)*1000;
-    if(d.numFields > 5) dataptr[6] = timestamp % 500;
-    for(int k = 7; k <= d.numFields; k++)
+    dataptr[1] = d->type;
+    dataptr[2] = d->id;
+    if(d->numFields > 2) dataptr[3] = (sin(x) + 1)*1000;
+    if(d->numFields > 3) dataptr[4] = (cos(x) + 1)*1000;
+    if(d->numFields > 4) dataptr[5] = sin(x)*sin(x)*1000;
+    if(d->numFields > 5) dataptr[6] = timestamp % 500;
+    for(int k = 7; k <= d->numFields; k++)
         dataptr[k] = dataptr[k%3 + 2];
 
     cb->put(dataptr);
 
     if(runVerbose && timestamp % 100 == 0)
-        printData(d.id, d.numFields, dataptr);
+        printData(d->id, d->numFields, dataptr);
 }
 
 void TestSerial::printBitMap(const uint32_t* map, int numFields)
@@ -453,17 +455,20 @@ void TestSerial::printBitMap(const uint32_t* map, int numFields)
 
 void TestSerial::printDeviceMaps(
         const std::vector<int>& deviceIds,
-        const std::unordered_map<int, FlexseaDevice> &connectedDevices)
+        const std::unordered_map<int, FxDevicePtr> &connectedDevices)
 {
     int id, nf;
     unsigned int i;
     std::cout << TAB << "Devices {id, numfields, map}: [ ";
+    uint32_t dMap[FX_BITMAP_WIDTH];
     for(i = 0; i < deviceIds.size(); i++)
     {
         id = deviceIds.at(i);
-        nf = connectedDevices.at(id).numFields;
+        nf = connectedDevices.at(id)->numFields;
         std::cout << "{" << id << ", ";
-        printBitMap(getMap(id), nf);
+
+        connectedDevices.at(id)->getBitmap(dMap);
+        printBitMap(dMap, nf);
         std::cout << "}";
         if(i+1!=deviceIds.size())
             std::cout << " , ";

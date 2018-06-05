@@ -9,6 +9,7 @@
 #include "flexseadevicetypes.h"
 #include "circular_buffer.h"
 #include "flexseastack/flexseadevice.h"
+#include <memory>
 
 class FlagList {
     std::mutex m_;
@@ -30,6 +31,8 @@ public:
     }
 };
 
+typedef std::shared_ptr<FlexseaDevice> FxDevicePtr;
+
 class FlexseaDeviceProvider
 {
 public:
@@ -45,12 +48,8 @@ public:
     /// \brief Returns a FlexseaDevice with matching ID, returns default device if no match.
     /// FlexseaDevice provides an interface to incoming data from a connected device
     virtual const FlexseaDevice& getDevice(int id) const;
-
-    /// \brief Returns a bitmap indicating which fields are active for the device with specified id.
-    /// FX_Bitmap is a uint32_t[3], so if (0x01 & active()[0]) then field 0 is active
-    /// if (0x01 & active()[1]) then field 32 is active
-    /// or in general if (1 << x) & active()[y] then field 32*y+x is active
-    virtual const uint32_t* getMap(int id) const;
+    virtual const FxDevicePtr getDevicePtr(int id) const;
+    bool haveDevice(int id) const { return connectedDevices.count(id) > 0; }
 
     /// These functions allow users to be notified of the corresponding events
     void registerConnectionChangeFlag(uint8_t *flag) const {deviceConnectedFlags.add(flag);}
@@ -63,8 +62,7 @@ protected:
     mutable FlagList mapChangedFlags;
 
     std::vector<int> deviceIds;
-    std::unordered_map<int, FlexseaDevice> connectedDevices;
-    std::unordered_map<int, uint32_t*> fieldMaps;
+    std::unordered_map<int, FxDevicePtr> connectedDevices;
     std::unordered_map<int, circular_buffer<FX_DataPtr>*> databuffers;
     const FlexseaDevice defaultDevice;
 
