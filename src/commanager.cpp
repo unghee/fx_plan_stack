@@ -98,8 +98,9 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int should
 bool CommManager::startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc)
 {
     int idx = getIndexOfFrequency(freq);
-    if(idx < 0 && !connectedDevices.count(devId))
+    if(idx < 0 || !connectedDevices.count(devId))
         return false;
+
     std::cout << "Started " << (shouldLog ? " logged " : "") << "streaming cmd: custom for slave id: " << devId << " at frequency: " << freq << std::endl;
     streamLists[idx].emplace_back(devId, -1, new StreamFunc(streamFunc));
     return true;
