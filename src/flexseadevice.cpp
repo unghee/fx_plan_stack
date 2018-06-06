@@ -200,11 +200,9 @@ std::string FlexseaDevice::getName() const
 }
 
 void FlexseaDevice::getBitmap(uint32_t* out) const {
-    for(uint16_t i=0;i<FX_BITMAP_WIDTH;i++)
-        out[i]=bitmap[i];
+    memcpy(out, bitmap, FX_BITMAP_WIDTH*sizeof(uint32_t));
 }
 
 void FlexseaDevice::setBitmap(uint32_t* in) {
-    for(uint16_t i=0;i<FX_BITMAP_WIDTH;i++)
-        bitmap[i] = in[i];
+    memcpy(bitmap, in, FX_BITMAP_WIDTH*sizeof(uint32_t));
 }

@@ -145,9 +145,9 @@ void TestSerial::writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, con
     testReceiveDataFromDevice(d.id, timestamp);
 }
 
-int TestSerial::writeDeviceMap(const FlexseaDevice &d, uint32_t *map)
+int TestSerial::writeDeviceMap(const FxDevicePtr d, uint32_t *map)
 {
-    connectedDevices.at(d.id)->setBitmap(map);
+    d->setBitmap(map);
     mapChangedFlags.notify();
     return 0;
 }
