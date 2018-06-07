@@ -77,6 +77,9 @@ uint32_t FlexseaDevice::getData(uint32_t index, int32_t *output, uint16_t output
     uint16_t fieldId = 0;
     uint16_t i = 0;
     int32_t *ptr = ((int32_t*)data->peek(index));
+
+    if(!ptr) return 0;
+
     while(fieldId < 32*FX_BITMAP_WIDTH && i < outputSize && (fieldId) < numFields)
     {
         if(IS_FIELD_HIGH(fieldId, bitmap))

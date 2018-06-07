@@ -13,6 +13,8 @@
 #include "flexseaserial.h"
 #include "periodictask.h"
 #include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
+#include "comm_string_generation.h"
+#include "datalogger.h"
 
 struct MultiWrapper_struct;
 typedef MultiWrapper_struct MultiWrapper;
@@ -85,7 +87,23 @@ protected:
     uint8_t serviceCount = 0;
 
     template<typename T, typename... Args>
-    bool enqueueCommand(const FxDevicePtr d, T tx_func, Args&&... tx_args);
+    bool enqueueCommand(const FxDevicePtr d, T tx_func, Args&&... tx_args)
+    {
+        if(!d->isValid()) return false;
+        MultiWrapper *out = &(portPeriphs[d->port].out);
+
+        bool error = CommStringGeneration::generateCommString(d->id, out,
+                                                       tx_func,
+                                                       std::forward<Args>(tx_args)...);
+        if(error)
+        {
+//            std::cout << "Error packing multipacket" << std::endl;
+            return false;
+        }
+
+        return !enqueueMultiPacket(d->id, out);
+    }
+
 
 private:
 	//Variables & Objects:
@@ -113,6 +131,8 @@ private:
 
     mutable std::unordered_map<int, uint16_t*> messageReceivedCounters;
     mutable std::unordered_map<int, uint16_t*> messageSentCounters;
+
+    DataLogger *dataLogger;
 };
 
 class CommManager::Message {
@@ -136,10 +156,11 @@ public:
 
 struct CommManager::StreamRcd {
 
-    StreamRcd(int id=-1, int cc=-1, StreamFunc* fc=nullptr) : devId(id), cmdCode(cc), func(fc) {}
+    StreamRcd(int id=-1, int cc=-1, bool sl=false, StreamFunc* fc=nullptr) : devId(id), cmdCode(cc), shouldLog(sl), func(fc) {}
 
     int devId;
     int cmdCode;
+    bool shouldLog;
     StreamFunc* func;
 
 };

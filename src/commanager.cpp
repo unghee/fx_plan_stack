@@ -27,9 +27,16 @@ CommManager::CommManager() : PeriodicTask(), FlexseaSerial()
     }
 
     streamCount = 0;
+
+    dataLogger = new DataLogger(this);
 }
 
-CommManager::~CommManager(){}
+CommManager::~CommManager(){
+    if(dataLogger)
+        delete dataLogger;
+
+    dataLogger = nullptr;
+}
 
 int CommManager::getIndexOfFrequency(int freq)
 {
@@ -60,13 +67,13 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int should
 
     if(indexOfFreq < 0 || indexOfFreq >= NUM_TIMER_FREQS)
     {
-        std::cout << "Invalid frequency" << std::endl;
+//        std::cout << "Invalid frequency" << std::endl;
         return false;
     }
 
     if(!haveDevice(devId))
     {
-        std::cout << "Invalid device id" << std::endl;
+//        std::cout << "Invalid device id" << std::endl;
         return false;
     }
 
@@ -74,10 +81,10 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int should
     if(shouldAuto)
     {
         sendAutoStream(devId, cmdCode, 1000 / freq, true);
-        autoStreamLists[indexOfFreq].emplace_back(devId, (int)cmdCode, nullptr);
+        autoStreamLists[indexOfFreq].emplace_back(devId, (int)cmdCode, shouldLog, nullptr);
     }
     else
-        streamLists[indexOfFreq].emplace_back(devId, (int)cmdCode, nullptr);
+        streamLists[indexOfFreq].emplace_back(devId, (int)cmdCode, shouldLog, nullptr);
 
     // increase stream count only for regular streaming
     bool doNotify = false;
@@ -91,6 +98,9 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int should
     if(doNotify)
         wakeCV.notify_all();
 
+    if(shouldLog)
+        dataLogger->startLogging(devId);
+
     return true;
 }
 
@@ -101,7 +111,11 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, const Stre
         return false;
 
     std::cout << "Started " << (shouldLog ? " logged " : "") << "streaming cmd: custom for slave id: " << devId << " at frequency: " << freq << std::endl;
-    streamLists[idx].emplace_back(devId, -1, new StreamFunc(streamFunc));
+    streamLists[idx].emplace_back(devId, -1, shouldLog, new StreamFunc(streamFunc));
+
+    if(shouldLog)
+        dataLogger->startLogging(devId);
+
     return true;
 }
 
@@ -135,14 +149,17 @@ bool CommManager::stopStreaming(int devId)
                         streamCount--;
                     }
 
-                        std::cout << "Stopped " << (listIndex == 0 ? "autostreaming" : "streaming");
-                        if(record.cmdCode > 0) std::cout << " cmd: " << record.cmdCode;
-                        else std::cout << " cmd: custom";
+                    std::cout << "Stopped " << (listIndex == 0 ? "autostreaming" : "streaming");
+                    if(record.cmdCode > 0) std::cout << " cmd: " << record.cmdCode;
+                    else std::cout << " cmd: custom";
 
-                        std::cout << ", for slave id: " << devId
-                                  << " at frequency: " << timerFrequencies[indexOfFreq] << std::endl;
+                    std::cout << ", for slave id: " << devId
+                              << " at frequency: " << timerFrequencies[indexOfFreq] << std::endl;
 
-                        found = true;
+                    found = true;
+
+                    if(record.shouldLog)
+                        dataLogger->stopLogging(devId);
                 }
                 else    //only increment i if we aren't erasing from the vector
                     i++;
@@ -158,12 +175,16 @@ void CommManager::periodicTask()
     serviceStreams(taskPeriod);
     serviceOpenAttempts(taskPeriod);
 
-    if(!serviceCount)
+    if(serviceCount % 4 == 0)
+    {
         serviceOpenPorts();
+    }
+    if(dataLogger && serviceCount % 10 == 0)
+    {
+        dataLogger->serviceLogs();
+    }
 
     serviceCount++;
-    if(serviceCount >= 4)
-        serviceCount = 0;
 }
 
 void CommManager::serviceStreams(uint8_t milliseconds)
@@ -312,24 +333,6 @@ bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
     return true;
 }
 
-template<typename T, typename... Args>
-bool CommManager::enqueueCommand(const FxDevicePtr d, T tx_func, Args&&... tx_args)
-{
-    if(!d->isValid()) return false;
-    MultiWrapper *out = &(portPeriphs[d->port].out);
-
-    bool error = csg::generateCommString(d->id, out,
-                                                   tx_func,
-                                                   std::forward<Args>(tx_args)...);
-    if(error)
-    {
-        std::cout << "Error packing multipacket" << std::endl;
-        return false;
-    }
-
-    return !enqueueMultiPacket(d->id, out);
-}
-
 void CommManager::sendCommands(int index)
 {
     if(index < 0 || index >= NUM_TIMER_FREQS) return;
@@ -349,7 +352,7 @@ void CommManager::sendCommands(int index)
             break;
 
             default:
-                std::cout<< "Unsupported command was given: " << record.cmdCode << std::endl;
+//                std::cout<< "Unsupported command was given: " << record.cmdCode << std::endl;
                 //stopStreaming(record.cmdType, record.slaveIndex, timerFrequencies[index]);
                 break;
         }

@@ -26,10 +26,10 @@ void PeriodicTask::runPeriodicTask()
         else
         {
             std::unique_lock<std::mutex> lk(conditionMutex);
-            std::cout << "Thread: " << std::this_thread::get_id() << " going into long sleep" << std::endl;
+//            std::cout << "Thread: " << std::this_thread::get_id() << " going into long sleep" << std::endl;
             wakeCV.wait(lk, [this]{return (!runPeriodicThread || this->wakeFromLongSleep());});
             nextWake = std::chrono::high_resolution_clock::now();
-            std::cout << "Thread: " << std::this_thread::get_id() << " woke after long sleep" << std::endl;
+//            std::cout << "Thread: " << std::this_thread::get_id() << " woke after long sleep" << std::endl;
         }
     }
 

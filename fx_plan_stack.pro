@@ -8,7 +8,7 @@ QT       -= core gui
 
 TARGET = fx_plan_stack
 TEMPLATE = lib
-CONFIG += staticlib
+#CONFIG += staticlib
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
@@ -98,6 +98,6 @@ DEPENDPATH += $$PWD/libinclude
 win32:!win32-g++: PRE_TARGETDEPS += $$PWD/lib/serialc.lib
 else:win32-g++: PRE_TARGETDEPS += $$PWD/lib/libserialc.a
 
-win32-g++: PRE_TARGETDEPS += $$PWD/lib/libFlexSEA-Stack-Plan.a
+PRE_TARGETDEPS += $$PWD/lib/libFlexSEA-Stack-Plan.a
 
 DESTDIR = $$PWD

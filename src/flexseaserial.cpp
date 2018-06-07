@@ -251,7 +251,7 @@ void FlexseaSerial::serviceOpenPorts()
         {
             try {
                 nb = ports[i].available();
-            } catch (serial::IOException e) {
+            } catch (...) {
                 ports[i].close();
                 nb = 0;
             }
