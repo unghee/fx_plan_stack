@@ -28,7 +28,7 @@ bool DataLogger::startLogging(int devId)
         ts = dev->getData(dev->dataCount()-1, nullptr, 0);
     }
 
-    std::vector<std::string> fieldLabels = dev->getFieldLabels();
+    std::vector<std::string> fieldLabels = dev->getActiveFieldLabels();
     (*fout) << "timestamp";
     for(auto&& l : fieldLabels)
         (*fout) << ", " << l;

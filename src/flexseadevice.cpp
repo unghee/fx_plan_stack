@@ -35,7 +35,7 @@ FlexseaDevice::~FlexseaDevice()
 }
 
 /* Returns a vector of strings which describe the fields specified by map  */
-const std::vector<std::string>& FlexseaDevice::getFieldLabels() const
+std::vector<std::string> FlexseaDevice::getActiveFieldLabels() const
 {
     /* make these private not static */
     bool equal = true;
@@ -64,6 +64,19 @@ const std::vector<std::string>& FlexseaDevice::getFieldLabels() const
         lastFieldLabelMap[i] = this->bitmap[i];
 
     return lastRequest;
+}
+
+std::vector<int> FlexseaDevice::getActiveFieldIds() const
+{
+    std::vector<int> r;
+    r.reserve(numFields);
+    for(int fieldId = 0; fieldId < numFields; ++fieldId)
+    {
+        if(IS_FIELD_HIGH(fieldId, this->bitmap))
+            r.push_back( fieldId );
+    }
+
+    return r;
 }
 
 uint32_t FlexseaDevice::getData(uint32_t index, int32_t *output, uint16_t outputSize) const
@@ -134,6 +147,35 @@ uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
 
 //    return last;
 //}
+
+uint32_t FlexseaDevice::getDataAfterTime(int field, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<int32_t> &data_output) const
+{
+    std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
+
+    if(!IS_FIELD_HIGH(field, this->bitmap)) return timestamp;
+
+    size_t i=0;
+    while(i < data->count() && data->peek(i)[0] <= timestamp)
+        i++;
+
+    ts_output.clear();
+    ts_output.reserve(data->count() - i);
+    data_output.clear();
+    data_output.reserve(data->count() - i);
+
+    FX_DataPtr p = nullptr;
+    while(i < data->count())
+    {
+        p = data->peek(i++);
+        ts_output.push_back(p[0]);
+        data_output.push_back(p[field+1]);
+    }
+
+    if(p)
+        return p[0];
+    else
+        return timestamp;
+}
 
 uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, std::vector<uint32_t> &timestamps, std::vector<std::vector<int32_t>> &outputData) const
 {

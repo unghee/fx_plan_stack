@@ -28,7 +28,8 @@ public:
     std::recursive_mutex *dataMutex;
 
     /* Returns a vector of strings which describe the fields specified by map  */
-    const std::vector<std::string>& getFieldLabels() const;
+    std::vector<std::string> getActiveFieldLabels() const;
+    std::vector<int> getActiveFieldIds() const;
 
     /* Interprets the data in this devices circular buffer at index
      *      and copies the fields specified in by this devices bitmap into output
@@ -50,6 +51,8 @@ public:
     ///     to access the 3rd field in the 2nd datum, you would use:  ( output + 2 * (numFields+1) )[3];
     /// note this method is faster than reading into nested std::vectors
 //    uint32_t getDataAfterTime(uint32_t timeStamp, uint32_t *output, uint16_t outputSize) const;
+
+    uint32_t getDataAfterTime(int field, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<int32_t> &data_output) const;
 
     /// \brief fills the vectors with all data whose timestamps are after timeStamp.
     /// timestamps and data are emptied and then filled as parallel vectors
