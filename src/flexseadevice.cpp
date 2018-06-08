@@ -2,14 +2,13 @@
 #include "cstring"
 #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
 
-
 FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int dataBuffSize):
     id(_id)
     , port(_port)
     , type(_type)
     , numFields( deviceSpecs[_type].numFields )
 {
-    data = new circular_buffer<FX_DataPtr>(dataBuffSize);
+    data = new FxDevData(dataBuffSize);
     dataMutex = new std::recursive_mutex();
     memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
 }

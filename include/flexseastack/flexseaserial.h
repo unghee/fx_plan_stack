@@ -26,8 +26,6 @@ namespace serial {
 #define CHUNK_SIZE				48
 #define MAX_SERIAL_RX_LEN		(CHUNK_SIZE*15 + 10)
 
-typedef circular_buffer<FX_DataPtr> FX_DataList;
-
 class OpenAttempt;
 typedef std::vector<OpenAttempt> OpenAttemptList;
 

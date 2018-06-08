@@ -417,7 +417,7 @@ void TestSerial::testReceiveDataFromDevice(int id, uint32_t timestamp)
     std::lock_guard<std::recursive_mutex> lk(*(d->dataMutex));
 
     //get the data buffer for this device
-    circular_buffer<FX_DataPtr> *cb = d->getCircBuff();
+    FxDevData *cb = d->getCircBuff();
     if(!cb) return;
     FX_DataPtr dataptr;
 

@@ -63,7 +63,6 @@ protected:
 
     std::vector<int> deviceIds;
     std::unordered_map<int, FxDevicePtr> connectedDevices;
-    std::unordered_map<int, circular_buffer<FX_DataPtr>*> databuffers;
     const FlexseaDevice defaultDevice;
 
     int addDevice(int id, int port, FlexseaDeviceType type);

@@ -9,6 +9,8 @@
 #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
 
 /// \brief FlexseaDevice class provides read access to connected devices
+
+typedef circular_buffer<FX_DataPtr> FxDevData;
 class FlexseaDevice
 {
 public:
@@ -70,7 +72,7 @@ public:
     /// \brief Returns the rate at which this device is/was receiving data in Hz
     double getDataRate() const;
 
-    circular_buffer<FX_DataPtr>* getCircBuff() { return data; }
+    FxDevData* getCircBuff() { return data; }
 
 protected:
 
@@ -88,7 +90,7 @@ protected:
     /* data gives access to data thats come into this device.
      * The actual buffer is managed by whichever object created this FlexseaDevice object
     */
-    circular_buffer<FX_DataPtr>* data;
+    FxDevData* data;
 };
 
 #endif // FLEXSEADEVICE_H
