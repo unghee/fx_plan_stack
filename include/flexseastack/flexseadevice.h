@@ -91,6 +91,8 @@ protected:
      * The actual buffer is managed by whichever object created this FlexseaDevice object
     */
     FxDevData* data;
+private:
+    inline size_t findIndexAfterTime(uint32_t timestamp) const;
 };
 
 #endif // FLEXSEADEVICE_H

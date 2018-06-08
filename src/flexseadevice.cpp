@@ -147,15 +147,46 @@ uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
 //    return last;
 //}
 
+inline size_t FlexseaDevice::findIndexAfterTime(uint32_t timestamp) const
+{
+// ---- Linear search O(n)
+//    size_t i=0;
+//    while(i < data->count() && data->peek(i)[0] <= timestamp)
+//        i++;
+
+// ---- Binary search O(logn)
+
+    size_t lb = 0, ub = data->count();
+
+    if(ub == 0) return 0;
+
+    size_t i = ub / 2;
+    uint32_t t = data->peek(i)[0];
+
+    while(i != lb && lb != ub)
+    {
+        if(timestamp > t)
+            lb = i;
+        else
+            ub = i;
+
+        i = (lb + ub) / 2;
+        t = data->peek(i)[0];
+    }
+
+    return i + (timestamp >= t);
+
+// ---- std lib implementation ? would have to implement begin and end iterators.. one day!
+
+}
+
 uint32_t FlexseaDevice::getDataAfterTime(int field, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<int32_t> &data_output) const
 {
     std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
 
     if(!IS_FIELD_HIGH(field, this->bitmap)) return timestamp;
 
-    size_t i=0;
-    while(i < data->count() && data->peek(i)[0] <= timestamp)
-        i++;
+    size_t i = findIndexAfterTime(timestamp);
 
     ts_output.clear();
     ts_output.reserve(data->count() - i);
