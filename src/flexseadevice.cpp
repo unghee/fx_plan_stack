@@ -165,7 +165,7 @@ inline size_t FlexseaDevice::findIndexAfterTime(uint32_t timestamp) const
 
     while(i != lb && lb != ub)
     {
-        if(timestamp > t)
+        if(timestamp >= t)
             lb = i;
         else
             ub = i;

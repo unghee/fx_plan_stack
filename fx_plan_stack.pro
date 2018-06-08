@@ -37,8 +37,7 @@ SOURCES += \
     src/serialdriver.cpp \
     src/flexseadeviceprovider.cpp \
     src/commtester.cpp \
-    src/datalogger.cpp \
-    src/circbuffset.cpp
+    src/datalogger.cpp
 
 HEADERS += \
         include/flexseastack/flexseaserial.h \
@@ -54,8 +53,7 @@ HEADERS += \
     include/flexseastack/flexseadeviceprovider.h \
     include/flexseastack/commtester.h \
     include/flexseastack/comm_string_generation.h \
-    include/flexseastack/datalogger.h \
-    include/flexseastack/circbuffset.h
+    include/flexseastack/datalogger.h
 
 #flexsea stack headers
 HEADERS += \
