@@ -43,7 +43,7 @@ public:
     /// Returns true if the the attempt was successful. May be unsuccessful if:
     ///     no device exists with device id == devId
     ///     freq not in getStreamingFrequences()
-    bool startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc);
+    int startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc);
 
     /// \brief Tries to start streaming from the selected device with the given parameters.
     /// Streams all fields if fieldIds is empty. Otherwise only streams ids in fieldIds
@@ -54,7 +54,7 @@ public:
 
     /// \brief Tries to stop streaming from the selected device with the given parameters.
     /// Returns true if the attempt was successful. May be unsuccessful if no stream for given id exists
-    bool stopStreaming(int devId);
+    bool stopStreaming(int devId, int cmdCode=-1);
 
     /// \brief writes a message to the device to set its active fields
     int writeDeviceMap(int devId, const std::vector<int> &fields);

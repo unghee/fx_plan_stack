@@ -104,22 +104,26 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int should
     return true;
 }
 
-bool CommManager::startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc)
+int CommManager::startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc)
 {
+    static int cmdCodeBase = 256;
+
     int idx = getIndexOfFrequency(freq);
     if(idx < 0 || !connectedDevices.count(devId))
-        return false;
+        return -1;
+
+    ++cmdCodeBase;
 
     std::cout << "Started " << (shouldLog ? " logged " : "") << "streaming cmd: custom for slave id: " << devId << " at frequency: " << freq << std::endl;
-    streamLists[idx].emplace_back(devId, -1, shouldLog, new StreamFunc(streamFunc));
+    streamLists[idx].emplace_back(devId, cmdCodeBase, shouldLog, new StreamFunc(streamFunc));
 
     if(shouldLog)
         dataLogger->startLogging(devId);
 
-    return true;
+    return cmdCodeBase;
 }
 
-bool CommManager::stopStreaming(int devId)
+bool CommManager::stopStreaming(int devId, int cmdCode)
 {
     StreamList* listArray[2] = {autoStreamLists, streamLists};
 
@@ -134,7 +138,7 @@ bool CommManager::stopStreaming(int devId)
             for(unsigned int i = 0; i < (l)[indexOfFreq].size(); /* no increment */)
             {
                 auto record = (l)[indexOfFreq].at(i);
-                if(record.devId == devId)
+                if(record.devId == devId && (record.cmdCode == cmdCode || cmdCode < 0))
                 {
                     if(record.func) delete record.func;
                     (l)[indexOfFreq].erase( (l)[indexOfFreq].begin() + i);
