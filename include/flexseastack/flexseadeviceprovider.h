@@ -40,7 +40,7 @@ public:
     virtual ~FlexseaDeviceProvider();
 
     /// \brief Returns a vector containing the ids of all connected devices.
-    virtual const std::vector<int>& getDeviceIds() const;
+    virtual std::vector<int> getDeviceIds() const;
 
     /// \brief Returns a vector containing the ids of all connected devices at the specified port.
     virtual std::vector<int> getDeviceIds(int portIdx) const;
@@ -65,7 +65,7 @@ protected:
     std::unordered_map<int, FxDevicePtr> connectedDevices;
     const FlexseaDevice defaultDevice;
 
-    int addDevice(int id, int port, FlexseaDeviceType type);
+    int addDevice(int id, int port, FlexseaDeviceType type, int role=FLEXSEA_MANAGE_1);
     int removeDevice(int id);
 };
 

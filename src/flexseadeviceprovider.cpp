@@ -11,7 +11,7 @@ FlexseaDeviceProvider::~FlexseaDeviceProvider()
         removeDevice(deviceIds.at(0));
 }
 
-const std::vector<int>& FlexseaDeviceProvider::getDeviceIds() const
+std::vector<int> FlexseaDeviceProvider::getDeviceIds() const
 {
     return deviceIds;
 }
@@ -44,7 +44,7 @@ const FxDevicePtr FlexseaDeviceProvider::getDevicePtr(int id) const
     return nullptr;
 }
 
-int FlexseaDeviceProvider::addDevice(int id, int port, FlexseaDeviceType type)
+int FlexseaDeviceProvider::addDevice(int id, int port, FlexseaDeviceType type, int role)
 {
     int unique = 1;
     for(const auto& it : deviceIds)
@@ -58,7 +58,7 @@ int FlexseaDeviceProvider::addDevice(int id, int port, FlexseaDeviceType type)
     if(!unique) return 1;
 
     deviceIds.push_back(id);
-    FxDevicePtr devPtr(new FlexseaDevice(id, port, type));
+    FxDevicePtr devPtr(new FlexseaDevice(id, port, type, role));
     connectedDevices.insert({id, devPtr});
 
     //Notify device connected

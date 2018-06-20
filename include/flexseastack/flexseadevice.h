@@ -7,14 +7,14 @@
 #include "flexseadevicetypes.h"
 #include "circular_buffer.h"
 #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
+#include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
 
 /// \brief FlexseaDevice class provides read access to connected devices
-
 typedef circular_buffer<FX_DataPtr> FxDevData;
 class FlexseaDevice
 {
 public:
-    explicit FlexseaDevice(int _id=-1, int _port=-1, FlexseaDeviceType _type=FX_NONE, int dataBuffSize=FX_DATA_BUFFER_SIZE);
+    explicit FlexseaDevice(int _id=-1, int _port=-1, FlexseaDeviceType _type=FX_NONE, int role=FLEXSEA_MANAGE_1, int dataBuffSize=FX_DATA_BUFFER_SIZE);
     ~FlexseaDevice();
 
     const int id;
@@ -22,6 +22,7 @@ public:
     const FlexseaDeviceType type;
     const int numFields;
 
+    int getRole() const { return _role; }
     bool hasData() const { return !data->empty(); }
     size_t dataCount() const { return data->count(); }
 
@@ -32,6 +33,8 @@ public:
     /* Returns a vector of strings which describe the fields specified by map  */
     std::vector<std::string> getActiveFieldLabels() const;
     std::vector<int> getActiveFieldIds() const;
+
+    std::vector<std::string> getAllFieldLabels() const;
 
     /* Interprets the data in this devices circular buffer at index
      *      and copies the fields specified in by this devices bitmap into output
@@ -91,6 +94,8 @@ protected:
      * The actual buffer is managed by whichever object created this FlexseaDevice object
     */
     FxDevData* data;
+    int _role;
+
 private:
     inline size_t findIndexAfterTime(uint32_t timestamp) const;
 };

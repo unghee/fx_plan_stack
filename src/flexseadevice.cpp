@@ -2,11 +2,12 @@
 #include "cstring"
 #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
 
-FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int dataBuffSize):
+FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int role, int dataBuffSize):
     id(_id)
     , port(_port)
     , type(_type)
     , numFields( deviceSpecs[_type].numFields )
+    , _role(role)
 {
     data = new FxDevData(dataBuffSize);
     dataMutex = new std::recursive_mutex();
@@ -76,6 +77,17 @@ std::vector<int> FlexseaDevice::getActiveFieldIds() const
     }
 
     return r;
+}
+
+std::vector<std::string> FlexseaDevice::getAllFieldLabels() const
+{
+    std::vector<std::string> result;
+    result.reserve(numFields);
+
+    for(int i = 0; i < numFields; ++i)
+        result.push_back(deviceSpecs[this->type].fieldLabels[i]);
+
+    return result;
 }
 
 uint32_t FlexseaDevice::getData(uint32_t index, int32_t *output, uint16_t outputSize) const
