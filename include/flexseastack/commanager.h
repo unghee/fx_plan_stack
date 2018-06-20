@@ -66,12 +66,6 @@ public:
     /// \brief overloaded to manage streams and connected devices
     virtual void close(uint16_t portIdx);
 
-    void registerMessageReceivedCounter(int devId, uint16_t *counter) const { messageReceivedCounters.insert({devId, counter}); }
-    void deregisterMessageReceivedCounter(int devId) const { messageReceivedCounters.erase(devId); }
-
-    void registerMessageSentCounter(int devId, uint16_t *counter) const { messageSentCounters.insert({devId, counter}); }
-    void deregisterMessageSentCounter(int devId) const { messageSentCounters.erase(devId); }
-
     template<typename T, typename... Args>
     bool enqueueCommand(int devId, T tx_func, Args&&... tx_args) { return enqueueCommand(connectedDevices.at(devId), tx_func, std::forward<Args>(tx_args)...); }
 
@@ -128,9 +122,6 @@ private:
     void sendSysDataRead(uint8_t slaveId);
 
     int streamCount;
-
-    mutable std::unordered_map<int, uint16_t*> messageReceivedCounters;
-    mutable std::unordered_map<int, uint16_t*> messageSentCounters;
 
     DataLogger *dataLogger;
 };
