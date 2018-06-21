@@ -1,6 +1,6 @@
 /****************************************************************************
 	[Project] FlexSEA: Flexible & Scalable Electronics Architecture
-	[Sub-project] 'flexsea-system' System commands & functions
+	[Sub-project] 'flexsea-execute' Advanced Motion Controller
 	Copyright (C) 2016 Dephy, Inc. <http://dephy.com/>
 
 	This program is free software: you can redistribute it and/or modify
@@ -16,66 +16,52 @@
 	You should have received a copy of the GNU General Public License
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *****************************************************************************
-	[Lead developper] Jean-Francois (JF) Duval, jfduval at dephy dot com.
-	[Origin] Based on Jean-Francois Duval's work at the MIT Media Lab
+	[Lead developper] Luke Mooney, lmooney at dephy dot com.
+	[Origin] Based on Jean-Francois Duval's work at the MIT Media Lab 
 	Biomechatronics research group <http://biomech.media.mit.edu/>
-	[Contributors]
+	[Contributors] Luke Mooney, Elliott Rouse
 *****************************************************************************
-	[This file] flexsea_cmd_data: Data Commands
+	[This file] knee: knee functions
 *****************************************************************************
 	[Change log] (Convention: YYYY-MM-DD | author | comment)
-	* 2016-09-09 | jfduval | Initial GPL-3.0 release
+	* 2016-09-29 | jfduval | Released under GPL-3.0 release
 	*
 ****************************************************************************/
 
-#ifndef INC_FLEXSEA_CMD_DATA_H
-#define INC_FLEXSEA_CMD_DATA_H
+#ifdef INCLUDE_UPROJ_RICNU_KNEE_V1
+#include "main.h"
+
+#ifdef BOARD_TYPE_FLEXSEA_MANAGE
+
+#ifndef INC_RICNU_KNEE_H
+#define INC_RICNU_KNEE_H
 
 //****************************************************************************
 // Include(s)
 //****************************************************************************
 
-#include <stdint.h>
 
 //****************************************************************************
-// Prototype(s):
+// Shared variable(s)
 //****************************************************************************
 
-void init_flexsea_payload_ptr_data(void);
+//****************************************************************************
+// Public Function Prototype(s):
+//****************************************************************************
 
-//Read All
-void rx_cmd_data_read_all_rw(uint8_t *buf, uint8_t *info);
-void rx_cmd_data_read_all_rr(uint8_t *buf, uint8_t *info);
-void tx_cmd_data_read_all_r(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
-					uint16_t *len);
-void tx_cmd_data_read_all_w(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
-					uint16_t *len);
-
-//User Data
-void rx_cmd_data_user_rw(uint8_t *buf, uint8_t *info);
-void rx_cmd_data_user_rr(uint8_t *buf, uint8_t *info);
-void rx_cmd_data_user_w(uint8_t *buf, uint8_t *info);
-void tx_cmd_data_user_r(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
-						uint16_t *len);
-void tx_cmd_data_user_w(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
-						uint16_t *len, uint8_t select_w);
-
-void copyUserWtoStack(struct user_data_s u);
-void readUserRfromStack(struct user_data_s *u);
-void ptx_cmd_data_user_r(uint8_t slaveId, uint16_t *numb, uint8_t *commStr);
-void ptx_cmd_data_user_w(uint8_t slaveId, uint16_t *numb, uint8_t *commStr, \
-							uint8_t select_w);
+void init_ricnu_knee(void);
+void ricnu_knee_fsm_1(void);
+void ricnu_knee_fsm_2(void);
 
 //****************************************************************************
 // Definition(s):
 //****************************************************************************
 
 //****************************************************************************
-// Structure(s):
+// Structure(s)
 //****************************************************************************
 
-//****************************************************************************
-// Shared variable(s)
-//****************************************************************************
+#endif	//INC_RICNU_KNEE_H
 
-#endif	//INC_FLEXSEA_CMD_DATA_H
+#endif //BOARD_TYPE_FLEXSEA_MANAGE
+#endif //INCLUDE_UPROJ_RICNU_KNEE_V1

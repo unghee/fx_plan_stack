@@ -1,6 +1,6 @@
 /****************************************************************************
 	[Project] FlexSEA: Flexible & Scalable Electronics Architecture
-	[Sub-project] 'flexsea-system' System commands & functions
+	[Sub-project] 'user/RICNU_Knee_v1' RIC/NU Knee
 	Copyright (C) 2016 Dephy, Inc. <http://dephy.com/>
 
 	This program is free software: you can redistribute it and/or modify
@@ -21,16 +21,13 @@
 	Biomechatronics research group <http://biomech.media.mit.edu/>
 	[Contributors]
 *****************************************************************************
-	[This file] flexsea_system: configuration and functions for this
-	particular system
-*****************************************************************************
-	[Change log] (Convention: YYYY-MM-DD | author | comment)
-	* 2016-09-09 | jfduval | Initial GPL-3.0 release
-	*
+	[This file] cmd-RICNU_Knee_v1: Custom commands for this project
 ****************************************************************************/
 
-#ifndef INC_FLEXSEA_SYSTEM_H
-#define INC_FLEXSEA_SYSTEM_H
+#ifdef INCLUDE_UPROJ_RICNU_KNEE_V1
+
+#ifndef INC_FLEXSEA_CMD_RICNU_KNEE_1_H
+#define INC_FLEXSEA_CMD_RICNU_KNEE_1_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,63 +37,44 @@ extern "C" {
 // Include(s)
 //****************************************************************************
 
-#include <flexsea_comm_def.h>
-#include "flexsea_sys_def.h"
-//Include the core flexsea-system files:
-#include "flexsea_global_structs.h"
-#include "flexsea_cmd_stream.h"
-#include "flexsea_cmd_control.h"
-#include "flexsea_cmd_sensors.h"
-#include "flexsea_cmd_external.h"
-#include "flexsea_cmd_data.h"
-#include "flexsea_cmd_tools.h"
-#include "flexsea_cmd_in_control.h"
-//Include the user files:
-
-struct rigid_s;
+#include <stdint.h>
 
 //****************************************************************************
 // Prototype(s):
 //****************************************************************************
 
-void init_flexsea_payload_ptr(void);
-uint16_t tx_cmd(uint8_t *payloadData, uint8_t cmdCode, uint8_t cmd_type, \
-				uint32_t len, uint8_t receiver, uint8_t *buf);
-void pack(uint8_t *shBuf, uint8_t cmd, uint8_t cmdType, uint16_t len, \
-			uint8_t rid, uint8_t *info, uint16_t *numBytes, uint8_t *commStr);
-void packAndSend(uint8_t *shBuf, uint8_t cmd, uint8_t cmdType, uint16_t len, \
-				 uint8_t rid, uint8_t *info, uint8_t ms);
-void executePtrXid(struct execute_s **myPtr, uint8_t p_xid);
-void managePtrXid(struct manage_s **myPtr, uint8_t p_xid);
-void gossipPtrXid(struct gossip_s **myPtr, uint8_t p_xid);
-void strainPtrXid(struct strain_s **myPtr, uint8_t p_xid);
-void rigidPtrXid(struct rigid_s **myPtr, uint8_t p_xid);
-void flexsea_payload_catchall(uint8_t *buf, uint8_t *info);
+void rx_cmd_ricnu_rw(uint8_t *buf, uint8_t *info);
+void rx_cmd_ricnu_w(uint8_t *buf, uint8_t *info);
+void rx_cmd_ricnu_rr(uint8_t *buf, uint8_t *info);
+
+void tx_cmd_ricnu_rw(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
+					uint16_t *len, uint8_t offset, uint8_t controller, \
+					int32_t setpoint, uint8_t setGains, int16_t g0, int16_t g1,\
+					int16_t g2, int16_t g3);
+void tx_cmd_ricnu_r(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
+					uint16_t *len, uint8_t offset);
+void tx_cmd_ricnu_w(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
+					uint16_t *len, uint8_t offset);
+
+//Decoding:
+void rx_cmd_ricnu_Action1(uint8_t controller, int32_t setpoint, uint8_t setGains,
+						int16_t g0,	int16_t g1,	int16_t g2, int16_t g3);
 
 //****************************************************************************
 // Definition(s):
 //****************************************************************************
 
 //****************************************************************************
-// Macro(s):
+// Structure(s):
 //****************************************************************************
-
-//To simplify user's life, here are two macros:
-#define TX_N_DEFAULT		tmpPayload,&cmdCode,&cmdType,&cmdLen
-#define P_AND_S_DEFAULT		tmpPayload,cmdCode,cmdType,cmdLen
 
 //****************************************************************************
 // Shared variable(s)
 //****************************************************************************
 
-//We use this buffer to exchange information between tx_N() and tx_cmd():
-extern uint8_t tmpPayload[PAYLOAD_BUF_LEN];	//tx_N() => tx_cmd()
-//Similarly, we exchange command code, type and length:
-extern uint8_t cmdCode, cmdType;
-extern uint16_t cmdLen;
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif	//INC_FLEXSEA_SYSTEM_H
+#endif	//INC_FLEXSEA_CMD_RICNU_KNEE_1_H
+#endif //INCLUDE_UPROJ_RICNU_KNEE_V1
