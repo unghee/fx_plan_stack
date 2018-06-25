@@ -13,7 +13,7 @@ set(FX_SRCFILES
 	src/flexseadeviceprovider.cpp
 	src/commtester.cpp
 	src/datalogger.cpp
-	src/stack_util.cpp
+	src/com_wrapper.cc
 )
 
 if(COMPILE_SHARED)

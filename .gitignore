@@ -2,3 +2,4 @@ libfx_plan_stack.a
 fx_plan_stack.dll
 libinclude/flexseastack/flexsea-dephy/
 build/
+*.user
