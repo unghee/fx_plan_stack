@@ -13,13 +13,10 @@
 template <int... indexes, typename ... types>
 auto get_tuple(std::tuple<types...> &mytup )
 {
-    
     return std::tie(
         (std::get<indexes>(mytup))...
-    );
-    
+    );   
 }
-
 
 extern "C" 
 {
@@ -86,7 +83,7 @@ extern "C"
 
         CtrlParams defaultCtrlParams()
         {
-                return {CTRL_NONE, 0, 0, 0, 0, 0, 0, KEEP};
+                return std::make_tuple(CTRL_NONE, 0, 0, 0, 0, 0, 0, KEEP);
         }
 
         // start streaming data from device with id: devId, with given configuration
@@ -181,22 +178,13 @@ extern "C"
         void setZGains(int devId, int z_k, int z_b, int i_kp, int i_ki)
         {
                 if(!ctrlsMap.count(devId)) return;
-                
-                // straight magic right here
                 get_tuple<2,3,4,5,6>( ctrlsMap.at(devId) ) = std::make_tuple(CHANGE, z_k, z_b, i_kp, i_ki);
-                // std::get<2> (  ) = CHANGE;
-                // std::get<3> ( ctrlsMap.at(devId) ) = z_k;
-                // std::get<4> ( ctrlsMap.at(devId) ) = z_b;
-                // std::get<5> ( ctrlsMap.at(devId) ) = i_kp;
-                // std::get<6> ( ctrlsMap.at(devId) ) = i_ki;  
         }
 
 
         void actPackFSM2(int devId, uint8_t on)
         {
             get_tuple<0,7>( ctrlsMap.at(devId) ) = std::make_tuple(CTRL_NONE, on ? SYS_NORMAL : SYS_DISABLE_FSM2);
-                // std::get<0> ( c ) = CTRL_NONE;
-                // std::get<7> ( ctrlsMap.at(devId) ) = on ? SYS_NORMAL : SYS_DISABLE_FSM2;
         }
 
         void findPoles(int devId, uint8_t block)

@@ -8,7 +8,8 @@ QT       -= core gui
 
 TARGET = fx_plan_stack
 TEMPLATE = lib
-#CONFIG += staticlib
+CONFIG += staticlib
+CONFIG += c++14
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
@@ -38,7 +39,7 @@ SOURCES += \
     src/flexseadeviceprovider.cpp \
     src/commtester.cpp \
     src/datalogger.cpp \
-    src/stack_util.cpp
+#    src/com_wrapper.cc
 
 HEADERS += \
         include/flexseastack/flexseaserial.h \
@@ -55,7 +56,7 @@ HEADERS += \
     include/flexseastack/commtester.h \
     include/flexseastack/comm_string_generation.h \
     include/flexseastack/datalogger.h \
-    include/flexseastack/stack_util.h
+#    include/flexseastack/com_wrapper.h
 
 #flexsea stack headers
 HEADERS += \
