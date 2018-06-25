@@ -88,12 +88,13 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int should
 
     // increase stream count only for regular streaming
     bool doNotify = false;
-    if(!shouldAuto)
+    if(!shouldAuto || shouldLog)
     {
         std::lock_guard<std::mutex> l(conditionMutex);
         streamCount++;
         doNotify = streamCount == 1;
     }
+
     // if stream count is exactly one, then we need to wake our sleeping worker thread
     if(doNotify)
         wakeCV.notify_all();
@@ -106,7 +107,7 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int should
 
 int CommManager::startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc)
 {
-    static int cmdCodeBase = 256;
+    static int cmdCodeBase = CMD_CODE_BASE;
 
     int idx = getIndexOfFrequency(freq);
     if(idx < 0 || !connectedDevices.count(devId))
@@ -119,6 +120,17 @@ int CommManager::startStreaming(int devId, int freq, bool shouldLog, const Strea
 
     if(shouldLog)
         dataLogger->startLogging(devId);
+
+    bool doNotify = false;
+    {
+        std::lock_guard<std::mutex> l(conditionMutex);
+        streamCount++;
+        doNotify = streamCount == 1;
+    }
+
+    // if stream count is exactly one, then we need to wake our sleeping worker thread
+    if(doNotify)
+        wakeCV.notify_all();
 
     return cmdCodeBase;
 }
@@ -147,7 +159,8 @@ bool CommManager::stopStreaming(int devId, int cmdCode)
                     {
                         sendAutoStream(devId, record.cmdCode, 1000 / timerFrequencies[indexOfFreq], false);
                     }
-                    else
+
+                    if(listIndex == 1 || record.shouldLog)
                     {
                         std::lock_guard<std::mutex> l(conditionMutex);
                         streamCount--;
@@ -340,26 +353,21 @@ bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
 void CommManager::sendCommands(int index)
 {
     if(index < 0 || index >= NUM_TIMER_FREQS) return;
-    StreamFunc *f;
+
     for(unsigned int i = 0; i < streamLists[index].size(); i++)
     {
         auto& record = streamLists[index].at(i);
-        switch(record.cmdCode)
-        {
-        case -1:
-            f = record.func;
-            if(f) enqueueCommand(record.devId, *f);
-            break;
 
-        case CMD_SYSDATA:
+        if(record.cmdCode == CMD_SYSDATA)
             sendSysDataRead(record.devId);
-            break;
-
-            default:
+        else if(record.cmdCode >= CMD_CODE_BASE && record.func)
+            enqueueCommand(record.devId, *record.func);
+        else
+        {
 //                std::cout<< "Unsupported command was given: " << record.cmdCode << std::endl;
-                //stopStreaming(record.cmdType, record.slaveIndex, timerFrequencies[index]);
-                break;
+//                stopStreaming(record.cmdType, record.slaveIndex, timerFrequencies[index]);
         }
+
     }
 }
 

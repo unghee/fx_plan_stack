@@ -122,6 +122,7 @@ private:
     void sendSysDataRead(uint8_t slaveId);
 
     int streamCount;
+    static const int CMD_CODE_BASE = 256;
 
     DataLogger *dataLogger;
 };
