@@ -83,8 +83,8 @@ void DataLogger::logDevice(int idx)
 {
     FxDevicePtr dev = devProvider->getDevicePtr(loggedDevices.at(idx));
 
-    int nf = dev->getNumActiveFields();
-    if(nf < 1) return;
+    auto fids = dev->getActiveFieldIds();
+    if(fids.size() < 1) return;
 
     int32_t ts = timestamps.at(idx);
 
@@ -103,9 +103,9 @@ void DataLogger::logDevice(int idx)
         (*fout) << stamps.at(line);
 
         auto&& dataline = data.at(line);
-        for(auto&& d : dataline)
+        for(auto&& fid : fids)
         {
-            (*fout) << ", " << d;
+            (*fout) << ", " << dataline.at(fid);
         }
         (*fout) << "\n";
     }
