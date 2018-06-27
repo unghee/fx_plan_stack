@@ -31,21 +31,17 @@ extern "C" {
 	// fieldIds specify the variable ids, n specifies the number of fieldIds
 	uint8_t fxSetStreamVariables(int devId, int* fieldIds, int n);
 
-    int* fxReadDevice(int devId, int* fieldIds, int n);
+    int* fxReadDevice(int devId, int* fieldIds, uint8_t* success, int n);
 
 	// CONTROL functions
 	void setControlMode(int devId, int ctrlMode);
 	void setMotorVoltage(int devId, int mV);
 	void setMotorCurrent(int devId, int cur);
 	void setPosition(int devId, int pos);
-	void setZGains(int devId, int z_k, int z_b, int i_kp, int i_ki);
-	
-	// --- back-compat functions - going to be deprecated ---
-	// ------------------------------------------
-	void actPackFSM2(int devId, uint8_t on);
-	void findPoles(int devId, uint8_t block);
-	void writeUser(int devId, int index, int value);
-	void readUser(int devId, int index, int value);
+	void setZGains(int devId, int z_k, int z_b, int i_kp, int i_ki);	
+    void actPackFSM2(int devId, int on);
+    void findPoles(int devId, int block);
+
 
 
 #ifdef __cplusplus

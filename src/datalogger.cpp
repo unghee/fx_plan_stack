@@ -138,7 +138,7 @@ std::string DataLogger::generateFileName(FxDevicePtr dev)
 {
     std::stringstream ss;
     std::time_t logStart = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    ss << dev->getName() << "_" << dev->type << "_" << std::ctime(&logStart) << ".csv";
+    ss << dev->getName() << "_id" << dev->id << "_" << std::ctime(&logStart) << ".csv";
     std::string result = ss.str();
 
     // replace spaces and : with _

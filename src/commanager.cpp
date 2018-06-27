@@ -229,8 +229,9 @@ void CommManager::serviceStreams(uint8_t milliseconds)
     if(outgoingBuffer.size())
     {
         Message m = outgoingBuffer.front();
+//        std::cout << "sending message over port " << m.portIdx << std::endl;
         outgoingBuffer.pop();
-        this->write(m.numBytes, m.dataPacket.get(), 0);
+        this->write(m.numBytes, m.dataPacket.get(), m.portIdx);
     }
 }
 
@@ -308,11 +309,17 @@ int CommManager::enqueueMultiPacket(int devId, MultiWrapper *out)
     if(!connectedDevices.count(devId)) return -1;
     FxDevicePtr d = connectedDevices.at(devId);
 
-    uint8_t frameId = 0;
+    bool isWriteCommand = !(out->packed[0][MULTI_DATA_OFFSET + MP_CMD1] & 0x01);
+
+    uint8_t frameId = 0, nb;
     while(out->frameMap > 0)
     {
+        nb = SIZE_OF_MULTIFRAME(out->packed[frameId]);
+        if(isWriteCommand)
+            nb = PACKET_WRAPPER_LEN;
+
         outgoingBuffer.push(Message(
-                                SIZE_OF_MULTIFRAME(out->packed[frameId])
+                                nb
                                 ,out->packed[frameId]  , d->port  ));
 
         out->frameMap &= (   ~(1 << frameId)   );
@@ -383,5 +390,6 @@ void CommManager::sendSysDataRead(uint8_t slaveId)
     enqueueCommand(slaveId,
                    tx_cmd_sysdata_r,
                    nullptr, 0);
+//    std::cout << "Sending sysdata read [" << (int)(slaveId) << "]" << std::endl;
 }
 

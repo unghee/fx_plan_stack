@@ -9,6 +9,10 @@
 #include <tuple>
 #include <utility>
 #include <exception>
+#include <algorithm>
+#include <cstring>
+
+using namespace std::chrono_literals;
 
 template <int... indexes, typename ... types>
 auto get_tuple(std::tuple<types...> &mytup )
@@ -25,12 +29,16 @@ extern "C"
 {
         #include "flexseastack/com_wrapper.h"
         #include "flexseastack/flexsea_config.h"
+        #include "flexseastack/flexsea-system/inc/flexsea_cmd_calibration.h"
 
         CommManager commManager;
         std::thread *commThread = nullptr;
 
         typedef std::tuple<uint8_t, int32_t, uint8_t, int16_t, int16_t, int16_t, int16_t, uint8_t> CtrlParams;
         std::unordered_map<int, CtrlParams> ctrlsMap; 
+
+        typedef struct user_data_s uData;
+        std::unordered_map<int, uData> uDataMap;
 
         void fxSetup()
         {
@@ -54,7 +62,7 @@ extern "C"
         void fxOpen(char* portName, int portIdx) 
         {       
                 std::string pn = portName;
-                std::cout << pn << std::endl;
+//                std::cout << pn << std::endl;
                 commManager.open(pn, portIdx);    
         }
 
@@ -74,8 +82,21 @@ extern "C"
         void fxGetDeviceIds(int *idarray, int n)
         {
                 std::vector<int> ids = commManager.getDeviceIds();
-                if(ids.size() == 0)
-                        commManager.sendDeviceWhoAmI(0);
+                std::vector<int> pList;
+                for(int i = 0; i < FX_NUMPORTS; ++i)
+                {
+                    if(commManager.isOpen(i))
+                        pList.push_back(i);
+                }
+
+                for(auto&& id : ids)
+                {
+                    int p = commManager.getDevicePtr(id)->port;
+                    pList.erase( std::remove( pList.begin(), pList.end(), p ), pList.end() );
+                }
+
+                for(auto&& p : pList)
+                    commManager.sendDeviceWhoAmI(p);
 
                 int i;
                 for(i = 0; i < n && i < ids.size(); ++i)
@@ -120,7 +141,8 @@ extern "C"
 
                 // stream reading and commands at same rate
                 commManager.startStreaming(devId, freq, shouldLog, shouldAuto);
-                commManager.startStreaming(devId, freq, false, cmdFunc);    
+                commManager.startStreaming(devId, freq, false, cmdFunc);
+                return 1;
         }
 
         // stop streaming data from device with id: devId
@@ -135,21 +157,51 @@ extern "C"
                 for(i=0;i<n;i++)
                         m.push_back(fieldIds[i]);
 
-                commManager.writeDeviceMap(devId, m);
+                return !commManager.writeDeviceMap(devId, m);
         }
 
         const int MAX_L = 100;
         int devData[MAX_L];
+        int devDataPriv[MAX_L];
 
-        int* fxReadDevice(int devId, int* fieldIds, int n)
+        int* fxReadDevice(int devId, int* fieldIds, uint8_t* success, int n)
         {
                 auto dev = commManager.getDevicePtr(devId);
+                memset(success, 0, n);
 
-                if(dev && dev->hasData())
+                if(!dev)
                 {
-                        dev->getData( dev->dataCount()-1, devData, MAX_L );
+                    std::cout << "Device does not exist" << std::endl;
+                    return &devData[0];
+                }
+                if(!dev->hasData())
+                {
+                    std::cout << "Device does not have data" << std::endl;
+                    return &devData[0];
+                }
+                if(dev->getDataPtr( dev->dataCount()-1, (FX_DataPtr)devDataPriv, MAX_L ) == 0)
+                {
+                    std::cout << "Failed to read device data" << std::endl;
+                    return &devData[0];
                 }
 
+                auto activeIds = dev->getActiveFieldIds();
+                for(int i = 0; i < n; i++)
+                {
+                    auto it = std::find(activeIds.begin(), activeIds.end(), fieldIds[i]);
+                    if(it != activeIds.end())
+                    {
+                        devData[i] = devDataPriv[1 + fieldIds[i]];
+                        success[i] = 1;
+                    }
+                    else
+                    {
+                        std::cout << "Requested field not found" << std::endl;
+                        devData[i] = 0;
+                    }
+                }
+
+                fflush(stdout);
                 return &devData[0];
         }
 
@@ -191,27 +243,26 @@ extern "C"
                 // std::get<6> ( ctrlsMap.at(devId) ) = i_ki;  
         }
 
-
-        void actPackFSM2(int devId, uint8_t on)
+        void actPackFSM2(int devId, int on)
         {
             get_tuple<0,7>( ctrlsMap.at(devId) ) = std::make_tuple(CTRL_NONE, on ? SYS_NORMAL : SYS_DISABLE_FSM2);
                 // std::get<0> ( c ) = CTRL_NONE;
                 // std::get<7> ( ctrlsMap.at(devId) ) = on ? SYS_NORMAL : SYS_DISABLE_FSM2;
         }
 
-        void findPoles(int devId, uint8_t block)
+        void findPoles(int devId, int block)
         {
+            if(!commManager.haveDevice(devId)) return;
+            commManager.enqueueCommand(devId, tx_cmd_calibration_mode_rw, CALIBRATION_FIND_POLES);
 
+            if(block)
+            {
+                int waitlength = 60;
+                for(int i=0;i<waitlength;i++)
+                {
+                    std::cout << "Waited for " << i << " / " << waitlength << " seconds..." << std::endl;
+                    std::this_thread::sleep_for(1s);
+                }
+            }
         }
-
-        void writeUser(int devId, int index, int value)
-        {
-
-        }
-
-        void readUser(int devId, int index, int value)
-        {
-                
-        }
-
 }

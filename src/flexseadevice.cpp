@@ -2,6 +2,8 @@
 #include "cstring"
 #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
 
+#include <iostream>
+
 FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int role, int dataBuffSize):
     id(_id)
     , port(_port)
@@ -115,6 +117,27 @@ uint32_t FlexseaDevice::getData(uint32_t index, int32_t *output, uint16_t output
     }
 
     return ptr[0];
+}
+
+uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outputSize) const
+{
+    if(index >= dataCount())
+    {
+        std::cout << "Invalid index requested.." << std::endl;
+        return 0;
+    }
+    int32_t *srcPtr = ((int32_t*)data->peek(index));
+    if(!srcPtr)
+    {
+        std::cout << "Error accessing data ptr" << std::endl;
+        return 0;
+    }
+
+    int s = outputSize >  (1 + numFields) ? (1 + numFields) : outputSize;
+    size_t sizeData =  s  * sizeof(int32_t);
+    memcpy(ptr, srcPtr, sizeData);
+
+    return srcPtr[0];
 }
 
 uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const

@@ -38,7 +38,7 @@ SOURCES += \
     src/flexseadeviceprovider.cpp \
     src/commtester.cpp \
     src/datalogger.cpp \
-    src/stack_util.cpp
+    src/com_wrapper.cc
 
 HEADERS += \
         include/flexseastack/flexseaserial.h \
@@ -55,7 +55,7 @@ HEADERS += \
     include/flexseastack/commtester.h \
     include/flexseastack/comm_string_generation.h \
     include/flexseastack/datalogger.h \
-    include/flexseastack/stack_util.h
+    include/flexseastack/com_wrapper.h
 
 #flexsea stack headers
 HEADERS += \

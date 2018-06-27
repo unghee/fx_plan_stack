@@ -154,7 +154,11 @@ inline int FlexseaSerial::updateDeviceData(uint8_t *buf)
 
 int FlexseaSerial::sysDataParser(int port)
 {
-    if(port < 0 || port >= FX_NUMPORTS) return 0;
+    if(port < 0 || port >= FX_NUMPORTS)
+    {
+        std::cout << "invalid port" << std::endl;
+        return 0;
+    }
     MultiCommPeriph *cp = portPeriphs+port;
 
     uint8_t *msgBuf = cp->in.unpacked;
