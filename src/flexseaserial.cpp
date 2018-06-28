@@ -29,10 +29,10 @@ FlexseaSerial::FlexseaSerial() : SerialDriver(FX_NUMPORTS)
     // set which commands to highjack
     memset(highjackedCmds, 0, NUM_COMMANDS);
     for(int i = 0; i < NUM_COMMANDS; i++)
-        stringParsers[i] = &defaultStringParser;
+        stringParsers[i] = &FlexseaSerial::defaultStringParser;
 
     highjackedCmds[CMD_SYSDATA] = 1;
-    stringParsers[CMD_SYSDATA] = &sysDataParser;
+    stringParsers[CMD_SYSDATA] = &FlexseaSerial::sysDataParser;
 }
 
 FlexseaSerial::~FlexseaSerial()
