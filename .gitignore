@@ -3,3 +3,4 @@ fx_plan_stack.dll
 libinclude/flexseastack/flexsea-dephy/
 build/
 *.user
+lib/libFlexSEA-Stack-Plan.a
