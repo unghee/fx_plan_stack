@@ -33,6 +33,7 @@ FlexseaSerial::FlexseaSerial() : SerialDriver(FX_NUMPORTS)
 
     highjackedCmds[CMD_SYSDATA] = 1;
     stringParsers[CMD_SYSDATA] = &FlexseaSerial::sysDataParser;
+    memset(devicesAtPort, 0, FX_NUMPORTS * sizeof(int));
 }
 
 FlexseaSerial::~FlexseaSerial()
@@ -44,18 +45,23 @@ FlexseaSerial::~FlexseaSerial()
 inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
 {
     uint16_t i=MP_DATA1+1;
-    uint8_t devType, devId, j, mapLen;
+    uint8_t devType, devId, j, mapLen, devRole;
     devType = buf[i++];
     devId = buf[i++];
+    mapLen = buf[i++];
+    devRole = buf[i + mapLen * sizeof(int32_t)];
 
     bool addedDevice = false;
     if(!connectedDevices.count(devId))
-        addedDevice = !addDevice(devId, port, static_cast<FlexseaDeviceType>(devType));
+    {
+        addedDevice = !addDevice(devId, port, static_cast<FlexseaDeviceType>(devType), devRole);
+        devicesAtPort[port]++;
+    }
     else if(connectedDevices.at(devId)->type != devType)
     {
         std::cout << "Device record's type does not match incoming message, something went wrong (two devices connected with same id?)" << std::endl;
         removeDevice(devId);
-        addedDevice = !addDevice(devId, port, static_cast<FlexseaDeviceType>(devType));
+        addedDevice = !addDevice(devId, port, static_cast<FlexseaDeviceType>(devType), devRole);
     }
 
     uint32_t bitmap[FX_BITMAP_WIDTH];
@@ -65,7 +71,6 @@ inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
     // if bitmap is null something is very wrong
     bool bitmapChanged = false;
 
-    mapLen = buf[i++];
     for(j=0;j<FX_BITMAP_WIDTH && j<mapLen; j++)
     {
         temp = REBUILD_UINT32(buf, &i);
@@ -210,7 +215,14 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
                 if(highjackedCmds[cmd])
                     parseResult = CALL_MEMBER_FN(this, stringParsers[cmd])(port);
                 else
-                    parseResult = parseReadyMultiString(portPeriphs + port);
+                {
+                    // c stack functions use device roles as ids...
+                    auto dev = getDevicePtr( cp->in.unpacked[MP_XID] );
+                    if(dev)
+                        cp->in.unpacked[MP_XID] = dev->getRole();
+
+                    parseResult = parseReadyMultiString(cp);
+                }
 
                 numMessagesReceived++;
                 (void) parseResult;
@@ -253,6 +265,18 @@ void FlexseaSerial::serviceOpenPorts()
     {
         if(ports[i].isOpen())
         {
+            if(devicesAtPort[i] < 0)
+            {
+                std::cout << "Some kind of error in port-device management" << std::endl;
+            }
+            else if(devicesAtPort[i] == 0)
+            {
+                static int counter=0;
+                counter = (counter + 1)%100;
+                if(!counter)
+                    sendDeviceWhoAmI(i);
+            }
+
             try {
                 nb = ports[i].available();
             } catch (...) {
@@ -348,6 +372,7 @@ void FlexseaSerial::close(uint16_t portIdx)
         std::cout << "Removed device : id\n";
     }
 
+    devicesAtPort[portIdx] = 0;
     tryClose(portIdx);
 }
 

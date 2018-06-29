@@ -309,20 +309,21 @@ int CommManager::enqueueMultiPacket(int devId, MultiWrapper *out)
     if(!connectedDevices.count(devId)) return -1;
     FxDevicePtr d = connectedDevices.at(devId);
 
-    bool isWriteCommand = !(out->packed[0][MULTI_DATA_OFFSET + MP_CMD1] & 0x01);
 
     uint8_t frameId = 0, nb;
     while(out->frameMap > 0)
     {
+        out->frameMap &= (   ~(1 << frameId)   );
+
         nb = SIZE_OF_MULTIFRAME(out->packed[frameId]);
-        if(isWriteCommand)
-            nb = PACKET_WRAPPER_LEN;
+        // if this is the last frame in the packet we extend it in order to ensure it gets pushed through
+        if(!out->frameMap)
+            nb = MAX(nb, PACKET_WRAPPER_LEN);
 
         outgoingBuffer.push(Message(
                                 nb
                                 ,out->packed[frameId]  , d->port  ));
 
-        out->frameMap &= (   ~(1 << frameId)   );
         frameId++;
     }
 

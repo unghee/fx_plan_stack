@@ -70,6 +70,7 @@ private:
     inline int updateDeviceMetadata(int port, uint8_t *buf);
     inline int updateDeviceData(uint8_t *buf);
 
+    int devicesAtPort[FX_NUMPORTS];
 };
 
 class OpenAttempt {
