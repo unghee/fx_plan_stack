@@ -44,6 +44,7 @@ public:
     */
     uint32_t getData(uint32_t index, int32_t *output, uint16_t outputSize) const;
     uint32_t  getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outputSize) const;
+    uint32_t getLatestTimestamp() const;
 
     /// \brief returns the first index of data whose timestamp is later than given timeStamp
     uint16_t getIndexAfterTime(uint32_t timeStamp) const;

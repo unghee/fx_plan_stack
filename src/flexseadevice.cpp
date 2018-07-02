@@ -140,6 +140,14 @@ uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outp
     return srcPtr[0];
 }
 
+uint32_t FlexseaDevice::getLatestTimestamp() const
+{
+    if(data->count())
+        return data->peekBack()[0];
+
+    return 0;
+}
+
 uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
 {
     std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);

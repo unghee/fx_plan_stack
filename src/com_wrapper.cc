@@ -96,7 +96,7 @@ extern "C"
                     commManager.sendDeviceWhoAmI(p);
 
                 int i;
-                for(i = 0; i < n && i < ids.size(); ++i)
+                for(i = 0; i < n && (unsigned int)i < ids.size(); ++i)
                         idarray[i] = ids[i];
                 while(i < n)
                         idarray[i++] = -1;
