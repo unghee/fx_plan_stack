@@ -39,7 +39,8 @@ SOURCES += \
     src/flexseadeviceprovider.cpp \
     src/commtester.cpp \
     src/datalogger.cpp \
-    src/com_wrapper.cc
+    src/com_wrapper.cc \
+    src/comm_string_generation.cpp
 
 HEADERS += \
         include/flexseastack/flexseaserial.h \

@@ -2,6 +2,7 @@
 #define COMM_STRING_GENERATION_H
 
 #include <utility>
+#include <cstring>
 #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
 #include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
 
@@ -26,6 +27,10 @@ namespace CommStringGeneration
 
         return packMultiPacket(out);
     }
+
+    bool getBtConfigField(unsigned int field, uint8_t *str, uint16_t *strlen);
+    bool getBtBilateralConfigField(unsigned int field, uint8_t *str, uint16_t *strlen);
+
 }
 
 #endif // COMM_STRING_GENERATION_H
