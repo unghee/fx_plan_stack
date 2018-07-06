@@ -8,6 +8,8 @@
 #include "flexseastack/periodictask.h"
 #include "flexseastack/flexseadeviceprovider.h"
 
+#define MAX_LOG_SIZE 50000
+
 class DataLogger : public PeriodicTask
 {
 public:
@@ -30,9 +32,16 @@ protected:
 
 
 private:
-    std::vector<int> loggedDevices;
-    std::vector<std::ofstream*> fileObjects;
-    std::vector<unsigned int> timestamps;
+
+struct LogRecord {
+    int devId;
+    std::ofstream* fileObject;
+    unsigned int lastTimestamp;
+    unsigned int logFileSize;
+    unsigned int logFileSplitIndex;
+};
+
+    std::vector<LogRecord> logRecords;
 
     FlexseaDeviceProvider *devProvider;
     int numLogDevices;
@@ -40,7 +49,7 @@ private:
     std::mutex resMutex;
 
     void clearRecords();
-    std::string generateFileName(FxDevicePtr dev);
+    std::string generateFileName(FxDevicePtr dev, std::string suffix="");
 };
 
 #endif // DATALOGGER_H

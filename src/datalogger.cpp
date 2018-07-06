@@ -38,9 +38,7 @@ bool DataLogger::startLogging(int devId)
 
     {
         std::lock_guard<std::mutex> lk(resMutex);
-        fileObjects.push_back(fout);
-        loggedDevices.push_back(devId);
-        timestamps.push_back(ts);
+        logRecords.push_back( {devId, fout, ts, 0, 0} );
         numLogDevices++;
     }
 
@@ -52,20 +50,20 @@ bool DataLogger::stopLogging(int devId)
     std::lock_guard<std::mutex> lk(resMutex);
 
     unsigned int i=0;
-    while( i < loggedDevices.size() && loggedDevices.at(i) != devId ) i++;
+    while( i < logRecords.size() && logRecords.at(i).devId != devId ) i++;
 
-    if(i >= loggedDevices.size() ) return false;
+    if(i >= logRecords.size() ) return false;
 
-    loggedDevices.erase(loggedDevices.begin() + i);
-    timestamps.erase(timestamps.begin() + i);
+    std::ofstream* fout = logRecords.at(i).fileObject;
 
-    std::ofstream* fout = fileObjects.at(i);
+    logRecords.erase(logRecords.begin() + i);
+
     if(fout)
     {
         fout->close();
         delete fout;
     }
-    fileObjects.erase(fileObjects.begin() + i);
+
     numLogDevices--;
 
     return true;
@@ -81,22 +79,22 @@ bool DataLogger::stopAllLogs()
 
 void DataLogger::logDevice(int idx)
 {
-    FxDevicePtr dev = devProvider->getDevicePtr(loggedDevices.at(idx));
+    FxDevicePtr dev = devProvider->getDevicePtr(logRecords.at(idx).devId);
 
     auto fids = dev->getActiveFieldIds();
     if(fids.size() < 1) return;
 
-    int32_t ts = timestamps.at(idx);
+    int32_t ts = logRecords.at(idx).lastTimestamp;
 
     std::vector<uint32_t> stamps;
     std::vector<std::vector<int32_t>> data;
     ts = dev->getDataAfterTime(ts, stamps, data);
-    timestamps.at(idx) = ts;
+    logRecords.at(idx).lastTimestamp = ts;
 
     if(stamps.size() != data.size())
         return; // TODO: exception
 
-    std::ofstream *fout = fileObjects.at(idx);
+    std::ofstream *fout = logRecords.at(idx).fileObject;
 
     for(unsigned int line = 0; line < stamps.size(); line++)
     {
@@ -110,22 +108,21 @@ void DataLogger::logDevice(int idx)
         (*fout) << "\n";
     }
 
+    logRecords.at(idx).logFileSize += stamps.size();
+
     fout->flush();
 }
 
 void DataLogger::clearRecords()
 {
-    loggedDevices.clear();
-
-    for(auto f : fileObjects)
+    for(auto&& r : logRecords)
     {
-        if(f->is_open())
-            f->close();
-        delete f;
+        if(r.fileObject->is_open())
+            r.fileObject->close();
+        delete r.fileObject;
     }
 
-    fileObjects.clear();
-    timestamps.clear();
+    logRecords.clear();
     numLogDevices = 0;
 }
 
@@ -134,11 +131,17 @@ bool isIllegalFileChar(char c)
     return c == '\\' || c == '\n' || c == '\t' || c == ' ';
 }
 
-std::string DataLogger::generateFileName(FxDevicePtr dev)
+std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
 {
     std::stringstream ss;
     std::time_t logStart = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    ss << dev->getName() << "_id" << dev->id << "_" << std::ctime(&logStart) << ".csv";
+    ss << dev->getName() << "_id" << dev->id << "_" << std::ctime(&logStart);
+
+    if(suffix.compare("") != 0)
+        ss << "_" << suffix;
+
+    ss << ".csv";
+
     std::string result = ss.str();
 
     // replace spaces and : with _
@@ -156,7 +159,7 @@ void DataLogger::serviceLogs()
 {
     std::lock_guard<std::mutex> lk(resMutex);
 
-    if(loggedDevices.size() != fileObjects.size() || loggedDevices.size() != timestamps.size() || loggedDevices.size() != (unsigned int)numLogDevices)
+    if(logRecords.size() != (unsigned int)numLogDevices)
     {    // something very wrong
         clearRecords();
         return;
@@ -164,6 +167,21 @@ void DataLogger::serviceLogs()
 
     for(int i = 0; i < numLogDevices; i++)
         logDevice(i);
+
+    for(auto &r : logRecords)
+    {
+        if(r.logFileSize > MAX_LOG_SIZE)
+        {
+            FxDevicePtr dev = devProvider->getDevicePtr(r.devId);
+
+            std::string nextFileName = generateFileName(dev, std::to_string(++r.logFileSplitIndex));
+            r.fileObject->close();
+            delete r.fileObject;
+            r.fileObject = new std::ofstream(nextFileName);
+            r.logFileSize = 0;
+        }
+    }
+
 }
 
 bool DataLogger::wakeFromLongSleep()
