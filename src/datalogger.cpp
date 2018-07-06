@@ -50,13 +50,19 @@ bool DataLogger::stopLogging(int devId)
     std::lock_guard<std::mutex> lk(resMutex);
 
     unsigned int i=0;
-    while( i < logRecords.size() && logRecords.at(i).devId != devId ) i++;
+    while( i < logRecords.size() && logRecords.at(i).devId != devId )
+        ++i;
 
-    if(i >= logRecords.size() ) return false;
+    return removeRecord(i);
+}
 
-    std::ofstream* fout = logRecords.at(i).fileObject;
+bool DataLogger::removeRecord(int idx)
+{
+    if(idx >= logRecords.size() ) return false;
 
-    logRecords.erase(logRecords.begin() + i);
+    std::ofstream* fout = logRecords.at(idx).fileObject;
+
+    logRecords.erase(logRecords.begin() + idx);
 
     if(fout)
     {
@@ -65,7 +71,6 @@ bool DataLogger::stopLogging(int devId)
     }
 
     numLogDevices--;
-
     return true;
 }
 
@@ -77,12 +82,12 @@ bool DataLogger::stopAllLogs()
     return true;
 }
 
-void DataLogger::logDevice(int idx)
+bool DataLogger::logDevice(int idx)
 {
     FxDevicePtr dev = devProvider->getDevicePtr(logRecords.at(idx).devId);
 
     auto fids = dev->getActiveFieldIds();
-    if(fids.size() < 1) return;
+    if(fids.size() < 1) return false;
 
     int32_t ts = logRecords.at(idx).lastTimestamp;
 
@@ -92,7 +97,7 @@ void DataLogger::logDevice(int idx)
     logRecords.at(idx).lastTimestamp = ts;
 
     if(stamps.size() != data.size())
-        return; // TODO: exception
+        return false;
 
     std::ofstream *fout = logRecords.at(idx).fileObject;
 
@@ -111,6 +116,8 @@ void DataLogger::logDevice(int idx)
     logRecords.at(idx).logFileSize += stamps.size();
 
     fout->flush();
+
+    return true;
 }
 
 void DataLogger::clearRecords()
@@ -166,7 +173,10 @@ void DataLogger::serviceLogs()
     }
 
     for(int i = 0; i < numLogDevices; i++)
-        logDevice(i);
+    {
+        if(!logDevice(i))
+            removeRecord(i);
+    }
 
     for(auto &r : logRecords)
     {

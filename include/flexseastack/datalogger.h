@@ -28,7 +28,7 @@ protected:
     virtual bool wakeFromLongSleep();
     virtual bool goToLongSleep();
 
-    void logDevice(int idx);
+    bool logDevice(int idx);
 
 
 private:
@@ -42,6 +42,7 @@ struct LogRecord {
 };
 
     std::vector<LogRecord> logRecords;
+    bool removeRecord(int idx);
 
     FlexseaDeviceProvider *devProvider;
     int numLogDevices;
