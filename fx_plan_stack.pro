@@ -57,7 +57,7 @@ HEADERS += \
     include/flexseastack/commtester.h \
     include/flexseastack/comm_string_generation.h \
     include/flexseastack/datalogger.h \
-#    include/flexseastack/com_wrapper.h
+    include/flexseastack/com_wrapper.h
 
 #flexsea stack headers
 HEADERS += \
@@ -84,7 +84,10 @@ HEADERS += \
     libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_in_control.h \
     libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_stream.h \
     libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h \
-    libinclude/flexseastack/flexsea-system/inc/flexsea_device_spec.h
+    libinclude/flexseastack/flexsea-system/inc/flexsea_device_spec.h \
+    libinclude/flexseastack/flexsea_board.h \
+    libinclude/flexseastack/flexsea_config.h \
+#    libinclude/flexseastack/trapez.h \
 
 #serial lib headers
 HEADERS += \
@@ -92,8 +95,6 @@ HEADERS += \
     libinclude/serial/v8stdint.h \
     libinclude/serial/impl/unix.h \
     libinclude/serial/impl/win.h \
-    libinclude/flexseastack/flexsea_board.h \
-    libinclude/flexseastack/flexsea_config.h \
 
 # serialc library for win32
 win32: LIBS += -L$$PWD/lib/ -lserialc -lsetupapi -lFlexSEA-Stack-Plan

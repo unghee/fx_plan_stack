@@ -187,7 +187,7 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
 {
     int totalBuffered = len + circ_buff_get_size(&(portPeriphs[port].circularBuff));
     int numMessagesReceived = 0;
-    int numMessagesExpected = (totalBuffered / COMM_STR_BUF_LEN);
+//    int numMessagesExpected = (totalBuffered / COMM_STR_BUF_LEN);
     int maxMessagesExpected = (totalBuffered / COMM_STR_BUF_LEN + (totalBuffered % COMM_STR_BUF_LEN != 0));
 
     uint16_t bytesToWrite, cbSpace, bytesWritten=0;

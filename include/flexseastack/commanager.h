@@ -20,7 +20,7 @@ struct MultiWrapper_struct;
 typedef MultiWrapper_struct MultiWrapper;
 typedef std::function<void(uint8_t*, uint8_t*, uint8_t*, uint16_t*)> StreamFunc;
 
-class CommManager : virtual public PeriodicTask, public FlexseaSerial
+class CommManager : public FlexseaSerial
 {
 
 public:

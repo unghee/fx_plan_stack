@@ -14,6 +14,7 @@ set(FX_SRCFILES
 	src/commtester.cpp
 	src/datalogger.cpp
 	src/com_wrapper.cc
+	src/comm_string_generation.cpp
 )
 
 ADD_LIBRARY(fx_plan_stack SHARED ${FX_SRCFILES})

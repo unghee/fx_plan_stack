@@ -1,6 +1,7 @@
 
 #include "flexseastack/commanager.h"
 #include "flexseastack/flexsea-projects/ActPack/inc/cmd-ActPack.h"
+#include "flexseastack/flexsea-system/inc/flexsea_system.h"
 #include "flexseastack/flexsea-comm/inc/flexsea_comm_def.h"
 
 #include <thread>

@@ -58,7 +58,7 @@ bool DataLogger::stopLogging(int devId)
 
 bool DataLogger::removeRecord(int idx)
 {
-    if(idx >= logRecords.size() ) return false;
+    if((unsigned int)idx >= logRecords.size() ) return false;
 
     std::ofstream* fout = logRecords.at(idx).fileObject;
 

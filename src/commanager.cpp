@@ -14,7 +14,7 @@ extern "C" {
 
 namespace csg = CommStringGeneration;
 
-CommManager::CommManager() : PeriodicTask(), FlexseaSerial()
+CommManager::CommManager() : FlexseaSerial()
 {
     //this needs to be in order from smallest to largest
     int timerFreqsInHz[NUM_TIMER_FREQS] = {1, 5, 10, 20, 33, 50, 100, 200, 300, 500, 1000};
@@ -32,8 +32,7 @@ CommManager::CommManager() : PeriodicTask(), FlexseaSerial()
 }
 
 CommManager::~CommManager(){
-    if(dataLogger)
-        delete dataLogger;
+    if(dataLogger) delete dataLogger;
 
     dataLogger = nullptr;
 }

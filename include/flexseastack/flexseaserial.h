@@ -30,7 +30,7 @@ class OpenAttempt;
 typedef std::vector<OpenAttempt> OpenAttemptList;
 
 /// \brief FlexseaSerial class manages serial ports and connected devices
-class FlexseaSerial : virtual public PeriodicTask, public SerialDriver, public FlexseaDeviceProvider
+class FlexseaSerial : public PeriodicTask, public SerialDriver, public FlexseaDeviceProvider
 {
 public:
     FlexseaSerial();

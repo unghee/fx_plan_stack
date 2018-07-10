@@ -39,7 +39,6 @@ FlexseaDevice::~FlexseaDevice()
 /* Returns a vector of strings which describe the fields specified by map  */
 std::vector<std::string> FlexseaDevice::getActiveFieldLabels() const
 {
-    /* make these private not static */
     bool equal = true;
     for(int i = 0; i < FX_BITMAP_WIDTH && equal; i++)
     {

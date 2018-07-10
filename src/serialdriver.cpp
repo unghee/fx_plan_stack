@@ -4,7 +4,7 @@
 
 SerialDriver::SerialDriver(int n) :
     _NUMPORTS(n)
-    , ports(new serial::Serial[_NUMPORTS])
+    , ports(new serial::Serial[n])
     , openPorts(0)
 {}
 
