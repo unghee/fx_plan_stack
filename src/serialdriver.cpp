@@ -136,3 +136,13 @@ void SerialDriver::clear(uint16_t portIdx)
     ports[portIdx].flushInput();
     ports[portIdx].flushOutput();
 }
+
+std::string SerialDriver::getPortName(uint16_t portIdx)
+{
+    if(portIdx >= _NUMPORTS) return "";
+
+    if(ports[portIdx].isOpen())
+        return ports[portIdx].getPort();
+
+    return "";
+}

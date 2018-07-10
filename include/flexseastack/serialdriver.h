@@ -23,6 +23,8 @@ public:
     virtual void flush(uint16_t portIdx=0);
     virtual void clear(uint16_t portIdx=0);
 
+    std::string getPortName(uint16_t portIdx);
+
 protected:
     int numPortsOpen() const;
     virtual void cleanupPort(int portIdx) {(void)portIdx;}
