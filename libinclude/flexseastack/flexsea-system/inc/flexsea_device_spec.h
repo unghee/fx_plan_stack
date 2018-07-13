@@ -36,31 +36,18 @@ extern FlexseaDeviceSpec deviceSpecs[NUM_DEVICE_TYPES];
 
 /* defines and externs needed by plan only */
 #ifdef BOARD_TYPE_FLEXSEA_PLAN
-	#define MAX_CONNECTED_DEVICES 10
-	extern FlexseaDeviceSpec connectedDeviceSpecs[MAX_CONNECTED_DEVICES];
-	extern uint8_t* deviceData[MAX_CONNECTED_DEVICES];
-	extern uint8_t fx_spec_numConnectedDevices;
-
-	// convenience define for accessing deviceData
-	// only works on little endian systems
-	// TODO: actually implement a big_endian/little_endian define so this isn't a bug waiting to happen
-	#ifdef BIG_ENDIAN
-	#else
-		#define DEVICESPEC_TYPE_BY_IDX(i) ( *(deviceData[i]) )
-		#define DEVICESPEC_UUID_BY_IDX(i) ( *((uint16_t*)(deviceData[i] + 1)) )
-	#endif
+	void initializeDeviceSpecs();
 #else
+
+	extern const uint16_t const* read_num_fields_active;
+	extern const uint8_t const* const* read_device_active_field_pointers;
+	extern const uint8_t const* read_device_active_field_lengths;
+	void setActiveFieldsByMap(uint32_t *map);
 
 #endif //BOARD_TYPE_FLEXSEA_PLAN
 
-void addConnectedDevice(uint8_t devType, uint16_t devId);
-void initializeDeviceSpecs();
-
 extern const FlexseaDeviceSpec *fx_this_device_spec;
 extern const uint8_t** _dev_data_pointers;
-extern uint16_t fx_dev_id;
-extern uint8_t fx_dev_type;
-extern uint8_t fx_dev_role;
 extern uint32_t *fx_dev_timestamp;
 
 /* Related to max number of fields, should probably call it max num fields.. */

@@ -57,7 +57,8 @@ HEADERS += \
     include/flexseastack/commtester.h \
     include/flexseastack/comm_string_generation.h \
     include/flexseastack/datalogger.h \
-    include/flexseastack/com_wrapper.h
+    include/flexseastack/com_wrapper.h \
+    include/flexseastack/fx_device_defs.h
 
 #flexsea stack headers
 HEADERS += \

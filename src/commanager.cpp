@@ -225,18 +225,25 @@ void CommManager::serviceStreams(uint8_t milliseconds)
         }
     }
 
-    if(outgoingBuffer.size())
+    for(i = 0; i < FX_NUMPORTS; ++i)
     {
-        Message m = outgoingBuffer.front();
-//        std::cout << "sending message over port " << m.portIdx << std::endl;
-        outgoingBuffer.pop();
-        this->write(m.numBytes, m.dataPacket.get(), m.portIdx);
+        if(outgoingBuffer[i].size())
+        {
+            auto& m = outgoingBuffer[i].front();
+            this->write(m.numBytes, m.dataPacket.get(), i);
+            outgoingBuffer[i].pop();
+        }
     }
+
 }
 
 bool CommManager::wakeFromLongSleep()
 {
-    return FlexseaSerial::wakeFromLongSleep() || (this->outgoingBuffer.size() || this->streamCount > 0);
+    bool haveMsg = false;
+    for(int i = 0; i < FX_NUMPORTS && !haveMsg; ++i)
+        haveMsg = outgoingBuffer[i].size();
+
+    return FlexseaSerial::wakeFromLongSleep() || (haveMsg || this->streamCount > 0);
 }
 bool CommManager::goToLongSleep()
 {
@@ -249,6 +256,13 @@ void CommManager::close(uint16_t portIdx)
     {
         if(kvp.second->port == portIdx)
             stopStreaming(kvp.second->id);
+    }
+
+    while(outgoingBuffer[portIdx].size())
+    {
+        Message m = outgoingBuffer[portIdx].front();
+        outgoingBuffer[portIdx].pop();
+        this->write(m.numBytes, m.dataPacket.get(), portIdx);
     }
 
     FlexseaSerial::close(portIdx);
@@ -317,19 +331,16 @@ int CommManager::enqueueMultiPacket(int devId, MultiWrapper *out)
         nb = SIZE_OF_MULTIFRAME(out->packed[frameId]);
         // if this is the last frame in the packet we extend it in order to ensure it gets pushed through
         if(!out->frameMap)
-            nb = MAX(nb, PACKET_WRAPPER_LEN);
+            nb = MAX(nb, PACKET_WRAPPER_LEN * 2 / 3);
 
-        outgoingBuffer.push(Message(
-                                nb
-                                ,out->packed[frameId]  , d->port  ));
-
+        outgoingBuffer[d->port].push(Message( nb ,out->packed[frameId]  ));
         frameId++;
     }
 
     out->isMultiComplete = 1;
 
-    while(outgoingBuffer.size() > MAX_Q_SIZE)
-        outgoingBuffer.pop();
+    while(outgoingBuffer[d->port].size() > MAX_Q_SIZE)
+        outgoingBuffer[d->port].pop();
 
     return 0;
 }
@@ -337,14 +348,14 @@ int CommManager::enqueueMultiPacket(int devId, MultiWrapper *out)
 bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
 {
     //If we are over a max size, clear the queue
-    if(outgoingBuffer.size() > MAX_Q_SIZE)
+    if(outgoingBuffer[portIdx].size() > MAX_Q_SIZE)
     {
         std::cout << "ComManager::enqueueCommand, queue is above max size (" << MAX_Q_SIZE  << "), clearing queue..." << std::endl;
-        while(outgoingBuffer.size())
-            outgoingBuffer.pop();
+        while(outgoingBuffer[portIdx].size())
+            outgoingBuffer[portIdx].pop();
     }
 
-    outgoingBuffer.push(Message(numb, dataPacket, portIdx));
+    outgoingBuffer[portIdx].push(Message(numb, dataPacket));
 
     bool doNotify;
     {

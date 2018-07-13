@@ -105,7 +105,7 @@ private:
     struct StreamRcd;
     typedef std::vector<StreamRcd> StreamList;
 
-    std::queue<Message> outgoingBuffer;
+    std::queue<Message> outgoingBuffer[FX_NUMPORTS];
     const unsigned int MAX_Q_SIZE = 200;
 
     StreamList autoStreamLists[NUM_TIMER_FREQS];
@@ -131,10 +131,9 @@ class CommManager::Message {
 public:
     static void do_delete(uint8_t buf[]) { delete[] buf; }
 
-    Message(uint8_t nb, uint8_t* data, int portIdx_=0):
+    Message(uint8_t nb, uint8_t* data):
     numBytes(nb)
     , dataPacket(std::shared_ptr<uint8_t>(new uint8_t[nb], do_delete))
-    , portIdx(portIdx_)
     {
         uint8_t* temp = dataPacket.get();
         for(int i = 0; i < numBytes; i++)
@@ -143,7 +142,6 @@ public:
 
     uint8_t numBytes;
     std::shared_ptr<uint8_t> dataPacket;
-    int portIdx;
 };
 
 struct CommManager::StreamRcd {
