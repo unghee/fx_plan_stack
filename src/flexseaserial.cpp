@@ -209,24 +209,24 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
             int convertedBytes = unpack_multi_payload_cb(&cp->circularBuff, &cp->in);
             error = circ_buff_move_head(&cp->circularBuff, convertedBytes);
             if(portPeriphs[port].in.isMultiComplete)
-            {
+        {
                 uint8_t cmd = MULTI_GET_CMD7(portPeriphs[port].in.unpacked);
-                int parseResult;
-                if(highjackedCmds[cmd])
-                    parseResult = CALL_MEMBER_FN(this, stringParsers[cmd])(port);
-                else
-                {
-                    // c stack functions use device roles as ids...
+            int parseResult;
+            if(highjackedCmds[cmd])
+                parseResult = CALL_MEMBER_FN(this, stringParsers[cmd])(port);
+            else
+            {
+                // c stack functions use device roles as ids...
                     auto dev = getDevicePtr( cp->in.unpacked[MP_XID] );
-                    if(dev)
+                if(dev)
                         cp->in.unpacked[MP_XID] = dev->getRole();
 
                     parseResult = parseReadyMultiString(cp);
-                }
+            }
 
                 numMessagesReceived++;
                 (void) parseResult;
-            }
+        }
 
             successfulParse = convertedBytes > 0 && !error;
         } while(successfulParse && numMessagesReceived < maxMessagesExpected);
@@ -272,7 +272,7 @@ void FlexseaSerial::serviceOpenPorts()
             else if(devicesAtPort[i] == 0)
             {
                 static int counter=0;
-                counter = (counter + 1)%100;
+                counter = (counter + 1)%200;
                 if(!counter)
                     sendDeviceWhoAmI(i);
             }

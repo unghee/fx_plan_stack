@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(fx_plan_stack)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 option(COMPILE_SHARED "compile as a shared lib vs. a static lib" ON)
 
 set(FX_SRCFILES
@@ -17,8 +20,12 @@ set(FX_SRCFILES
 	src/comm_string_generation.cpp
 )
 
-ADD_LIBRARY(fx_plan_stack SHARED ${FX_SRCFILES})
-ADD_LIBRARY(fx_plan_stack_static STATIC ${FX_SRCFILES})
+ADD_LIBRARY(fx_plan_objs OBJECT ${FX_SRCFILES})
+
+
+ADD_LIBRARY(fx_plan_stack SHARED $<TARGET_OBJECTS:fx_plan_objs>)
+ADD_LIBRARY(fx_plan_stack_static STATIC $<TARGET_OBJECTS:fx_plan_objs>)
+
 
 
 find_library(serialc_LIBRARY serialc PATHS ${PROJECT_SOURCE_DIR}/lib)
