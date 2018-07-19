@@ -66,6 +66,12 @@ public:
   void
   open ();
 
+  void 
+  openAsync();
+
+  state_t
+  getState();
+
   void
   close ();
 
@@ -198,6 +204,13 @@ private:
   HANDLE read_mutex;
   // Mutex used to lock the write functions
   HANDLE write_mutex;
+
+  state_t port_state;
+
+  static void syncOpen(VOID* p);
+
+  mutable HANDLE worker_thread;
+
 };
 
 }

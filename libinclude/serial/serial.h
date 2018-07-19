@@ -89,6 +89,13 @@ typedef enum {
   flowcontrol_hardware
 } flowcontrol_t;
 
+typedef enum {
+  state_none,
+  state_opening,
+  state_open_failed,
+  state_open
+} state_t;
+ 
 /*!
  * Structure for setting the timeout of the serial port, times are
  * in milliseconds.
@@ -203,6 +210,13 @@ public:
    */
   void
   open ();
+
+  void 
+  openAsync();
+
+  state_t
+  getState();
+
 
   /*! Gets the open status of the serial port.
    *

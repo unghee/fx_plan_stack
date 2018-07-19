@@ -1,13 +1,11 @@
 #ifndef SERIALDRIVER_H
 #define SERIALDRIVER_H
 
+#include "serial/serial.h"
+
 #include <vector>
 #include <string>
 #include <mutex>
-
-namespace serial {
-    class Serial;
-}
 
 class SerialDriver
 {
@@ -24,6 +22,7 @@ public:
     virtual void clear(uint16_t portIdx=0);
 
     std::string getPortName(uint16_t portIdx);
+    serial::state_t getPortState(uint16_t portIdx);
 
 protected:
     int numPortsOpen() const;

@@ -1,5 +1,5 @@
 #include "flexseastack/serialdriver.h"
-#include "serial/serial.h"
+
 #include <iostream>
 
 SerialDriver::SerialDriver(int n) :
@@ -47,27 +47,33 @@ bool SerialDriver::tryOpen(const std::string &portName, uint16_t portIdx) {
     if(ports[portIdx].isOpen())
     {
         std::cout << "Port " << portIdx << " already open" << std::endl;
-        return false;
     }
-    serial::Serial *s = ports+portIdx;
-    s->setPort(portName);
-    s->setBaudrate(400000);
-    s->setBytesize(serial::eightbits);
-    s->setParity(serial::parity_none);
-    s->setStopbits(serial::stopbits_one);
-    s->setFlowcontrol(serial::flowcontrol_hardware);
+    else
+    {
+        serial::Serial *s = ports+portIdx;
+        s->setPort(portName);
+        s->setBaudrate(400000);
+        s->setBytesize(serial::eightbits);
+        s->setParity(serial::parity_none);
+        s->setStopbits(serial::stopbits_one);
+        s->setFlowcontrol(serial::flowcontrol_hardware);
 
-    try { s->open(); } catch (...) {}
+        try { s->openAsync(); } catch (...) {}
+    }
 
-    if(s->isOpen())
+    if(ports[portIdx].isOpen())
     {
         std::cout << "Opened port " << portName << " at index " << portIdx << std::endl;
+
+        int temp = 0;
+        for(int i = 0; i < _NUMPORTS; ++i)
+            if(ports[i].isOpen()) temp++;
+
         std::lock_guard<std::mutex> lk(_portsMutex);
-        openPorts++;
+        openPorts = temp;
         return true;
     }
 
-    std::cout << "Failed to open port " << portName << " at index " << portIdx << std::endl;
     return false;
 }
 
@@ -146,3 +152,9 @@ std::string SerialDriver::getPortName(uint16_t portIdx)
 
     return "";
 }
+serial::state_t SerialDriver::getPortState(uint16_t portIdx)
+{
+    if(portIdx >= _NUMPORTS) return serial::state_none;
+    return ports[portIdx].getState();
+}
+

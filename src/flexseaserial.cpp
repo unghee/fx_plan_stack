@@ -329,7 +329,8 @@ void FlexseaSerial::open(std::string portName, int portIdx)
     if(portIdx >= _NUMPORTS) return;
 
     std::lock_guard<std::mutex> lk(openAttemptMut_);
-    openAttempts.emplace_back(portIdx, portName, 0, 5, 100, 100);
+    const int OPEN_DELAY = 400;
+    openAttempts.emplace_back(portIdx, portName, 0, 5, OPEN_DELAY, OPEN_DELAY);
 
     if(!haveOpenAttempts)
     {
