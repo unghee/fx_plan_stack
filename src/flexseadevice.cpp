@@ -10,9 +10,10 @@ FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int ro
     , type(_type)
     , numFields( deviceSpecs[_type].numFields )
     , _role(role)
+    , _data(dataBuffSize)
 {
-    data = new FxDevData(dataBuffSize);
-    dataMutex = new std::recursive_mutex();
+    data = &_data;
+    dataMutex = &_dataMutex;
     memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
 }
 
@@ -28,12 +29,6 @@ FlexseaDevice::~FlexseaDevice()
         if(dataptr)
             delete dataptr;
     }
-
-    delete data;
-    data=nullptr;
-
-    delete dataMutex;
-    dataMutex=nullptr;
 }
 
 /* Returns a vector of strings which describe the fields specified by map  */

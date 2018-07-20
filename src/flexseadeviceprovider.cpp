@@ -6,6 +6,9 @@ FlexseaDeviceProvider::FlexseaDeviceProvider() : defaultDevice(-1, -1, FX_NONE)
 
 FlexseaDeviceProvider::~FlexseaDeviceProvider()
 {
+    deviceConnectedFlags.clear();
+    mapChangedFlags.clear();
+
     // de-alloc all devices
     while(deviceIds.size())
         removeDevice(deviceIds.at(0));

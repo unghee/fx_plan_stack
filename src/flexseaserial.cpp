@@ -375,7 +375,8 @@ void FlexseaSerial::serviceOpenAttempts(uint8_t delayed)
     // iterate through and service each attempt
     for(auto& attempt : openAttempts)
     {
-        auto state = ports[attempt.portIdx].getState();
+        auto state = getState(attempt.portIdx);
+
         if(state == serial::state_opening)
         {
             continue;

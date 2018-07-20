@@ -95,7 +95,9 @@ protected:
     /* data gives access to data thats come into this device.
      * The actual buffer is managed by whichever object created this FlexseaDevice object
     */
+    FxDevData _data;
     FxDevData* data;
+    std::recursive_mutex _dataMutex;
     int _role;
 
 private:

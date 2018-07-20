@@ -29,6 +29,10 @@ public:
         for(unsigned short i = 0; i < l_.size(); i++)
             *(l_.at(i)) = 1;
     }
+    void clear() {
+        std::lock_guard<std::mutex> lk(m_);
+        l_.clear();
+    }
 };
 
 typedef std::shared_ptr<FlexseaDevice> FxDevicePtr;

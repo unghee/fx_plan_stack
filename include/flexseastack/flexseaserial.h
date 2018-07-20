@@ -59,6 +59,8 @@ protected:
     void processReceivedData(int port, size_t nb);
     virtual void serviceOpenPorts();
 
+    int devicesAtPort[FX_NUMPORTS];
+
 private:
     // multi comm periph string parsing stuff
     static const int NUM_COMMANDS = 256;
@@ -71,7 +73,6 @@ private:
     inline int updateDeviceMetadata(int port, uint8_t *buf);
     inline int updateDeviceData(uint8_t *buf);
 
-    int devicesAtPort[FX_NUMPORTS];
 };
 
 class OpenAttempt {

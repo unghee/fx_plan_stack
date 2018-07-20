@@ -51,7 +51,7 @@ bool TestSerial::tryOpen(const std::string &portName, uint16_t portIdx)
     if(isOpen(portIdx))
     {
         std::cout << "Port index " << portIdx << " already open." << std::endl;
-        return false;
+        return true;
     }
 
     // get the idx of this name within the fakePortList
@@ -152,6 +152,11 @@ int TestSerial::writeDeviceMap(const FxDevicePtr d, uint32_t *map)
     return 0;
 }
 
+serial::state_t TestSerial::getState(int port)
+{
+    return isOpen(port) ? serial::state_open : serial::state_none;
+}
+
 void TestSerial::sendDeviceWhoAmI(int port)
 {
     // fake receiving replies from random # of devices
@@ -159,6 +164,8 @@ void TestSerial::sendDeviceWhoAmI(int port)
     unsigned int j, n = rand() % 3 + 1;
     for(j=0;j<n;j++)
         testConnectDevice(port);
+
+    devicesAtPort[port] += n;
 }
 
 bool TestSerial::startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode)

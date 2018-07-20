@@ -28,6 +28,7 @@ protected:
     int numPortsOpen() const;
     virtual void cleanupPort(int portIdx) {(void)portIdx;}
     virtual bool tryOpen(const std::string &portName, uint16_t portIdx=0);
+    virtual serial::state_t getState(int portIdx) { return ports[portIdx].getState(); }
 
     const int _NUMPORTS;
     serial::Serial *ports;
