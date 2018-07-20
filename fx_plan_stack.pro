@@ -48,6 +48,7 @@ HEADERS += \
         include/flexseastack/flexseadevicetypes.h \
         include/flexseastack/flexseadevice.h \
         include/flexseastack/circular_buffer.h \
+        include/flexseastack/fxdata.h \
         include/flexseastack/commanager.h \
         include/flexseastack/periodictask.h \
         include/flexseastack/flexsea-system/inc/flexsea_device_spec.h \

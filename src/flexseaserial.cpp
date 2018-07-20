@@ -84,14 +84,6 @@ inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
         // need to clear old data ptrs as they are wrong size
         std::lock_guard<std::recursive_mutex> lk(*(dev->dataMutex));
         dev->setBitmap(bitmap);
-        FxDevData *cb = dev->getCircBuff();
-        FX_DataPtr ptr;
-        while(cb->count())
-        {
-            ptr = cb->get();
-            delete ptr;
-        }
-        ptr = nullptr;
         mapChangedFlags.notify();
     }
 
@@ -115,8 +107,9 @@ inline int FlexseaSerial::updateDeviceData(uint8_t *buf)
     FxDevicePtr d = connectedDevices.at(devId);
     FlexseaDeviceSpec ds = deviceSpecs[d->type];
     std::lock_guard<std::recursive_mutex> lk(*(d->dataMutex));
+
     FxDevData *cb = d->getCircBuff();
-    FX_DataPtr fxDataPtr = cb->full() ? cb->get() : new uint32_t[d->numFields+1]{0};
+    FX_DataPtr fxDataPtr = cb->getWrite();
 
     uint32_t deviceBitmap[FX_BITMAP_WIDTH];
     d->getBitmap(deviceBitmap);
@@ -146,7 +139,7 @@ inline int FlexseaSerial::updateDeviceData(uint8_t *buf)
 
             fieldOffset += 4; // storing each value as a separate int32
         }
-        cb->put(fxDataPtr);
+
     }
     else
     {

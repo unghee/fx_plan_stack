@@ -426,13 +426,8 @@ void TestSerial::testReceiveDataFromDevice(int id, uint32_t timestamp)
     //get the data buffer for this device
     FxDevData *cb = d->getCircBuff();
     if(!cb) return;
-    FX_DataPtr dataptr;
 
-    //data access
-    if(cb->full())
-        dataptr = cb->get();
-    else
-        dataptr = new uint32_t[d->numFields+1]{0};
+    FX_DataPtr dataptr = cb->getWrite();
 
     dataptr[0] = timestamp;
     dataptr[1] = d->type;
@@ -443,8 +438,6 @@ void TestSerial::testReceiveDataFromDevice(int id, uint32_t timestamp)
     if(d->numFields > 5) dataptr[6] = timestamp % 500;
     for(int k = 7; k <= d->numFields; k++)
         dataptr[k] = dataptr[k%3 + 2];
-
-    cb->put(dataptr);
 
     if(runVerbose && timestamp % 100 == 0)
         printData(d->id, d->numFields, dataptr);

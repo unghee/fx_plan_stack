@@ -193,7 +193,7 @@ void CommManager::periodicTask()
 
     if(serviceCount % 4 == 0)
     {
-        serviceOpenPorts();
+       serviceOpenPorts();
     }
     if(dataLogger && serviceCount % 10 == 0)
     {

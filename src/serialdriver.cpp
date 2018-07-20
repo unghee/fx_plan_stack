@@ -8,7 +8,6 @@ SerialDriver::SerialDriver(int n) :
     , openPorts(0)
 {}
 
-
 SerialDriver::~SerialDriver()
 {
     openPorts = 0;
@@ -109,13 +108,6 @@ void SerialDriver::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_
     if(!ports[portIdx].isOpen())
     {
         cleanupPort(portIdx);
-//        std::cout << "Port " << portIdx << " not open" << std::endl;
-//        for(unsigned int i = 0; i < deviceIds.size(); i++)
-//        {
-//            if(connectedDevices.at(deviceIds.at(i)).port == portIdx)
-//                removeDevice(deviceIds.at(i));
-//        }
-//        return;
     }
 
     try {

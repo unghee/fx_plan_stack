@@ -9,27 +9,15 @@ FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int ro
     , port(_port)
     , type(_type)
     , numFields( deviceSpecs[_type].numFields )
+    , dataMutex(&_dataMutex)
     , _role(role)
-    , _data(dataBuffSize)
+    , _data(dataBuffSize, deviceSpecs[_type].numFields + 1 )
 {
-    data = &_data;
-    dataMutex = &_dataMutex;
     memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
 }
 
 FlexseaDevice::~FlexseaDevice()
-{
-    //deallocate the circular buffer
-    dataMutex->lock();
-
-    FX_DataPtr dataptr;
-    while(data->count())
-    {
-        dataptr = data->get();
-        if(dataptr)
-            delete dataptr;
-    }
-}
+{}
 
 /* Returns a vector of strings which describe the fields specified by map  */
 std::vector<std::string> FlexseaDevice::getActiveFieldLabels() const
@@ -86,31 +74,31 @@ std::vector<std::string> FlexseaDevice::getAllFieldLabels() const
     return result;
 }
 
-uint32_t FlexseaDevice::getData(uint32_t index, int32_t *output, uint16_t outputSize) const
+uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputSize, int index)
 {
-    /*  Not a real implementation just for dev/testing purposes
-    */
-    if(index >= dataCount()) return 0;
+    if(index == -1) index = dataCount() - 1;
+    if(index < 0 || index >= dataCount()) return 0;
 
     std::lock_guard<std::recursive_mutex> lk(*dataMutex);
 
-    uint16_t fieldId = 0;
-    uint16_t i = 0;
-    int32_t *ptr = ((int32_t*)data->peek(index));
+    int32_t *ptr = ((int32_t*)_data.peek(index));
 
-    if(!ptr) return 0;
-
-    while(fieldId < 32*FX_BITMAP_WIDTH && i < outputSize && (fieldId) < numFields)
+    int outIdx = 0;
+    for(int i = 0; i < outputSize; ++i)
     {
-        if(IS_FIELD_HIGH(fieldId, bitmap))
+        int field = fieldIds[i];
+
+        if( (field >= 0) && (field < numFields) && IS_FIELD_HIGH(field, bitmap)  )
         {
-            output[i++] = ptr[1+fieldId];
+            output[outIdx] = ptr[ 1 + field ];
+            fieldIds[outIdx] = field;
+            outIdx++;
         }
 
-        fieldId++;
     }
 
     return ptr[0];
+
 }
 
 uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outputSize) const
@@ -120,7 +108,7 @@ uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outp
         std::cout << "Invalid index requested.." << std::endl;
         return 0;
     }
-    int32_t *srcPtr = ((int32_t*)data->peek(index));
+    int32_t *srcPtr = ((int32_t*)_data.peek(index));
     if(!srcPtr)
     {
         std::cout << "Error accessing data ptr" << std::endl;
@@ -136,8 +124,8 @@ uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outp
 
 uint32_t FlexseaDevice::getLatestTimestamp() const
 {
-    if(data->count())
-        return data->peekBack()[0];
+    if(_data.count())
+        return _data.peekBack()[0];
 
     return 0;
 }
@@ -146,9 +134,9 @@ uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
 {
     std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
 
-    size_t lb = 0, ub = data->count();
+    size_t lb = 0, ub = _data.count();
     size_t i = ub/2;
-    uint32_t t = data->peek(i)[0];
+    uint32_t t = _data.peek(i)[0];
 
     while(i != lb && lb != ub)
     {
@@ -158,7 +146,7 @@ uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
             ub = i;             //go left
 
         i = (lb + ub) / 2;
-        t = data->peek(i)[0];
+        t = _data.peek(i)[0];
     }
 
     return i + (t >= timestamp);
@@ -170,16 +158,16 @@ uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
 
 //    std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
 
-//    while(i < data->count() && data->peek(i)[0] <= timestamp)
+//    while(i < _data.count() && _data.peek(i)[0] <= timestamp)
 //        i++;
 
-//    while(i < data->count() && j < outputSize)
+//    while(i < _data.count() && j < outputSize)
 //    {
-//        memcpy(output+j, data->peek(i++), sizeData);
+//        memcpy(output+j, _data.peek(i++), sizeData);
 //        j+=numFields+1;
 //    }
 
-//    uint32_t last = data->peek(i-1)[0];
+//    uint32_t last = _data.peek(i-1)[0];
 
 //    return last;
 //}
@@ -188,17 +176,17 @@ inline size_t FlexseaDevice::findIndexAfterTime(uint32_t timestamp) const
 {
 // ---- Linear search O(n)
 //    size_t i=0;
-//    while(i < data->count() && data->peek(i)[0] <= timestamp)
+//    while(i < _data.count() && _data.peek(i)[0] <= timestamp)
 //        i++;
 
 // ---- Binary search O(logn)
 
-    size_t lb = 0, ub = data->count();
+    size_t lb = 0, ub = _data.count();
 
     if(ub == 0) return 0;
 
     size_t i = ub / 2;
-    uint32_t t = data->peek(i)[0];
+    uint32_t t = _data.peek(i)[0];
 
     while(i != lb && lb != ub)
     {
@@ -208,7 +196,7 @@ inline size_t FlexseaDevice::findIndexAfterTime(uint32_t timestamp) const
             ub = i;
 
         i = (lb + ub) / 2;
-        t = data->peek(i)[0];
+        t = _data.peek(i)[0];
     }
 
     return i + (timestamp >= t);
@@ -226,14 +214,14 @@ uint32_t FlexseaDevice::getDataAfterTime(int field, uint32_t timestamp, std::vec
     size_t i = findIndexAfterTime(timestamp);
 
     ts_output.clear();
-    ts_output.reserve(data->count() - i);
+    ts_output.reserve(_data.count() - i);
     data_output.clear();
-    data_output.reserve(data->count() - i);
+    data_output.reserve(_data.count() - i);
 
     FX_DataPtr p = nullptr;
-    while(i < data->count())
+    while(i < _data.count())
     {
-        p = data->peek(i++);
+        p = _data.peek(i++);
         ts_output.push_back(p[0]);
         data_output.push_back(p[field+1]);
     }
@@ -249,19 +237,19 @@ uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, std::vector<uint32_
     size_t i = 0, sizeData = numFields * sizeof(int32_t);
     std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
 
-    while(i < data->count() && data->peek(i)[0] <= timestamp)
+    while(i < _data.count() && _data.peek(i)[0] <= timestamp)
         i++;
 
     timestamps.clear();
-    timestamps.reserve(data->count() - i);
+    timestamps.reserve(_data.count() - i);
     outputData.clear();
-    outputData.reserve(data->count() - i);
+    outputData.reserve(_data.count() - i);
 
     FX_DataPtr p = nullptr;
 
-    while(i < data->count())
+    while(i < _data.count())
     {
-        p = data->peek(i++);
+        p = _data.peek(i++);
         timestamps.push_back(p[0]);
         outputData.emplace_back(numFields);
         memcpy(outputData.back().data(), p+1, sizeData);
@@ -295,11 +283,11 @@ double FlexseaDevice::getDataRate() const
 {
     std::lock_guard<std::recursive_mutex> lk(*dataMutex);
     const int AVG_OVER = 10;
-    if(data->count() < AVG_OVER)
+    if(_data.count() < AVG_OVER)
         return -1;
 
-    size_t i = data->count() - AVG_OVER;
-    double avg_period = ((double)(data->peekBack()[0] - data->peek(i)[0])) / AVG_OVER;
+    size_t i = _data.count() - AVG_OVER;
+    double avg_period = ((double)(_data.peekBack()[0] - _data.peek(i)[0])) / AVG_OVER;
     return 1000.0 / avg_period;
 }
 

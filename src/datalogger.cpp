@@ -25,7 +25,7 @@ bool DataLogger::startLogging(int devId)
     unsigned int ts = 0;
     if(dev->dataCount())
     {
-        ts = dev->getData(dev->dataCount()-1, nullptr, 0);
+        ts = dev->getLatestTimestamp();
     }
 
     std::vector<std::string> fieldLabels = dev->getActiveFieldLabels();
