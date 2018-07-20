@@ -265,18 +265,6 @@ void FlexseaSerial::serviceOpenPorts()
     {
         if(ports[i].isOpen())
         {
-            if(devicesAtPort[i] < 0)
-            {
-                std::cout << "Some kind of error in port-device management" << std::endl;
-            }
-            else if(devicesAtPort[i] == 0)
-            {
-                static int counter=0;
-                counter = (counter + 1)%200;
-                if(!counter)
-                    sendDeviceWhoAmI(i);
-            }
-
             try {
                 nb = ports[i].available();
             } catch (...) {
@@ -328,14 +316,16 @@ void FlexseaSerial::open(std::string portName, int portIdx)
 {
     if(portIdx >= _NUMPORTS) return;
 
+    tryOpen(portName, portIdx);
+
     std::lock_guard<std::mutex> lk(openAttemptMut_);
-    const int OPEN_DELAY = 400;
-    openAttempts.emplace_back(portIdx, portName, 0, 5, OPEN_DELAY, OPEN_DELAY);
+    const int OPEN_DELAY = 250;
+    openAttempts.emplace_back(portIdx, portName, 0, 10, OPEN_DELAY, 0);
 
     if(!haveOpenAttempts)
     {
         std::lock_guard<std::mutex> pTaskLock(conditionMutex);
-        haveOpenAttempts = true;
+        haveOpenAttempts = openAttempts.size();
     }
 
     wakeCV.notify_all();
@@ -385,17 +375,28 @@ void FlexseaSerial::serviceOpenAttempts(uint8_t delayed)
     // iterate through and service each attempt
     for(auto& attempt : openAttempts)
     {
-        attempt.delayed += delayed;
-        attempt.tries++;
-        if(attempt.delayed >= attempt.delay)
+        auto state = ports[attempt.portIdx].getState();
+        if(state == serial::state_opening)
         {
-            attempt.delayed -= attempt.delay;
-            bool succeeded = tryOpen(attempt.portName, attempt.portIdx);
-
-            if(succeeded)
+            continue;
+        }
+        else if(state == serial::state_open && devicesAtPort[attempt.portIdx] < 1)
+        {
+            attempt.delayed += delayed;
+            if(attempt.delayed >= attempt.delay)
+            {
+                attempt.delayed -= attempt.delay;
+                if(!openPorts) openPorts = 1;
                 sendDeviceWhoAmI(attempt.portIdx);
+            }
+        }
+        else
+        {
+            // tryOpen is called once more on success to properly update state
+            if(state == serial::state_open)
+                tryOpen(attempt.portName, attempt.portIdx);
 
-            attempt.markedToRemove = succeeded || attempt.tries >= attempt.tryMax;
+            attempt.markedToRemove = true;
         }
     }
 
@@ -406,5 +407,5 @@ void FlexseaSerial::serviceOpenAttempts(uint8_t delayed)
                 openAttempts.end());
 
     std::lock_guard<std::mutex> pTaskLock(conditionMutex);
-    haveOpenAttempts = !openAttempts.empty();
+    haveOpenAttempts = openAttempts.size();
 }

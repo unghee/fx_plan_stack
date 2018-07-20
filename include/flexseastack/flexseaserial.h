@@ -50,7 +50,8 @@ protected:
     virtual bool goToLongSleep();
 
     OpenAttemptList openAttempts;
-    bool haveOpenAttempts = false;
+    int haveOpenAttempts = 0;
+
     std::mutex openAttemptMut_;
     void serviceOpenAttempts(uint8_t delayed);
 
