@@ -51,7 +51,9 @@ public:
 
     /// \brief returns the first index of data whose timestamp is later than given timeStamp
     uint16_t getIndexAfterTime(uint32_t timeStamp) const;
+
     uint32_t getDataAfterTime(int field, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<int32_t> &data_output) const;
+    uint32_t getDataAfterTime(const std::vector<int> &fields, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<std::vector<int32_t>> &data_output) const;
 
     /// \brief fills the vectors with all data whose timestamps are after timeStamp.
     /// timestamps and data are emptied and then filled as parallel vectors

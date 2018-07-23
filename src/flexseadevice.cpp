@@ -232,6 +232,41 @@ uint32_t FlexseaDevice::getDataAfterTime(int field, uint32_t timestamp, std::vec
         return timestamp;
 }
 
+
+uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<std::vector<int32_t>> &data_output) const
+{
+    std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
+
+    for(auto && field : fieldIds )
+        if(!IS_FIELD_HIGH(field, this->bitmap)) return timestamp;
+
+    size_t i = findIndexAfterTime(timestamp), j;
+    size_t nf = fieldIds.size();
+
+    ts_output.clear();
+    ts_output.reserve(_data.count() - i);
+    data_output.clear();
+    data_output.resize( nf );
+
+    for(j = 0; j < nf; ++j)
+        data_output.at(j).reserve(_data.count() - i);
+
+    FX_DataPtr p = nullptr;
+    while(i < _data.count())
+    {
+        p = _data.peek(i++);
+        ts_output.push_back(p[0]);
+
+        for(j = 0; j < nf; ++j)
+            data_output.at(j).push_back(p[fieldIds.at(j)+1]);
+    }
+
+    if(p)
+        return p[0];
+    else
+        return timestamp;
+}
+
 uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, std::vector<uint32_t> &timestamps, std::vector<std::vector<int32_t>> &outputData) const
 {
     size_t i = 0, sizeData = numFields * sizeof(int32_t);
