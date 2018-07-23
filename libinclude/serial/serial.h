@@ -215,7 +215,7 @@ public:
   openAsync();
 
   state_t
-  getState();
+  getState() const;
 
 
   /*! Gets the open status of the serial port.

@@ -70,7 +70,7 @@ public:
   openAsync();
 
   state_t
-  getState();
+  getState() const;
 
   void
   close ();
