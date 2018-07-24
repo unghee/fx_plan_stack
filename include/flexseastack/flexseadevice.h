@@ -42,6 +42,7 @@ public:
      *      outputSize is specified as length of int32_t array
      *      returns the timestamp
     */
+    virtual uint32_t getLastData(int32_t *output, uint16_t outputSize);
     uint32_t getData(uint32_t index, int32_t *output, uint16_t outputSize) const;
     uint32_t  getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outputSize) const;
     uint32_t getLatestTimestamp() const;

@@ -44,6 +44,29 @@ const FxDevicePtr FlexseaDeviceProvider::getDevicePtr(int id) const
     return nullptr;
 }
 
+int FlexseaDeviceProvider::addDevice(FlexseaDevice * dev)
+{
+    int unique = 1;
+    for(const auto& it : deviceIds)
+    {
+        if(it == dev->id)
+        {
+            unique = 0;
+            break;
+        }
+    }
+    if(!unique) return 1;
+
+    deviceIds.push_back(dev->id);
+    FxDevicePtr devPtr(dev);
+    connectedDevices.insert({dev->id, devPtr});
+
+    //Notify device connected
+    deviceConnectedFlags.notify();
+
+    return 0;
+}
+
 int FlexseaDeviceProvider::addDevice(int id, int port, FlexseaDeviceType type, int role)
 {
     int unique = 1;

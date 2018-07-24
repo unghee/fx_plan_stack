@@ -65,6 +65,7 @@ protected:
     std::unordered_map<int, FxDevicePtr> connectedDevices;
     const FlexseaDevice defaultDevice;
 
+    int addDevice(FlexseaDevice * dev);
     int addDevice(int id, int port, FlexseaDeviceType type, int role=FLEXSEA_MANAGE_1);
     int removeDevice(int id);
 };

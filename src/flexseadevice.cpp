@@ -92,6 +92,11 @@ std::vector<std::string> FlexseaDevice::getAllFieldLabels() const
     return result;
 }
 
+uint32_t FlexseaDevice::getLastData(int32_t *output, uint16_t outputSize)
+{
+    return getData(data->count() - 1, output, outputSize);
+}
+
 uint32_t FlexseaDevice::getData(uint32_t index, int32_t *output, uint16_t outputSize) const
 {
     /*  Not a real implementation just for dev/testing purposes
