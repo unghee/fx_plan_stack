@@ -49,7 +49,7 @@ public:
     /// FlexseaDevice provides an interface to incoming data from a connected device
     virtual const FlexseaDevice& getDevice(int id) const;
     virtual const FxDevicePtr getDevicePtr(int id) const;
-    bool haveDevice(int id) const { return connectedDevices.count(id) > 0; }
+    virtual bool haveDevice(int id) const { return connectedDevices.count(id) > 0; }
 
     /// These functions allow users to be notified of the corresponding events
     void registerConnectionChangeFlag(uint8_t *flag) const {deviceConnectedFlags.add(flag);}

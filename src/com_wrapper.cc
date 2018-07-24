@@ -34,8 +34,8 @@ extern "C"
         typedef std::tuple<uint8_t, int32_t, uint8_t, int16_t, int16_t, int16_t, int16_t, uint8_t> CtrlParams;
         std::unordered_map<int, CtrlParams> ctrlsMap; 
 
-        typedef struct user_data_s uData;
-        std::unordered_map<int, uData> uDataMap;
+//        typedef struct user_data_s uData;
+//        std::unordered_map<int, uData> uDataMap;
 
         void fxSetup()
         {
