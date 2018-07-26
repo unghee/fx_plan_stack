@@ -32,8 +32,14 @@ CommManager::CommManager() : FlexseaSerial()
 }
 
 CommManager::~CommManager(){
-    if(dataLogger) delete dataLogger;
 
+    for(int i = 0; i < FX_NUMPORTS; ++i)
+    {
+        if(isOpen(i))
+            close(i);
+    }
+
+    if(dataLogger) delete dataLogger;
     dataLogger = nullptr;
 }
 
@@ -262,7 +268,9 @@ void CommManager::close(uint16_t portIdx)
     {
         Message m = outgoingBuffer[portIdx].front();
         outgoingBuffer[portIdx].pop();
-        this->write(m.numBytes, m.dataPacket.get(), portIdx);
+
+        if(isOpen(portIdx))
+            this->write(m.numBytes, m.dataPacket.get(), portIdx);
     }
 
     FlexseaSerial::close(portIdx);

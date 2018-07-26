@@ -353,7 +353,7 @@ void FlexseaSerial::close(uint16_t portIdx)
     for(const int &id : idsToRemove)
     {
         this->removeDevice(id);
-        std::cout << "Removed device : id\n";
+        std::cout << "Removed device : " << id << std::endl;
     }
 
     devicesAtPort[portIdx] = 0;
