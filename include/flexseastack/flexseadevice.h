@@ -19,6 +19,7 @@ class FlexseaDevice
 {
 public:
     explicit FlexseaDevice(int _id=-1, int _port=-1, FlexseaDeviceType _type=FX_NONE, int role=FLEXSEA_MANAGE_1, int dataBuffSize=FX_DATA_BUFFER_SIZE);
+    explicit FlexseaDevice(int _id, int _port, std::vector<std::string> fieldLabels, int role, int dataBuffSize);
     ~FlexseaDevice();
 
     const int id;
@@ -89,6 +90,7 @@ protected:
      * The actual buffer is managed by whichever object created this FlexseaDevice object
     */
     int _role;
+    std::vector<std::string> fieldLabels;
     std::recursive_mutex _dataMutex;
     FxDevData _data;
 

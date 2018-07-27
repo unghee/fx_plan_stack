@@ -44,15 +44,15 @@ public:
     virtual ~FlexseaDeviceProvider();
 
     /// \brief Returns a vector containing the ids of all connected devices.
-    virtual std::vector<int> getDeviceIds() const;
+    std::vector<int> getDeviceIds() const;
 
     /// \brief Returns a vector containing the ids of all connected devices at the specified port.
-    virtual std::vector<int> getDeviceIds(int portIdx) const;
+    std::vector<int> getDeviceIds(int portIdx) const;
 
     /// \brief Returns a FlexseaDevice with matching ID, returns default device if no match.
     /// FlexseaDevice provides an interface to incoming data from a connected device
-    virtual const FlexseaDevice& getDevice(int id) const;
-    virtual const FxDevicePtr getDevicePtr(int id) const;
+    const FlexseaDevice& getDevice(int id) const;
+    const FxDevicePtr getDevicePtr(int id) const;
     bool haveDevice(int id) const { return connectedDevices.count(id) > 0; }
 
     /// These functions allow users to be notified of the corresponding events
@@ -70,6 +70,22 @@ protected:
     const FlexseaDevice defaultDevice;
 
     int addDevice(int id, int port, FlexseaDeviceType type, int role=FLEXSEA_MANAGE_1);
+
+    template<typename ... Args>
+    int addDevice(int id, Args&&... args)
+    {
+        if(haveDevice(id)) return 1;
+
+        deviceIds.push_back(id);
+        FxDevicePtr devPtr(new FlexseaDevice( id, std::forward<Args>(args)... ));
+        connectedDevices.insert({id, devPtr});
+
+        //Notify device connected
+        deviceConnectedFlags.notify();
+
+        return 0;
+    }
+
     int removeDevice(int id);
 };
 

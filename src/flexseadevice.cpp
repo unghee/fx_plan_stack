@@ -14,6 +14,27 @@ FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int ro
     , _data(dataBuffSize, deviceSpecs[_type].numFields + 1 )
 {
     memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
+
+    for(int i = 0; i < numFields; ++i)
+    {
+        const char* c_str = deviceSpecs[_type].fieldLabels[i];
+        if(c_str)
+            fieldLabels.push_back(c_str);
+        else
+            throw std::invalid_argument("Device Spec for given type is invalid, causing null pointer access");
+     }
+}
+
+FlexseaDevice::FlexseaDevice(int _id, int _port, std::vector<std::string> fieldLabels, int role, int dataBuffSize)
+    : id(_id), port(_port), type(FX_CUSTOM)
+    , numFields(fieldLabels.size())
+    , data( new FxDevData(dataBuffSize) )
+    , _role(role)
+    , fieldLabels(fieldLabels)
+
+{
+    dataMutex = new std::recursive_mutex();
+    memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
 }
 
 FlexseaDevice::~FlexseaDevice()
@@ -35,11 +56,11 @@ std::vector<std::string> FlexseaDevice::getActiveFieldLabels() const
     uint16_t fieldId = 0;
     lastRequest.clear();
 
-    while(fieldId < 32*FX_BITMAP_WIDTH && fieldId < deviceSpecs[this->type].numFields)
+    while(fieldId < 32*FX_BITMAP_WIDTH && fieldId < numFields)
     {
         if(IS_FIELD_HIGH(fieldId, this->bitmap))
         {
-            lastRequest.push_back( deviceSpecs[this->type].fieldLabels[fieldId] );
+            lastRequest.push_back( fieldLabels.at(fieldId) );
         }
 
         fieldId++;
@@ -65,13 +86,12 @@ std::vector<int> FlexseaDevice::getActiveFieldIds() const
 
 std::vector<std::string> FlexseaDevice::getAllFieldLabels() const
 {
-    std::vector<std::string> result;
-    result.reserve(numFields);
+    return fieldLabels;
+}
 
-    for(int i = 0; i < numFields; ++i)
-        result.push_back(deviceSpecs[this->type].fieldLabels[i]);
-
-    return result;
+uint32_t FlexseaDevice::getLastData(int32_t *output, uint16_t outputSize)
+{
+    return getData(data->count() - 1, output, outputSize);
 }
 
 uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputSize, int index)
@@ -329,7 +349,7 @@ double FlexseaDevice::getDataRate() const
 std::string FlexseaDevice::getName() const
 {
     if(this->type < NUM_DEVICE_TYPES && this->type != FX_NONE)
-        return (deviceSpecs[this->type].fieldLabels[0]);
+        return ( fieldLabels.at(0) );
 
     return  "";
 }
