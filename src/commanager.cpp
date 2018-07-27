@@ -264,14 +264,19 @@ void CommManager::close(uint16_t portIdx)
             stopStreaming(kvp.second->id);
     }
 
-    while(outgoingBuffer[portIdx].size())
-    {
-        Message m = outgoingBuffer[portIdx].front();
-        outgoingBuffer[portIdx].pop();
+    // -- Forcing remaining messages allows us to stop auto streaming when we disconnect
+    // -- However over bluetooth, we risk trying to send a message to a bluetooth port that's actually not open
+    // -- ie: connected over bluetooth, turn off device, then call into close()
+    // -- this causes caller of CommManager::close to hang while windows tries to write with BT driver :(
 
-        if(isOpen(portIdx))
-            this->write(m.numBytes, m.dataPacket.get(), portIdx);
-    }
+//    while(outgoingBuffer[portIdx].size())
+//    {
+//        Message m = outgoingBuffer[portIdx].front();
+//        outgoingBuffer[portIdx].pop();
+
+//        if(isOpen(portIdx))
+//            this->write(m.numBytes, m.dataPacket.get(), portIdx);
+//    }
 
     FlexseaSerial::close(portIdx);
 }

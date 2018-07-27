@@ -31,11 +31,11 @@ public:
     bool hasData() const { return !_data.empty(); }
     size_t dataCount() const { return _data.count(); }
 
-    /* dataMutex should be locked while accessing data to ensure thread safety
-    */
-    std::recursive_mutex *dataMutex;
+    // dataMutex should be locked while accessing data to ensure thread safety
+    // a const pointer to a (non-const) recursive_mutex
+    std::recursive_mutex *const dataMutex;
 
-    /* Returns a vector of strings which describe the fields specified by map  */
+    // Returns a vector of strings which describe the fields specified by map
     std::vector<std::string> getActiveFieldLabels() const;
     std::vector<int> getActiveFieldIds() const;
 

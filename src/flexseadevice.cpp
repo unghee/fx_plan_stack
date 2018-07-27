@@ -28,12 +28,11 @@ FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int ro
 FlexseaDevice::FlexseaDevice(int _id, int _port, std::vector<std::string> fieldLabels, int role, int dataBuffSize)
     : id(_id), port(_port), type(FX_CUSTOM)
     , numFields(fieldLabels.size())
-    , data( new FxDevData(dataBuffSize) )
+    , dataMutex(&_dataMutex)
     , _role(role)
     , fieldLabels(fieldLabels)
-
+    , _data( dataBuffSize, fieldLabels.size() )
 {
-    dataMutex = new std::recursive_mutex();
     memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
 }
 
@@ -89,15 +88,15 @@ std::vector<std::string> FlexseaDevice::getAllFieldLabels() const
     return fieldLabels;
 }
 
-uint32_t FlexseaDevice::getLastData(int32_t *output, uint16_t outputSize)
-{
-    return getData(data->count() - 1, output, outputSize);
-}
+//uint32_t FlexseaDevice::getLastData(int32_t *output, uint16_t outputSize)
+//{
+//    return getData(data->count() - 1, output, outputSize);
+//}
 
 uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputSize, int index)
 {
     if(index == -1) index = dataCount() - 1;
-    if(index < 0 || index >= dataCount()) return 0;
+    if(index < 0 || index >= (int)dataCount()) return 0;
 
     std::lock_guard<std::recursive_mutex> lk(*dataMutex);
 
