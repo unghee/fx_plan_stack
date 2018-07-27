@@ -77,7 +77,7 @@ bool TestSerial::tryOpen(const std::string &portName, uint16_t portIdx)
         std::cout << "Connecting to port \"" << portName << "\" at index " << portIdx << std::endl;
         // connect a couple devices (random number between 1 and 3) at this port
         portMapping[portIdx] = i;
-        std::lock_guard<std::mutex> lk(_portsMutex);
+        std::lock_guard<std::mutex> lk(_portCountMutex);
         openPorts++;
         return true;
     }
@@ -95,7 +95,7 @@ void TestSerial::tryClose(uint16_t portIdx)
         std::cout << "[Fake] Disconnecting port \"" << portName << "\" at index " << portIdx << std::endl;
         portMapping[portIdx] = -1;
 
-        std::lock_guard<std::mutex> lk(_portsMutex);
+        std::lock_guard<std::mutex> lk(_portCountMutex);
         openPorts--;
     }
 }

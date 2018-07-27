@@ -2,11 +2,18 @@
 
 #include <iostream>
 
+#define CHECK_PORTIDX(idx) do { if(idx >= _NUMPORTS) throw std::invalid_argument("Port Index outside of range"); } while(0)
+#define LOCK_MTX(idx) std::lock_guard<std::mutex> lk(serialMutexes[idx])
+
 SerialDriver::SerialDriver(int n) :
     _NUMPORTS(n)
     , ports(new serial::Serial[n])
+    , serialMutexes(new std::mutex[n])
+    , isPortOpen(new bool[n])
     , openPorts(0)
-{}
+{
+    memset(isPortOpen, 0, sizeof(bool)*n);
+}
 
 SerialDriver::~SerialDriver()
 {
@@ -17,6 +24,8 @@ SerialDriver::~SerialDriver()
 
     delete[] ports;
     ports = nullptr;
+    delete[] serialMutexes;
+    serialMutexes = nullptr;
 }
 
 /* Serial functions */
@@ -32,22 +41,23 @@ std::vector<std::string> SerialDriver::getAvailablePorts() const
 }
 
 int SerialDriver::isOpen(uint16_t portIdx) const {
+    CHECK_PORTIDX(portIdx);
+    LOCK_MTX(portIdx);
+
+    if(!isPortOpen[portIdx] && ports[portIdx].isOpen())
+    {
+        std::lock_guard<std::mutex> lk(_portCountMutex);
+        openPorts++;
+    }
+
     return ports[portIdx].isOpen();
 }
 
 bool SerialDriver::tryOpen(const std::string &portName, uint16_t portIdx) {
+    CHECK_PORTIDX(portIdx);
+    LOCK_MTX(portIdx);
 
-    if(portIdx >= _NUMPORTS)
-    {
-        std::cout << "Can't to open port outside range (" << portIdx << ")" << std::endl;
-        return false;
-    }
-
-    if(ports[portIdx].isOpen())
-    {
-        std::cout << "Port " << portIdx << " already open" << std::endl;
-    }
-    else
+    if(!ports[portIdx].isOpen())
     {
         serial::Serial *s = ports+portIdx;
         s->setPort(portName);
@@ -57,88 +67,114 @@ bool SerialDriver::tryOpen(const std::string &portName, uint16_t portIdx) {
         s->setStopbits(serial::stopbits_one);
         s->setFlowcontrol(serial::flowcontrol_hardware);
 
+#ifdef __WIN32
         try { s->openAsync(); } catch (...) {}
+#else
+        try { s->open(); } catch (...) {}
+#endif
+
     }
+
+    if(!isPortOpen[portIdx] && ports[portIdx].isOpen())
+    {
+        std::lock_guard<std::mutex> lk(_portCountMutex);
+        openPorts++;
+        std::cout << "Port " << portIdx << " opened" << std::endl;
+    }
+
+    return ports[portIdx].isOpen();
+}
+
+serial::state_t SerialDriver::getState(int portIdx) const
+{
+    CHECK_PORTIDX(portIdx);
+    LOCK_MTX(portIdx);
+
+    if(!isPortOpen[portIdx] && ports[portIdx].isOpen())
+    {
+        std::lock_guard<std::mutex> lk(_portCountMutex);
+        openPorts++;
+    }
+
+    return ports[portIdx].getState();
+}
+
+size_t SerialDriver::bytesAvailable(int portIdx) const
+{
+    CHECK_PORTIDX(portIdx);
+    LOCK_MTX(portIdx);
 
     if(ports[portIdx].isOpen())
-    {
-        std::cout << "Opened port " << portName << " at index " << portIdx << std::endl;
+        return ports[portIdx].available();
 
-        int temp = 0;
-        for(int i = 0; i < _NUMPORTS; ++i)
-            if(ports[i].isOpen()) temp++;
+    return 0;
+}
 
-        std::lock_guard<std::mutex> lk(_portsMutex);
-        openPorts = temp;
-        return true;
-    }
+size_t SerialDriver::readPort(int portIdx, uint8_t *buf, uint16_t nb)
+{
+    CHECK_PORTIDX(portIdx);
+    LOCK_MTX(portIdx);
 
-    return false;
+    if(ports[portIdx].isOpen())
+        return ports[portIdx].read(buf, nb);
+
+    return 0;
 }
 
 void SerialDriver::tryClose(uint16_t portIdx) {
-    if(portIdx >= _NUMPORTS)
-    {
-        std::cout << "Can't close port outside range (" << portIdx << ")" << std::endl;
-        return;
-    }
+    CHECK_PORTIDX(portIdx);
+    LOCK_MTX(portIdx);
 
-    if(!ports[portIdx].isOpen())
-    {
-        std::cout << "Port " << portIdx << " already closed" << std::endl;
-        return;
-    }
+    if(ports[portIdx].isOpen())
+        ports[portIdx].close();
 
-    ports[portIdx].close();
-    if(!ports[portIdx].isOpen())
+    if(!ports[portIdx].isOpen() && isPortOpen[portIdx])
     {
         std::cout << "Closed port " << portIdx << "." << std::endl;
-        std::lock_guard<std::mutex> lk(_portsMutex);
+        std::lock_guard<std::mutex> lk(_portCountMutex);
         openPorts--;
     }
 }
 
 void SerialDriver::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t portIdx)
 {
-    if(portIdx >= _NUMPORTS)
+    CHECK_PORTIDX(portIdx);
+    LOCK_MTX(portIdx);
+
+    bool success = false;
+
+    if(ports[portIdx].isOpen())
     {
-        std::cout << "Can't write to port outside range (" << portIdx << ")" << std::endl;
-        return;
-    }
-    if(!ports[portIdx].isOpen())
-    {
-        cleanupPort(portIdx);
+        try {
+            ports[portIdx].write(serial_tx_data, bytes_to_send);
+            success = true;
+        } catch (serial::IOException e) {
+            std::cout << "IO Exception:  " << e.what() << std::endl;
+        } catch (serial::SerialException e) {
+            std::cout << "Serial Exception:  " << e.what() << std::endl;
+        }
     }
 
-    try {
-        ports[portIdx].write(serial_tx_data, bytes_to_send);
-    } catch (serial::IOException e) {
-        std::cout << "IO Exception:  " << e.what() << std::endl;
-    } catch (serial::SerialException e) {
-        std::cout << "Serial Exception:  " << e.what() << std::endl;
-    } catch (serial::PortNotOpenedException e) {
-        std::cout << "Port wasn't open" << std::endl;
-        close();
-//        tryClose(portIdx);
-    }
+    if(!success && ports[portIdx].isOpen())
+        ports[portIdx].close();
 }
 
 void SerialDriver::flush(uint16_t portIdx)
 {
-    if(portIdx >= _NUMPORTS) return;
+    CHECK_PORTIDX(portIdx);
     ports[portIdx].flush();
 }
 void SerialDriver::clear(uint16_t portIdx)
 {
-    if(portIdx >= _NUMPORTS) return;
+    CHECK_PORTIDX(portIdx);
     ports[portIdx].flushInput();
     ports[portIdx].flushOutput();
 }
 
 std::string SerialDriver::getPortName(uint16_t portIdx)
 {
-    if(portIdx >= _NUMPORTS) return "";
-
+    CHECK_PORTIDX(portIdx);
+    LOCK_MTX(portIdx);
     if(ports[portIdx].isOpen())
         return ports[portIdx].getPort();
 
@@ -146,7 +182,7 @@ std::string SerialDriver::getPortName(uint16_t portIdx)
 }
 serial::state_t SerialDriver::getPortState(uint16_t portIdx)
 {
-    if(portIdx >= _NUMPORTS) return serial::state_none;
+    CHECK_PORTIDX(portIdx);
     return ports[portIdx].getState();
 }
 

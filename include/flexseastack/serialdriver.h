@@ -25,15 +25,24 @@ public:
     serial::state_t getPortState(uint16_t portIdx);
 
 protected:
-    int numPortsOpen() const;
+    int numPortsOpen() const {return openPorts;}
     virtual void cleanupPort(int portIdx) {(void)portIdx;}
     virtual bool tryOpen(const std::string &portName, uint16_t portIdx=0);
-    virtual serial::state_t getState(int portIdx) { return ports[portIdx].getState(); }
+    virtual serial::state_t getState(int portIdx) const;
+    size_t bytesAvailable(int portIdx) const;
+    size_t readPort(int portIdx, uint8_t *buf, uint16_t nb);
 
+
+private:
     const int _NUMPORTS;
     serial::Serial *ports;
-    std::mutex _portsMutex;
-    uint16_t openPorts;
+    std::mutex *serialMutexes;
+    bool *isPortOpen;
+
+    mutable std::mutex _portCountMutex;
+    mutable uint16_t openPorts;
+
+    friend class TestSerial;
 };
 
 #endif // SERIALDRIVER_H

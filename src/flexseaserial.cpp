@@ -248,36 +248,21 @@ void FlexseaSerial::serviceOpenPorts()
     size_t i, nr;
     long int nb;
 
-    {
-        std::lock_guard<std::mutex> lk(_portsMutex);
-        if(!openPorts)
-            return;
-    }
-
     for(i = 0; i < FX_NUMPORTS; i++)
     {
-        if(ports[i].isOpen())
+        nb = bytesAvailable(i);
+        while(nb > 0)
         {
-            try {
-                nb = ports[i].available();
-            } catch (...) {
-                ports[i].close();
-                nb = 0;
-            }
-
-            while(nb > 0)
-            {
-                nr = nb > MAX_SERIAL_RX_LEN ? MAX_SERIAL_RX_LEN : nb;
-                nb -= nr;
-                ports[i].read(largeRxBuffer, nr);
-                processReceivedData(i, nr);
-            }
+            nr = nb > MAX_SERIAL_RX_LEN ? MAX_SERIAL_RX_LEN : nb;
+            nb -= nr;
+            readPort(i, largeRxBuffer, nr);
+            processReceivedData(i, nr);
         }
     }
 }
 
-bool FlexseaSerial::wakeFromLongSleep() { return openPorts > 0 || haveOpenAttempts; }
-bool FlexseaSerial::goToLongSleep() { return !openPorts && !haveOpenAttempts; }
+bool FlexseaSerial::wakeFromLongSleep() { return numPortsOpen() > 0 || haveOpenAttempts; }
+bool FlexseaSerial::goToLongSleep() { return !numPortsOpen() && !haveOpenAttempts; }
 
 void FlexseaSerial::sendDeviceWhoAmI(int port)
 {
@@ -307,8 +292,6 @@ void FlexseaSerial::sendDeviceWhoAmI(int port)
 
 void FlexseaSerial::open(std::string portName, int portIdx)
 {
-    if(portIdx >= _NUMPORTS) return;
-
     tryOpen(portName, portIdx);
 
     std::lock_guard<std::mutex> lk(openAttemptMut_);
@@ -380,7 +363,7 @@ void FlexseaSerial::serviceOpenAttempts(uint8_t delayed)
             if(attempt.delayed >= attempt.delay)
             {
                 attempt.delayed -= attempt.delay;
-                if(!openPorts) openPorts = 1;
+//                if(!openPorts) openPorts = 1;
                 sendDeviceWhoAmI(attempt.portIdx);
             }
         }
