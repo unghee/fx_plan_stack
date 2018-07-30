@@ -88,15 +88,14 @@ std::vector<std::string> FlexseaDevice::getAllFieldLabels() const
     return fieldLabels;
 }
 
-//uint32_t FlexseaDevice::getLastData(int32_t *output, uint16_t outputSize)
-//{
-//    return getData(data->count() - 1, output, outputSize);
-//}
+uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputSize)
+{
+    return getData(fieldIds, output, outputSize, dataCount());
+}
 
 uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputSize, int index)
 {
-    if(index == -1) index = dataCount() - 1;
-    if(index < 0 || index >= (int)dataCount()) return 0;
+    if(index < 0 || (unsigned int)index >= dataCount()) return 0;
 
     std::lock_guard<std::recursive_mutex> lk(*dataMutex);
 
@@ -117,7 +116,6 @@ uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputS
     }
 
     return ptr[0];
-
 }
 
 uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outputSize) const
