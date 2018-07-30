@@ -10,14 +10,14 @@
 struct _MultiPacketInfo_s;
 typedef _MultiPacketInfo_s MultiPacketInfo;
 
-typedef std::function<void(MultiPacketInfo*, uint8_t*, uint16_t)> RxFunc;
+typedef std::function<void(MultiPacketInfo*, uint8_t*, uint16_t)> RxHandler;
 
-class RxHandler
+class RxHandlerManager
 {
 
 public:
 
-    void addRxFunc(int cmdCode, RxFunc func)
+    void addRxHandler(int cmdCode, RxHandler func)
     {
         LOCK_MUTEX(_rxFuncMapMutex);
 
@@ -27,7 +27,7 @@ public:
             _rxFuncMap.emplace(cmdCode, func);
     }
 
-    void removeRxFunc(int cmdCode)
+    void removeRxHandler(int cmdCode)
     {
         LOCK_MUTEX(_rxFuncMapMutex);
         _rxFuncMap.erase(cmdCode);
@@ -50,7 +50,7 @@ protected:
 private:
 
     std::mutex _rxFuncMapMutex;
-    std::unordered_map<int, RxFunc> _rxFuncMap;
+    std::unordered_map<int, RxHandler> _rxFuncMap;
 
 };
 
