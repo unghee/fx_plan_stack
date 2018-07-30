@@ -18,22 +18,18 @@ extern "C" {
     #include "flexseastack/flexsea-system/inc/flexsea_dataformats.h"
 }
 
-FlexseaSerial::FlexseaSerial() : SerialDriver(FX_NUMPORTS)
+FlexseaSerial::FlexseaSerial()
+    : SerialDriver(FX_NUMPORTS)
+    , haveOpenAttempts(0)
 {
     portPeriphs = new MultiCommPeriph[FX_NUMPORTS];
     initializeDeviceSpecs();
 
     for(int i = 0; i < FX_NUMPORTS; i++)
+    {
         initMultiPeriph(this->portPeriphs + i, PORT_USB, SLAVE);
-
-    // set which commands to highjack
-    memset(highjackedCmds, 0, NUM_COMMANDS);
-    for(int i = 0; i < NUM_COMMANDS; i++)
-        stringParsers[i] = &FlexseaSerial::defaultStringParser;
-
-    highjackedCmds[CMD_SYSDATA] = 1;
-    stringParsers[CMD_SYSDATA] = &FlexseaSerial::sysDataParser;
-    memset(devicesAtPort, 0, FX_NUMPORTS * sizeof(int));
+        devicesAtPort[i] = 0;
+    }
 }
 
 FlexseaSerial::~FlexseaSerial()
@@ -201,25 +197,42 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
             MultiCommPeriph *cp = portPeriphs+port;
             int convertedBytes = unpack_multi_payload_cb(&cp->circularBuff, &cp->in);
             error = circ_buff_move_head(&cp->circularBuff, convertedBytes);
-            if(portPeriphs[port].in.isMultiComplete)
-        {
-                uint8_t cmd = MULTI_GET_CMD7(portPeriphs[port].in.unpacked);
-            int parseResult;
-            if(highjackedCmds[cmd])
-                parseResult = CALL_MEMBER_FN(this, stringParsers[cmd])(port);
-            else
-            {
-                // c stack functions use device roles as ids...
-                    auto dev = getDevicePtr( cp->in.unpacked[MP_XID] );
-                if(dev)
-                        cp->in.unpacked[MP_XID] = dev->getRole();
 
-                    parseResult = parseReadyMultiString(cp);
-            }
+            if(portPeriphs[port].in.isMultiComplete)
+            {
+                uint8_t cmd = MULTI_GET_CMD7(portPeriphs[port].in.unpacked);
+                int parseResult;
+
+                if(cmd == CMD_SYSDATA)
+                {
+                    // use sys data handling
+                    parseResult = sysDataParser(port);
+                }
+                else if(isCmdOverloaded(cmd))
+                {
+                    // use user added Rx function
+                    MultiPacketInfo info;
+                    info.xid = cp->in.unpacked[MP_XID];
+                    info.rid = cp->in.unpacked[MP_RID];
+                    info.portIn = port;
+                    info.portOut = port;
+
+                    callRx(cmd, &info, cp->in.unpacked + MP_DATA1, cp->in.unpackedIdx);
+                }
+                else
+                {
+                    // use c stack function
+                    // c stack functions use device roles as ids...
+                    auto dev = getDevicePtr( cp->in.unpacked[MP_XID] );
+                    if(dev)
+                            cp->in.unpacked[MP_XID] = dev->getRole();
+
+                        parseResult = parseReadyMultiString(cp);
+                }
 
                 numMessagesReceived++;
                 (void) parseResult;
-        }
+            }
 
             successfulParse = convertedBytes > 0 && !error;
         } while(successfulParse && numMessagesReceived < maxMessagesExpected);
@@ -239,8 +252,8 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
 
 void FlexseaSerial::periodicTask()
 {
-    serviceOpenPorts();
     serviceOpenAttempts(taskPeriod);
+    serviceOpenPorts();
 }
 
 void FlexseaSerial::serviceOpenPorts()
@@ -363,7 +376,6 @@ void FlexseaSerial::serviceOpenAttempts(uint8_t delayed)
             if(attempt.delayed >= attempt.delay)
             {
                 attempt.delayed -= attempt.delay;
-//                if(!openPorts) openPorts = 1;
                 sendDeviceWhoAmI(attempt.portIdx);
             }
         }

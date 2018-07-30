@@ -75,14 +75,15 @@ bool SerialDriver::tryOpen(const std::string &portName, uint16_t portIdx) {
 
     }
 
-    if(!isPortOpen[portIdx] && ports[portIdx].isOpen())
+    bool isOpen = ports[portIdx].isOpen();
+    if(!isPortOpen[portIdx] && isOpen)
     {
         std::lock_guard<std::mutex> lk(_portCountMutex);
         openPorts++;
         std::cout << "Port " << portIdx << " opened" << std::endl;
     }
 
-    return ports[portIdx].isOpen();
+    return isOpen;
 }
 
 serial::state_t SerialDriver::getState(int portIdx) const
