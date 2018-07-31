@@ -18,9 +18,7 @@ public:
     bool startLogging(int devId);
     bool stopLogging(int devId);
     bool stopAllLogs();
-
     void serviceLogs();
-
 
 protected:
 
@@ -30,7 +28,6 @@ protected:
 
     bool logDevice(int idx);
 
-
 private:
 
 struct LogRecord {
@@ -39,7 +36,11 @@ struct LogRecord {
     unsigned int lastTimestamp;
     unsigned int logFileSize;
     unsigned int logFileSplitIndex;
+    unsigned int numActiveFields;
 };
+
+    unsigned int writeLogHeader(std::ofstream* fout, const FxDevicePtr dev);
+    void swapFileObject(LogRecord &record, std::string newfilename, const FxDevicePtr dev);
 
     std::vector<LogRecord> logRecords;
     bool removeRecord(int idx);

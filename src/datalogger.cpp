@@ -3,6 +3,7 @@
 #include <sstream>
 #include <string>
 #include <algorithm>
+#include <iostream>
 
 DataLogger::DataLogger(FlexseaDeviceProvider* fdp) : devProvider(fdp), numLogDevices(0)
 {}
@@ -28,17 +29,11 @@ bool DataLogger::startLogging(int devId)
         ts = dev->getLatestTimestamp();
     }
 
-    std::vector<std::string> fieldLabels = dev->getActiveFieldLabels();
-    (*fout) << "timestamp";
-    for(auto&& l : fieldLabels)
-        (*fout) << ", " << l;
-
-    (*fout) << "\n";
-    fout->flush();
+    unsigned int numActiveFields = writeLogHeader(fout, dev);
 
     {
         std::lock_guard<std::mutex> lk(resMutex);
-        logRecords.push_back( {devId, fout, ts, 0, 0} );
+        logRecords.push_back( {devId, fout, ts, 0, 0, numActiveFields} );
         numLogDevices++;
     }
 
@@ -87,8 +82,9 @@ bool DataLogger::logDevice(int idx)
     FxDevicePtr dev = devProvider->getDevicePtr(logRecords.at(idx).devId);
 
     auto fids = dev->getActiveFieldIds();
-    if(fids.size() < 1) return false;
+    if(fids.size() < 1) return true;
 
+    LogRecord& record = logRecords.at(idx);
     int32_t ts = logRecords.at(idx).lastTimestamp;
 
     std::vector<uint32_t> stamps;
@@ -96,8 +92,20 @@ bool DataLogger::logDevice(int idx)
     ts = dev->getDataAfterTime(ts, stamps, data);
     logRecords.at(idx).lastTimestamp = ts;
 
+    // if stamps and data mismatch in size, we have some kind of problem
     if(stamps.size() != data.size())
         return false;
+
+    // if the record's active field num is different than current active field num
+    // this indicates that we started a log file immediately after sending a configuration command
+    // and we didn't receive configuration response until after starting the log file
+    // in the spirit of being tolerant of async work flows, we just swap to a new file
+    if(record.numActiveFields != fids.size())
+    {
+        std::string nextFileName = generateFileName(dev, std::to_string(++logRecords.at(idx).logFileSplitIndex));
+        std::cout << "Swapping files to new name: " << nextFileName << std::endl;
+        swapFileObject(logRecords.at(idx), nextFileName, dev);
+    }
 
     std::ofstream *fout = logRecords.at(idx).fileObject;
 
@@ -172,26 +180,51 @@ void DataLogger::serviceLogs()
         return;
     }
 
+    // log each device we have a record for
+    // if the logging fails, remove the record
     for(int i = 0; i < numLogDevices; i++)
     {
         if(!logDevice(i))
             removeRecord(i);
     }
 
+    // for each record, we can check the new file size
+    // switch to a new log file if we have gone over the max number of lines
     for(auto &r : logRecords)
     {
         if(r.logFileSize > MAX_LOG_SIZE)
         {
             FxDevicePtr dev = devProvider->getDevicePtr(r.devId);
-
             std::string nextFileName = generateFileName(dev, std::to_string(++r.logFileSplitIndex));
-            r.fileObject->close();
-            delete r.fileObject;
-            r.fileObject = new std::ofstream(nextFileName);
-            r.logFileSize = 0;
+            swapFileObject(r, nextFileName, dev);
         }
     }
+}
 
+unsigned int DataLogger::writeLogHeader(std::ofstream* fout, const FxDevicePtr dev)
+{
+    std::vector<std::string> fieldLabels = dev->getActiveFieldLabels();
+    (*fout) << "timestamp";
+    for(auto&& l : fieldLabels)
+        (*fout) << ", " << l;
+
+    (*fout) << "\n";
+    fout->flush();
+
+    return fieldLabels.size();
+}
+
+
+void DataLogger::swapFileObject(LogRecord &record, std::string newFileName, const FxDevicePtr dev)
+{
+    // get rid of the old file object
+    record.fileObject->close();
+    delete record.fileObject;
+
+    // generate the new file object
+    record.fileObject = new std::ofstream(newFileName);
+    record.numActiveFields = writeLogHeader(record.fileObject, dev);
+    record.logFileSize = 0;
 }
 
 bool DataLogger::wakeFromLongSleep()
