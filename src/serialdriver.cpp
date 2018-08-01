@@ -103,10 +103,33 @@ serial::state_t SerialDriver::getState(int portIdx) const
 size_t SerialDriver::bytesAvailable(int portIdx) const
 {
     CHECK_PORTIDX(portIdx);
-    LOCK_MTX(portIdx);
 
-    if(ports[portIdx].isOpen())
-        return ports[portIdx].available();
+    bool serialError = false;
+
+    {
+        LOCK_MTX(portIdx);
+        try
+        {
+            if(ports[portIdx].isOpen())
+                return ports[portIdx].available();
+        }
+        catch (...)
+        {
+            // we expect to hit this block if we turn off a physical device
+            // before disconnecting the port
+            serialError = true;
+        }
+    }
+
+    if(serialError)
+    {
+        // calling a non const function from a const context - spooooky
+        // semantically this function is still const in that if the serial port errors on calling available
+        // it is effectively already "closed"
+        // here we just do the book keeping...
+        ((SerialDriver*)this)->tryClose(portIdx);   // should update state so that isOpen(...) returns false
+        ((SerialDriver*)this)->close(portIdx);      // allow derived classes to handle port closing stuff
+    }
 
     return 0;
 }
