@@ -14,22 +14,30 @@ bool DataLogger::startLogging(int devId)
     if(!dev || dev->type == FX_NONE) return false;
 
     std::string fileName = generateFileName(dev);
-    std::ofstream* fout = new std::ofstream(fileName);
+    std::ofstream* fout = nullptr;
 
-    if(!fout || !fout->is_open())
+    unsigned int numActiveFields = dev->getNumActiveFields();
+    unsigned int ts = 0;
+
+    if(numActiveFields)
     {
-        if(fout) delete fout;
-        fout = nullptr;
-        return false;
+        fout = new std::ofstream(fileName);
+
+        if(!fout || !fout->is_open())
+        {
+            if(fout) delete fout;
+            fout = nullptr;
+
+            throw std::bad_alloc();
+        }
+
+        writeLogHeader(fout, dev);
     }
 
-    unsigned int ts = 0;
     if(dev->dataCount())
     {
         ts = dev->getLatestTimestamp();
     }
-
-    unsigned int numActiveFields = writeLogHeader(fout, dev);
 
     {
         std::lock_guard<std::mutex> lk(resMutex);
@@ -80,6 +88,7 @@ bool DataLogger::stopAllLogs()
 bool DataLogger::logDevice(int idx)
 {
     FxDevicePtr dev = devProvider->getDevicePtr(logRecords.at(idx).devId);
+    if(!dev) return false;
 
     auto fids = dev->getActiveFieldIds();
     if(fids.size() < 1) return true;
@@ -102,28 +111,36 @@ bool DataLogger::logDevice(int idx)
     // in the spirit of being tolerant of async work flows, we just swap to a new file
     if(record.numActiveFields != fids.size())
     {
-        std::string nextFileName = generateFileName(dev, std::to_string(++logRecords.at(idx).logFileSplitIndex));
+        std::string nextFileName;
+        if(record.fileObject)
+            nextFileName = generateFileName(dev, std::to_string(++logRecords.at(idx).logFileSplitIndex));
+        else
+            nextFileName = generateFileName(dev);
+
         std::cout << "Swapping files to new name: " << nextFileName << std::endl;
         swapFileObject(logRecords.at(idx), nextFileName, dev);
     }
 
     std::ofstream *fout = logRecords.at(idx).fileObject;
 
-    for(unsigned int line = 0; line < stamps.size(); line++)
+    if(fout && fids.size())
     {
-        (*fout) << stamps.at(line);
-
-        auto&& dataline = data.at(line);
-        for(auto&& fid : fids)
+        for(unsigned int line = 0; line < stamps.size(); line++)
         {
-            (*fout) << ", " << dataline.at(fid);
+            (*fout) << stamps.at(line);
+
+            auto&& dataline = data.at(line);
+            for(auto&& fid : fids)
+            {
+                (*fout) << ", " << dataline.at(fid);
+            }
+            (*fout) << "\n";
         }
-        (*fout) << "\n";
+
+        logRecords.at(idx).logFileSize += stamps.size();
+
+        fout->flush();
     }
-
-    logRecords.at(idx).logFileSize += stamps.size();
-
-    fout->flush();
 
     return true;
 }
@@ -132,9 +149,13 @@ void DataLogger::clearRecords()
 {
     for(auto&& r : logRecords)
     {
-        if(r.fileObject->is_open())
-            r.fileObject->close();
-        delete r.fileObject;
+        if(r.fileObject)
+        {
+            if(r.fileObject->is_open())
+                r.fileObject->close();
+
+            delete r.fileObject;
+        }
     }
 
     logRecords.clear();
@@ -218,8 +239,11 @@ unsigned int DataLogger::writeLogHeader(std::ofstream* fout, const FxDevicePtr d
 void DataLogger::swapFileObject(LogRecord &record, std::string newFileName, const FxDevicePtr dev)
 {
     // get rid of the old file object
-    record.fileObject->close();
-    delete record.fileObject;
+    if(record.fileObject)
+    {
+        record.fileObject->close();
+        delete record.fileObject;
+    }
 
     // generate the new file object
     record.fileObject = new std::ofstream(newFileName);
