@@ -90,7 +90,7 @@ std::vector<std::string> FlexseaDevice::getAllFieldLabels() const
 
 uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputSize)
 {
-    return getData(fieldIds, output, outputSize, dataCount());
+    return getData(fieldIds, output, outputSize, dataCount() - 1);
 }
 
 uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputSize, int index)
