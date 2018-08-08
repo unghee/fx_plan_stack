@@ -249,8 +249,7 @@ uint32_t FlexseaDevice::getDataAfterTime(int field, uint32_t timestamp, std::vec
         return timestamp;
 }
 
-
-uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<std::vector<int32_t>> &data_output) const
+uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<std::vector<int32_t>> &data_output, unsigned max) const
 {
     std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
 
@@ -258,20 +257,21 @@ uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint3
         if(!IS_FIELD_HIGH(field, this->bitmap)) return timestamp;
 
     size_t i = findIndexAfterTime(timestamp), j;
+    size_t n = std::min(_data.count() - i, max);
     size_t nf = fieldIds.size();
 
     ts_output.clear();
-    ts_output.reserve(_data.count() - i);
+    ts_output.reserve(n);
     data_output.clear();
     data_output.resize( nf );
 
     for(j = 0; j < nf; ++j)
-        data_output.at(j).reserve(_data.count() - i);
+        data_output.at(j).reserve(n);
 
     FX_DataPtr p = nullptr;
-    while(i < _data.count())
+    while(i < _data.count() && --n)
     {
-        p = _data.peek(i++);
+        p = _data.peek((int)i++);
         ts_output.push_back(p[0]);
 
         for(j = 0; j < nf; ++j)
@@ -282,6 +282,12 @@ uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint3
         return p[0];
     else
         return timestamp;
+}
+
+
+uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<std::vector<int32_t>> &data_output) const
+{
+    return getDataAfterTime(fieldIds, timestamp, ts_output, data_output, -1);
 }
 
 uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, std::vector<uint32_t> &timestamps, std::vector<std::vector<int32_t>> &outputData) const
@@ -347,6 +353,8 @@ std::string FlexseaDevice::getName() const
 {
     if(this->type < NUM_DEVICE_TYPES && this->type != FX_NONE)
         return ( fieldLabels.at(0) );
+    else if(this->type == FX_CUSTOM)
+        return ( "Custom Device" );
 
     return  "";
 }
