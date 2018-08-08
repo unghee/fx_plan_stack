@@ -31,7 +31,7 @@ FlexseaDevice::FlexseaDevice(int _id, int _port, std::vector<std::string> fieldL
     , dataMutex(&_dataMutex)
     , _role(role)
     , fieldLabels(fieldLabels)
-    , _data( dataBuffSize, fieldLabels.size() )
+    , _data( dataBuffSize, fieldLabels.size() + 1 )
 {
     memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
 }
