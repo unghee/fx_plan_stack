@@ -41,25 +41,44 @@ public:
     FlexseaSerial();
     virtual ~FlexseaSerial();
 
-    void open(std::string, int portIdx);
-    void openCancelRequest(int portIdx);
+    /// \brief opens portName at portIdx
+    /// Starts an open attempt at the corresponding port. Later polls for the state of the port
+    /// If the port opens successfully, FlexseaSerial periodically sends whoami messages until metadata is received
+    void open(std::string portName, int portIdx);
 
+    /// \brief DEPRECATED: sends a who am i (who are you really?) message at the given port
+    /// You should never need to call this function explicitly, under the hood FlexseaSerial handles it for you
+    /// --
+    /// When a FlexSEA device receives a who am i message, it responds with metadata describing itself
+    /// metadata includes device id, device type, device role, and currently active fields
     virtual void sendDeviceWhoAmI(int port);
+
+    /// \brief [Blocking] write to the device specified by the device handle d
+    /// GUI should prefer non blocking writes
+    /// for a non blocking write, use CommManager::enqueueCommand
     virtual void writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d);
+
+    /// \brief close the corresponding port
     virtual void close(uint16_t portIdx);
 
-    MultiCommPeriph *portPeriphs;
-
 protected:
+    /// \brief see class PeriodicTask for more info
     virtual void periodicTask();
+    /// \brief see class PeriodicTask for more info
     virtual bool wakeFromLongSleep();
+    /// \brief see class PeriodicTask for more info
     virtual bool goToLongSleep();
 
+    /// \brief checks any ports that currently have open attempts
     void serviceOpenAttempts(uint8_t delayed);
 
-    void processReceivedData(int port, size_t nb);
+    /// \brief checks any ports that currently open, receives data if any bytes are available
     virtual void serviceOpenPorts();
 
+    /// \brief processes nb bytes at the port, analyses for packets, parses, etc
+    void processReceivedData(int port, size_t nb);
+
+    MultiCommPeriph *portPeriphs;
     std::atomic<int> devicesAtPort[FX_NUMPORTS];
 
 private:
@@ -72,7 +91,6 @@ private:
     OpenAttemptList openAttempts;
     std::mutex openAttemptMut_;
     std::atomic<int> haveOpenAttempts;
-
     uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
 };
 

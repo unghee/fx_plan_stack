@@ -320,16 +320,6 @@ void FlexseaSerial::open(std::string portName, int portIdx)
     wakeCV.notify_all();
 }
 
-void FlexseaSerial::openCancelRequest(int portIdx)
-{
-    std::lock_guard<std::mutex> lk(openAttemptMut_);
-    for(auto& oa : openAttempts)
-    {
-        if(oa.portIdx == portIdx)
-            oa.markedToRemove = true;
-    }
-}
-
 void FlexseaSerial::writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d) {
     write(bytes_to_send, serial_tx_data, (uint16_t)(d.port));
 }
