@@ -39,7 +39,6 @@ public:
     virtual void tryClose(uint16_t portIdx=0);
     virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t portIdx=0);
     virtual void writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d);
-    virtual serial::state_t getState(int port);
 
     // overriding flexseaserial functions
     virtual int writeDeviceMap(const FxDevicePtr d, uint32_t* map);
@@ -48,6 +47,9 @@ public:
 
     // overriding commmanager functions
     virtual bool startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode=CMD_SYSDATA);
+
+protected:
+    virtual serial::state_t getPortState(int port) const override;
 
 private:
     /* Three "Test Cases" */

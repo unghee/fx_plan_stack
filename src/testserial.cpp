@@ -152,7 +152,7 @@ int TestSerial::writeDeviceMap(const FxDevicePtr d, uint32_t *map)
     return 0;
 }
 
-serial::state_t TestSerial::getState(int port)
+serial::state_t TestSerial::getPortState(int port) const
 {
     return isOpen(port) ? serial::state_open : serial::state_none;
 }

@@ -1,9 +1,11 @@
-#ifndef __COMWRAPPER_H
-#define __COMWRAPPER_H
+#ifndef COMWRAPPER_H
+#define COMWRAPPER_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+    #include <stdint.h>
 
 	// setup the entire stack
 	void fxSetup();
@@ -48,4 +50,4 @@ extern "C" {
 }
 #endif
 
-#endif
+#endif // COMWRAPPER_H

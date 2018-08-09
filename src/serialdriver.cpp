@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#define CHECK_PORTIDX(idx) do { if(idx >= _NUMPORTS) throw std::invalid_argument("Port Index outside of range"); } while(0)
+#define CHECK_PORTIDX(idx) do { if(idx >= _NUMPORTS) throw std::out_of_range("Port Index outside of range"); } while(0)
 #define LOCK_MTX(idx) std::lock_guard<std::mutex> lk(serialMutexes[idx])
 
 SerialDriver::SerialDriver(int n) :
@@ -86,7 +86,7 @@ bool SerialDriver::tryOpen(const std::string &portName, uint16_t portIdx) {
     return isOpen;
 }
 
-serial::state_t SerialDriver::getState(int portIdx) const
+serial::state_t SerialDriver::getPortState(int portIdx) const
 {
     CHECK_PORTIDX(portIdx);
     LOCK_MTX(portIdx);
@@ -195,7 +195,7 @@ void SerialDriver::clear(uint16_t portIdx)
     ports[portIdx].flushOutput();
 }
 
-std::string SerialDriver::getPortName(uint16_t portIdx)
+std::string SerialDriver::getPortName(uint16_t portIdx) const
 {
     CHECK_PORTIDX(portIdx);
     LOCK_MTX(portIdx);
@@ -204,9 +204,3 @@ std::string SerialDriver::getPortName(uint16_t portIdx)
 
     return "";
 }
-serial::state_t SerialDriver::getPortState(uint16_t portIdx)
-{
-    CHECK_PORTIDX(portIdx);
-    return ports[portIdx].getState();
-}
-
