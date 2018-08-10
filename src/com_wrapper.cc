@@ -35,9 +35,6 @@ extern "C"
         typedef std::tuple<uint8_t, int32_t, uint8_t, int16_t, int16_t, int16_t, int16_t, uint8_t> CtrlParams;
         std::unordered_map<int, CtrlParams> ctrlsMap; 
 
-//        typedef struct user_data_s uData;
-//        std::unordered_map<int, uData> uDataMap;
-
         void fxSetup()
         {
                 initFlexSEAStack_minimalist(FLEXSEA_PLAN_1);
@@ -134,26 +131,8 @@ extern "C"
                 if(!ctrlsMap.count(devId))
                         ctrlsMap.insert({devId, defaultCtrlParams()});
 
-                // cmd func periodically writes 
-//                auto cmdFunc = [devId] (uint8_t* buf, uint8_t* cmdCode, uint8_t* cmdType, uint16_t* len) {
-//                        if(!ctrlsMap.count(devId))
-//                        {
-//                            std::cout << "Something wrong, no ctrls map for selected device\n";
-//                            return;
-//                        }
-//                        auto ctrls = ctrlsMap.at(devId);
-//                        tx_cmd_actpack_rw(buf, cmdCode, cmdType, len,
-//                                0,                  std::get<0>(ctrls), std::get<1>(ctrls),
-//                                std::get<2>(ctrls), std::get<3>(ctrls), std::get<4>(ctrls),
-//                                std::get<5>(ctrls), std::get<6>(ctrls), std::get<7>(ctrls)
-//                                );
-//                        std::get<2>(ctrlsMap.at(devId)) = KEEP;
-//                        return;
-//                };
-
                 // stream reading and commands at same rate
                 commManager.startStreaming(devId, freq, shouldLog, shouldAuto);
-//                commManager.startStreaming(devId, freq, false, cmdFunc);
                 return 1;
         }
 
