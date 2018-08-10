@@ -103,9 +103,28 @@ extern "C"
                         idarray[i++] = -1;
         }
 
-        CtrlParams defaultCtrlParams()
+        static CtrlParams defaultCtrlParams()
         {
                 return std::make_tuple(CTRL_NONE, 0, 0, 0, 0, 0, 0, KEEP);
+        }
+
+        void sendCommandMessage(uint8_t* buf, uint8_t* cmdCode, uint8_t* cmdType, uint16_t* len, int devId)
+        {
+            if(!ctrlsMap.count(devId))
+            {
+                std::cout << "Something wrong, no ctrls map for selected device\n";
+                return;
+            }
+
+            auto ctrls = ctrlsMap.at(devId);
+
+            tx_cmd_actpack_rw(buf, cmdCode, cmdType, len,
+                    0,                  std::get<0>(ctrls), std::get<1>(ctrls),
+                    std::get<2>(ctrls), std::get<3>(ctrls), std::get<4>(ctrls),
+                    std::get<5>(ctrls), std::get<6>(ctrls), std::get<7>(ctrls)
+                    );
+
+            std::get<2>(ctrlsMap.at(devId)) = KEEP;
         }
 
         // start streaming data from device with id: devId, with given configuration
@@ -113,33 +132,28 @@ extern "C"
         {
                 if(!commManager.haveDevice(devId)) return 0;
                 if(!ctrlsMap.count(devId))
-                        ctrlsMap.insert({devId, CtrlParams()});
+                        ctrlsMap.insert({devId, defaultCtrlParams()});
 
                 // cmd func periodically writes 
-                auto cmdFunc = [devId] (uint8_t* buf, uint8_t* cmdCode, uint8_t* cmdType, uint16_t* len) {
-
-                        if(!ctrlsMap.count(devId)) 
-                        {
-                            std::cout << "Something wrong, no ctrls map for selected device\n";
-                            return;
-                        }
-
-                        auto ctrls = ctrlsMap.at(devId);
-
-                        tx_cmd_actpack_rw(buf, cmdCode, cmdType, len,
-                                0,                  std::get<0>(ctrls), std::get<1>(ctrls), 
-                                std::get<2>(ctrls), std::get<3>(ctrls), std::get<4>(ctrls), 
-                                std::get<5>(ctrls), std::get<6>(ctrls), std::get<7>(ctrls)
-                                );
-
-                        std::get<2>(ctrlsMap.at(devId)) = KEEP;
-
-                        return;
-                };
+//                auto cmdFunc = [devId] (uint8_t* buf, uint8_t* cmdCode, uint8_t* cmdType, uint16_t* len) {
+//                        if(!ctrlsMap.count(devId))
+//                        {
+//                            std::cout << "Something wrong, no ctrls map for selected device\n";
+//                            return;
+//                        }
+//                        auto ctrls = ctrlsMap.at(devId);
+//                        tx_cmd_actpack_rw(buf, cmdCode, cmdType, len,
+//                                0,                  std::get<0>(ctrls), std::get<1>(ctrls),
+//                                std::get<2>(ctrls), std::get<3>(ctrls), std::get<4>(ctrls),
+//                                std::get<5>(ctrls), std::get<6>(ctrls), std::get<7>(ctrls)
+//                                );
+//                        std::get<2>(ctrlsMap.at(devId)) = KEEP;
+//                        return;
+//                };
 
                 // stream reading and commands at same rate
                 commManager.startStreaming(devId, freq, shouldLog, shouldAuto);
-                commManager.startStreaming(devId, freq, false, cmdFunc);
+//                commManager.startStreaming(devId, freq, false, cmdFunc);
                 return 1;
         }
 
@@ -208,35 +222,41 @@ extern "C"
         {
                 if(!ctrlsMap.count(devId)) return;
                 std::get<0> ( ctrlsMap.at(devId) ) = ctrlMode;
+                commManager.enqueueCommand(devId, sendCommandMessage, devId);
         }
 
         void setMotorVoltage(int devId, int mV)
         {
                 if(!ctrlsMap.count(devId)) return;
                 std::get<1> ( ctrlsMap.at(devId) ) = mV;
+                commManager.enqueueCommand(devId, sendCommandMessage, devId);
         }
 
         void setMotorCurrent(int devId, int cur)
         {
                 if(!ctrlsMap.count(devId)) return;
                 std::get<1> ( ctrlsMap.at(devId) ) = cur;
+                commManager.enqueueCommand(devId, sendCommandMessage, devId);
         }
 
         void setPosition( int devId, int pos )
        {
                 if(!ctrlsMap.count(devId)) return;
                 std::get<1> ( ctrlsMap.at(devId) ) = pos;
+                commManager.enqueueCommand(devId, sendCommandMessage, devId);
         }
 
         void setZGains(int devId, int z_k, int z_b, int i_kp, int i_ki)
         {
                 if(!ctrlsMap.count(devId)) return;
                 get_tuple<2,3,4,5,6>( ctrlsMap.at(devId) ) = std::make_tuple(CHANGE, z_k, z_b, i_kp, i_ki);
+                commManager.enqueueCommand(devId, sendCommandMessage, devId);
         }
 
         void actPackFSM2(int devId, int on)
         {
             get_tuple<0,7>( ctrlsMap.at(devId) ) = std::make_tuple(CTRL_NONE, on ? SYS_NORMAL : SYS_DISABLE_FSM2);
+            commManager.enqueueCommand(devId, sendCommandMessage, devId);
         }
 
         void findPoles(int devId, int block)
