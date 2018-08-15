@@ -13,14 +13,11 @@
 #include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
 
 /// \brief FlexseaDevice class provides read access to connected devices
-//typedef circular_buffer<FX_DataPtr> FxDevData;
-
 class FlexseaDevice
 {
 public:
     explicit FlexseaDevice(int _id=-1, int _port=-1, FlexseaDeviceType _type=FX_NONE, int role=FLEXSEA_MANAGE_1, int dataBuffSize=FX_DATA_BUFFER_SIZE);
     explicit FlexseaDevice(int _id, int _port, std::vector<std::string> fieldLabels, int role, int dataBuffSize);
-    ~FlexseaDevice();
 
     const int id;
     const int port;
@@ -38,7 +35,6 @@ public:
     // Returns a vector of strings which describe the fields specified by map
     std::vector<std::string> getActiveFieldLabels() const;
     std::vector<int> getActiveFieldIds() const;
-
     std::vector<std::string> getAllFieldLabels() const;
 
     uint32_t getLatestTimestamp() const;

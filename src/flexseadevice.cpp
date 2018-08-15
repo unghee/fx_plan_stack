@@ -36,9 +36,6 @@ FlexseaDevice::FlexseaDevice(int _id, int _port, std::vector<std::string> fieldL
     memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
 }
 
-FlexseaDevice::~FlexseaDevice()
-{}
-
 /* Returns a vector of strings which describe the fields specified by map  */
 std::vector<std::string> FlexseaDevice::getActiveFieldLabels() const
 {
