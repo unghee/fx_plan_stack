@@ -18,6 +18,8 @@ extern "C" {
     #include "flexseastack/flexsea-system/inc/flexsea_dataformats.h"
 }
 
+#define LONG_ID(shortId, port) ((shortId << 6) | port)
+
 FlexseaSerial::FlexseaSerial()
     : SerialDriver(FX_NUMPORTS)
     , haveOpenAttempts(0)
@@ -41,23 +43,25 @@ FlexseaSerial::~FlexseaSerial()
 inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
 {
     uint16_t i=MP_DATA1+1;
-    uint8_t devType, devId, j, mapLen, devRole;
+    uint8_t devType, devShortId, j, mapLen, devRole;
     devType = buf[i++];
-    devId = buf[i++];
+    devShortId = buf[i++];
     mapLen = buf[i++];
     devRole = buf[i + mapLen * sizeof(int32_t)];
+
+    int devId = LONG_ID(devShortId, port);
 
     bool addedDevice = false;
     if(!connectedDevices.count(devId))
     {
-        addedDevice = !addDevice(devId, port, static_cast<FlexseaDeviceType>(devType), devRole);
+        addedDevice = !addDevice(devId, devShortId, port, static_cast<FlexseaDeviceType>(devType), devRole);
         devicesAtPort[port]++;
     }
     else if(connectedDevices.at(devId)->type != devType)
     {
         std::cout << "Device record's type does not match incoming message, something went wrong (two devices connected with same id?)" << std::endl;
         removeDevice(devId);
-        addedDevice = !addDevice(devId, port, static_cast<FlexseaDeviceType>(devType), devRole);
+        addedDevice = !addDevice(devId, devShortId, port, static_cast<FlexseaDeviceType>(devType), devRole);
     }
 
     uint32_t bitmap[FX_BITMAP_WIDTH];
@@ -93,10 +97,11 @@ inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
 
     return 0;
 }
-inline int FlexseaSerial::updateDeviceData(uint8_t *buf)
+inline int FlexseaSerial::updateDeviceData(int port, uint8_t *buf)
 {
-    uint8_t devId;
-    devId = buf[MP_XID];
+    uint8_t shortDevId = buf[MP_XID];
+    int devId = LONG_ID(shortDevId, port);
+
     if(!connectedDevices.count(devId))
         return -1;
 
@@ -167,7 +172,7 @@ int FlexseaSerial::sysDataParser(int port)
     if(isMetaData)
         return updateDeviceMetadata(port, msgBuf);
     else
-        return updateDeviceData(msgBuf);
+        return updateDeviceData(port, msgBuf);
 }
 
 #define CALL_MEMBER_FN(object,ptrToMember)  ((object)->*(ptrToMember))

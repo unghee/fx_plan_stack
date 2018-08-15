@@ -75,7 +75,8 @@ protected:
     virtual bool goToLongSleep();
 
     virtual int writeDeviceMap(const FxDevicePtr d, uint32_t* map);
-    virtual int enqueueMultiPacket(int devId, MultiWrapper *out);
+    int enqueueMultiPacket(int devId, MultiWrapper *out);
+    int enqueueMultiPacket(int devId, int port, MultiWrapper *out);
 
     virtual void serviceStreams(uint8_t milliseconds);
     uint8_t serviceCount = 0;
@@ -86,7 +87,7 @@ protected:
         if(!d->isValid()) return false;
         MultiWrapper *out = &(portPeriphs[d->port].out);
 
-        bool error = CommStringGeneration::generateCommString(d->id, out,
+        bool error = CommStringGeneration::generateCommString(d->getShortId(), out,
                                                        tx_func,
                                                        std::forward<Args>(tx_args)...);
         if(error)
@@ -95,7 +96,7 @@ protected:
             return false;
         }
 
-        return !enqueueMultiPacket(d->id, out);
+        return !enqueueMultiPacket(d->id, d->port, out);
     }
 
 
@@ -119,7 +120,7 @@ private:
 
     void sendCommands(int index);
     void sendAutoStream(int devId, int cmd, int period, bool start);
-    void sendSysDataRead(uint8_t slaveId);
+    void sendSysDataRead(int slaveId);
 
     int streamCount;
     static const int CMD_CODE_BASE = 256;

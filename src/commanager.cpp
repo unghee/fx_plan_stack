@@ -334,8 +334,11 @@ int CommManager::enqueueMultiPacket(int devId, MultiWrapper *out)
 {
     if(!connectedDevices.count(devId)) return -1;
     FxDevicePtr d = connectedDevices.at(devId);
+    return enqueueMultiPacket(d->id, d->port, out);
+}
 
-
+int CommManager::enqueueMultiPacket(int, int port, MultiWrapper *out)
+{
     uint8_t frameId = 0, nb;
     while(out->frameMap > 0)
     {
@@ -346,14 +349,14 @@ int CommManager::enqueueMultiPacket(int devId, MultiWrapper *out)
         if(!out->frameMap)
             nb = MAX(nb, PACKET_WRAPPER_LEN * 2 / 3);
 
-        outgoingBuffer[d->port].push(Message( nb ,out->packed[frameId]  ));
+        outgoingBuffer[port].push(Message( nb ,out->packed[frameId]  ));
         frameId++;
     }
 
     out->isMultiComplete = 1;
 
-    while(outgoingBuffer[d->port].size() > MAX_Q_SIZE)
-        outgoingBuffer[d->port].pop();
+    while(outgoingBuffer[port].size() > MAX_Q_SIZE)
+        outgoingBuffer[port].pop();
 
     return 0;
 }
@@ -409,7 +412,7 @@ void CommManager::sendAutoStream(int devId, int cmd, int period, bool start)
                    cmd, period, start, 0, 0);
 }
 
-void CommManager::sendSysDataRead(uint8_t slaveId)
+void CommManager::sendSysDataRead(int slaveId)
 {
     enqueueCommand(slaveId,
                    tx_cmd_sysdata_r,

@@ -16,7 +16,8 @@
 class FlexseaDevice
 {
 public:
-    explicit FlexseaDevice(int _id=-1, int _port=-1, FlexseaDeviceType _type=FX_NONE, int role=FLEXSEA_MANAGE_1, int dataBuffSize=FX_DATA_BUFFER_SIZE);
+    explicit FlexseaDevice(int _id, int _port, FlexseaDeviceType _type,              int role, int dataBuffSize=FX_DATA_BUFFER_SIZE);
+    explicit FlexseaDevice(int _id, int _shortid, int _port, FlexseaDeviceType _type, int role, int dataBuffSize=FX_DATA_BUFFER_SIZE);
     explicit FlexseaDevice(int _id, int _port, std::vector<std::string> fieldLabels, int role, int dataBuffSize);
 
     const int id;
@@ -24,6 +25,7 @@ public:
     const FlexseaDeviceType type;
     const int numFields;
 
+    int getShortId() const { return shortId; }
     int getRole() const { return _role; }
     bool hasData() const { return !_data.empty(); }
     size_t dataCount() const { return _data.count(); }
@@ -84,9 +86,7 @@ protected:
     mutable uint32_t lastFieldLabelMap[FX_BITMAP_WIDTH] = {0};
     mutable std::vector<std::string> lastRequest;
 
-    /* data gives access to data thats come into this device.
-     * The actual buffer is managed by whichever object created this FlexseaDevice object
-    */
+    int shortId;
     int _role;
     std::vector<std::string> fieldLabels;
     std::recursive_mutex _dataMutex;

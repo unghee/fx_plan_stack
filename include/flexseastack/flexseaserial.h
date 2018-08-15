@@ -84,7 +84,7 @@ protected:
 private:
     int sysDataParser(int port);
     inline int updateDeviceMetadata(int port, uint8_t *buf);
-    inline int updateDeviceData(uint8_t *buf);
+    inline int updateDeviceData(int port, uint8_t *buf);
 
     // open attempts needs serialization.
     // It is written to from the control thread, read from the worker thread

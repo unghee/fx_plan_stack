@@ -10,6 +10,29 @@ FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int ro
     , type(_type)
     , numFields( deviceSpecs[_type].numFields )
     , dataMutex(&_dataMutex)
+    , shortId(id)
+    , _role(role)
+    , _data(dataBuffSize, deviceSpecs[_type].numFields + 1 )
+{
+    memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
+
+    for(int i = 0; i < numFields; ++i)
+    {
+        const char* c_str = deviceSpecs[_type].fieldLabels[i];
+        if(c_str)
+            fieldLabels.push_back(c_str);
+        else
+            throw std::invalid_argument("Device Spec for given type is invalid, causing null pointer access");
+     }
+}
+
+FlexseaDevice::FlexseaDevice(int _id, int _shortid, int _port, FlexseaDeviceType _type, int role, int dataBuffSize):
+    id(_id)
+    , port(_port)
+    , type(_type)
+    , numFields( deviceSpecs[_type].numFields )
+    , dataMutex(&_dataMutex)
+    , shortId(_shortid)
     , _role(role)
     , _data(dataBuffSize, deviceSpecs[_type].numFields + 1 )
 {
@@ -29,6 +52,7 @@ FlexseaDevice::FlexseaDevice(int _id, int _port, std::vector<std::string> fieldL
     : id(_id), port(_port), type(FX_CUSTOM)
     , numFields(fieldLabels.size())
     , dataMutex(&_dataMutex)
+    , shortId(id)
     , _role(role)
     , fieldLabels(fieldLabels)
     , _data( dataBuffSize, fieldLabels.size() + 1 )
