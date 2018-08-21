@@ -60,12 +60,10 @@ public:
     int writeDeviceMap(int devId, const std::vector<int> &fields);
     int writeDeviceMap(int devId, uint32_t* map);
 
-    /// \brief adds a message to a queue of messages to be written to the port periodically
-    bool enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx=0);
-
     /// \brief overloaded to manage streams and connected devices
     virtual void close(uint16_t portIdx);
 
+    /// \brief adds a message to a queue of messages to be written to the port periodically
     template<typename T, typename... Args>
     bool enqueueCommand(int devId, T tx_func, Args&&... tx_args) { return enqueueCommand(connectedDevices.at(devId), tx_func, std::forward<Args>(tx_args)...); }
 
@@ -98,6 +96,9 @@ protected:
 
         return !enqueueMultiPacket(d->id, d->port, out);
     }
+
+    /// \brief adds a message to a queue of messages to be written to the port periodically
+    bool enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx=0);
 
 
 private:

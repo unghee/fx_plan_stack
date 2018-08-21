@@ -6,8 +6,16 @@
 #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
 #include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
 
+/// \brief This namespace contains some convenience functions for generalized method of generating comm strings
 namespace CommStringGeneration
 {
+
+    /// \brief Calls a tx function in order to generate a comm string inside of a multiwrapper. \n
+    /// tx_func must be of the form [return type] tx_func(uint8_t* buf, uint8_t* cmdCode, uint8_t* cmdType, uint16_t* len, Args...)
+    /// @param out : the multiwrapper to fill with the resulting comm string
+    /// @param tx_func : the function to call
+    /// @param tx_args : additional arguments that the function needs besides the following:
+    ///                  uint8_t* buf, uint8_t* cmdCode, uint8_t* cmdType, uint16_t* len
     template<typename T, typename... Args>
     bool generateCommString(int devId, MultiWrapper *out, T tx_func, Args&&... tx_args)
     {
@@ -28,7 +36,9 @@ namespace CommStringGeneration
         return packMultiPacket(out);
     }
 
+    /// \brief retrieves the bluetooth configuration string for the field specified for regular device-computer configurations
     bool getBtConfigField(unsigned int field, uint8_t *str, uint16_t *strlen);
+    /// \brief retrieves the bluetooth configuration string for the field specified for regular device-device configurations (deprecated)
     bool getBtBilateralConfigField(unsigned int field, uint8_t *str, uint16_t *strlen);
 
 }

@@ -1,5 +1,5 @@
-#ifndef __CIRCULAR_BUFFER_H
-#define __CIRCULAR_BUFFER_H
+#ifndef CIRCULAR_BUFFER_H
+#define CIRCULAR_BUFFER_H
 
 #include <cstdio>
 #include <memory>
@@ -15,16 +15,11 @@
          - added a peak()
 */
 
-/*
-* Important Usage Note: This library reserves one spare entry for queue-full detection
-* Otherwise, corner cases and detecting difference between full/empty is hard.
-* You are not seeing an accidental off-by-one.
-*/
-
 /// \brief Simple and robust circular buffer template class.
-/// This container is used for storing incoming data. It is fixed size, thus isn't slowed down by memory
-/// allocation. Additionally, old data isn't useful data for us, so we don't worry too much about
-/// overwriting old values.
+/// This container is used for storing incoming data.
+/// It is fixed size, so that it doesn't slow with memory allocation.
+/// Additionally, old data isn't useful data for us, so we overwrite old values.
+/// This implementation is thread safe, using mutexes
 template <class T>
 class circular_buffer {
 public:
@@ -147,4 +142,4 @@ private:
     T defaultT_;
 };
 
-#endif //__CIRCULAR_BUFFER_H
+#endif //CIRCULAR_BUFFER_H

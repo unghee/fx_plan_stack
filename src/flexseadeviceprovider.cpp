@@ -31,13 +31,6 @@ std::vector<int> FlexseaDeviceProvider::getDeviceIds(int portIdx) const
     return ids;
 }
 
-const FlexseaDevice& FlexseaDeviceProvider::getDevice(int id) const
-{
-    if(connectedDevices.count(id))
-        return *(connectedDevices.at(id));
-    else
-        return defaultDevice;
-}
 
 const FxDevicePtr FlexseaDeviceProvider::getDevicePtr(int id) const
 {

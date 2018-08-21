@@ -10,14 +10,25 @@
 
 #define MAX_LOG_SIZE 50000
 
+/// \brief class which manages creating log files
+/// reads data from FlexseaDevices provided by a FlexseaDeviceProvider
+/// employs a polling method therefore the owner MUST either
+///  - trigger polls by calling serviceLogs, or
+///  - run DataLogger on a thread using the PeriodicTask pattern
 class DataLogger : public PeriodicTask
 {
 public:
     DataLogger(FlexseaDeviceProvider* fdp);
 
+    /// \brief starts logging all data received by device with id=devId
     bool startLogging(int devId);
+    /// \brief stops logging all data received by device with id=devId
     bool stopLogging(int devId);
+
+    /// \brief stops all logs managed by this DataLogger
     bool stopAllLogs();
+
+    /// \brief service all logs managed by this DataLogger (must be called periodically)
     void serviceLogs();
 
 protected:

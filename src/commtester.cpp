@@ -34,11 +34,12 @@ void CommTester::startTest(int devId, const CommTestParams& params)
 
     testStartTime = std::chrono::system_clock::now();
 
-    auto tx_func = [this] (uint8_t* buf, uint8_t* cmdCode, uint8_t* cmdType, uint16_t* len) {
-        tx_cmd_tools_comm_test_r(buf, cmdCode, cmdType, len, 1, 20, this->packetIndex);
-        this->packetIndex++;
-        sendIntervals[this->packetIndex % this->AVG_SIZE] = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - this->testStartTime).count();
-    };
+    auto tx_func =
+            [this] (uint8_t* buf, uint8_t* cmdCode, uint8_t* cmdType, uint16_t* len)
+            {
+                tx_cmd_tools_comm_test_r(buf, cmdCode, cmdType, len, 1, 20, this->packetIndex);
+                this->packetIndex++;
+            };
 
     isTesting = _commManager.startStreaming(devId, params.freq, false, tx_func);
     if(isTesting)
@@ -63,7 +64,6 @@ void CommTester::resetStats()
     prevSent = 0;
     prevReceived = 0;
     this->packetIndex = 0;
-    memset(sendIntervals, 0, sizeof(sendIntervals));
 
     if(isTesting) testStartTime = std::chrono::system_clock::now();
 }
