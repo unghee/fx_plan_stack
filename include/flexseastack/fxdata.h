@@ -30,7 +30,7 @@ struct FxDevData {
 
 		// increase size conditionally
 		// advance read index conditionally
-		if((++size) >= _rows)
+        if((++size) > _rows)
 		{
 			--size;
 			if((++rIdx) >= _rows) 
