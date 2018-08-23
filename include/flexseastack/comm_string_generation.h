@@ -27,13 +27,19 @@ namespace CommStringGeneration
                 std::forward<Args>(tx_args)...
                 );
 
-        setMsgInfo(out->unpacked, FLEXSEA_PLAN_1, devId, cmdCode, cmdType == CMD_READ ? RX_PTYPE_READ : RX_PTYPE_WRITE, 0);
-        out->unpackedIdx += MULTI_PACKET_OVERHEAD;
+        if(out->unpackedIdx)
+        {
+            setMsgInfo(out->unpacked, FLEXSEA_PLAN_1, devId, cmdCode, cmdType == CMD_READ ? RX_PTYPE_READ : RX_PTYPE_WRITE, 0);
+            out->unpackedIdx += MULTI_PACKET_OVERHEAD;
 
-        out->currentMultiPacket++;
-        out->currentMultiPacket%=4;
+            out->currentMultiPacket++;
+            out->currentMultiPacket%=4;
 
-        return packMultiPacket(out);
+            return packMultiPacket(out);
+        }
+        else
+            return false;
+
     }
 
     /// \brief retrieves the bluetooth configuration string for the field specified for regular device-computer configurations
