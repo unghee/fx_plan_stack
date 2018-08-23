@@ -29,11 +29,11 @@ extern "C"
         #include "flexseastack/flexsea_config.h"
         #include "flexseastack/flexsea-system/inc/flexsea_cmd_calibration.h"
 
-        CommManager commManager;
-        std::thread *commThread = nullptr;
+        static CommManager commManager;
+        static std::thread *commThread = nullptr;
 
         typedef std::tuple<uint8_t, int32_t, uint8_t, int16_t, int16_t, int16_t, int16_t, uint8_t> CtrlParams;
-        std::unordered_map<int, CtrlParams> ctrlsMap; 
+        static std::unordered_map<int, CtrlParams> ctrlsMap;
 
         void fxSetup()
         {
@@ -77,21 +77,6 @@ extern "C"
         void fxGetDeviceIds(int *idarray, int n)
         {
                 std::vector<int> ids = commManager.getDeviceIds();
-                std::vector<int> pList;
-                for(int i = 0; i < FX_NUMPORTS; ++i)
-                {
-                    if(commManager.isOpen(i))
-                        pList.push_back(i);
-                }
-
-                for(auto&& id : ids)
-                {
-                    int p = commManager.getDevicePtr(id)->port;
-                    pList.erase( std::remove( pList.begin(), pList.end(), p ), pList.end() );
-                }
-
-                for(auto&& p : pList)
-                    commManager.sendDeviceWhoAmI(p);
 
                 int i;
                 for(i = 0; i < n && (unsigned int)i < ids.size(); ++i)
