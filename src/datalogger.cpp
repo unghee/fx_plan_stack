@@ -8,10 +8,11 @@
 DataLogger::DataLogger(FlexseaDeviceProvider* fdp) : devProvider(fdp), numLogDevices(0)
 {}
 
-bool DataLogger::startLogging(int devId)
+bool DataLogger::startLogging(int devId, bool logAdditionalFieldInit)
 {
     FxDevicePtr dev = devProvider->getDevicePtr(devId);
-    if(!dev || dev->type == FX_NONE) return false;
+    if(!dev ||
+       dev->type == FX_NONE) return false;
 
     std::string fileName = generateFileName(dev);
     std::ofstream* fout = nullptr;
@@ -31,7 +32,7 @@ bool DataLogger::startLogging(int devId)
             throw std::bad_alloc();
         }
 
-        writeLogHeader(fout, dev);
+        writeLogHeader(fout, dev, logAdditionalFieldInit);
     }
 
     if(dev->dataCount())
@@ -41,7 +42,7 @@ bool DataLogger::startLogging(int devId)
 
     {
         std::lock_guard<std::mutex> lk(resMutex);
-        logRecords.push_back( {devId, fout, ts, 0, 0, numActiveFields} );
+        logRecords.push_back( {devId, fout, ts, 0, 0, numActiveFields, logAdditionalFieldInit} );
         numLogDevices++;
     }
 
@@ -57,6 +58,19 @@ bool DataLogger::stopLogging(int devId)
         ++i;
 
     return removeRecord(i);
+}
+
+
+void DataLogger::setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue)
+{
+    additionalColumnLabels = addLabel;
+    additionalColumnValues = addValue;
+}
+
+// public, allows user to set values
+void DataLogger::setColumnValue(unsigned col, int val)
+{
+    additionalColumnValues.at(col) = val;
 }
 
 bool DataLogger::removeRecord(int idx)
@@ -134,6 +148,12 @@ bool DataLogger::logDevice(int idx)
             {
                 (*fout) << ", " << dataline.at(fid);
             }
+            if(record.logAdditionalField)
+            {
+                for(auto&& l : additionalColumnValues)
+                    (*fout) << ", " << l;
+            }
+
             (*fout) << "\n";
         }
 
@@ -222,12 +242,17 @@ void DataLogger::serviceLogs()
     }
 }
 
-unsigned int DataLogger::writeLogHeader(std::ofstream* fout, const FxDevicePtr dev)
+unsigned int DataLogger::writeLogHeader(std::ofstream* fout, const FxDevicePtr dev, bool logAdditionalColumnsInit)
 {
     std::vector<std::string> fieldLabels = dev->getActiveFieldLabels();
     (*fout) << "timestamp";
     for(auto&& l : fieldLabels)
         (*fout) << ", " << l;
+    if(logAdditionalColumnsInit)
+    {
+        for(auto&& l : additionalColumnLabels)
+            (*fout) << ", " << l;
+    }
 
     (*fout) << "\n";
     fout->flush();
@@ -247,7 +272,7 @@ void DataLogger::swapFileObject(LogRecord &record, std::string newFileName, cons
 
     // generate the new file object
     record.fileObject = new std::ofstream(newFileName);
-    record.numActiveFields = writeLogHeader(record.fileObject, dev);
+    record.numActiveFields = writeLogHeader(record.fileObject, dev, record.logAdditionalField);
     record.logFileSize = 0;
 }
 
