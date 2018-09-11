@@ -14,6 +14,7 @@ extern "C" {
 	#include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
 	#include "flexseastack/flexsea-comm/inc/flexsea_payload.h"
 	#include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
+	#include "flexseastack/flexsea-comm/inc/flexsea_multi_circbuff.h"
 	#include "flexseastack/flexsea-system/inc/flexsea_system.h"
 	#include "flexseastack/flexsea-system/inc/flexsea_dataformats.h"
 }
