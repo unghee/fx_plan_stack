@@ -63,9 +63,12 @@ public:
     /// \brief overloaded to manage streams and connected devices
     virtual void close(uint16_t portIdx);
 
+    void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);
+    void setColumnValue(unsigned col, int val);
+
     /// \brief adds a message to a queue of messages to be written to the port periodically
     template<typename T, typename... Args>
-    bool enqueueCommand(int devId, T tx_func, Args&&... tx_args) { return enqueueCommand(connectedDevices.at(devId), tx_func, std::forward<Args>(tx_args)...); }
+    bool enqueueCommand(int devId, T tx_func, Args&&... tx_args) { return enqueueCommand(connectedDevices.at(devId), tx_func, std::forward<Args>(tx_args)...); }  
 
 protected:
     virtual void periodicTask();

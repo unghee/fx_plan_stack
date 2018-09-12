@@ -105,7 +105,7 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int should
         wakeCV.notify_all();
 
     if(shouldLog)
-        dataLogger->startLogging(devId);
+        dataLogger->startLogging(devId, true);
 
     return true;
 }
@@ -124,7 +124,7 @@ int CommManager::startStreaming(int devId, int freq, bool shouldLog, const Strea
     streamLists[idx].emplace_back(devId, cmdCodeBase, shouldLog, new StreamFunc(streamFunc));
 
     if(shouldLog)
-        dataLogger->startLogging(devId);
+        dataLogger->startLogging(devId, true);
 
     bool doNotify = false;
     {
@@ -279,6 +279,16 @@ void CommManager::close(uint16_t portIdx)
 //    }
 
     FlexseaSerial::close(portIdx);
+}
+
+void CommManager::setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue)
+{
+    dataLogger->setAdditionalColumn(addLabel, addValue);
+}
+
+void CommManager::setColumnValue(unsigned col, int val)
+{
+    dataLogger->setColumnValue(col, val);
 }
 
 int CommManager::writeDeviceMap(const FxDevicePtr d, uint32_t *map)
