@@ -174,9 +174,6 @@ bool DataLogger::logDevice(int idx)
 
 void DataLogger::initializeSessionFolder()
 {
-#ifdef _WIN32
-   //define something for Windows (32-bit and 64-bit, this part is common)
-
     // current date/time based on current system
     time_t now = time(0);
 
@@ -186,6 +183,10 @@ void DataLogger::initializeSessionFolder()
     str.erase(str.end() - 1);
     replace(str.begin(), str.end(), ' ', '_');
     replace(str.begin(), str.end(), ':', '.');
+
+#ifdef _WIN32
+   //define something for Windows (32-bit and 64-bit, this part is common)
+
     sessionPath = "Log_File\\" + str + "\\";
     str.insert(0,"mkdir Log_File\\");
     system(str.c_str());
@@ -207,7 +208,10 @@ void DataLogger::initializeSessionFolder()
     #   error "Unknown Apple platform"
     #endif
 #elif __linux__
-    // linux
+    sessionPath = "Log_File/" + str + "/";
+    str.insert(0,"mkdir Log_File/");
+    system("mkdir Log_File")
+    system(str.c_str());
 #elif __unix__ // all unices not caught above
     // Unix
 #elif defined(_POSIX_VERSION)
