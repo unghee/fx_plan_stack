@@ -7,6 +7,14 @@
 
 DataLogger::DataLogger(FlexseaDeviceProvider* fdp) : devProvider(fdp), numLogDevices(0), isFirstLogFile(true)
 {
+
+    #ifdef _WIN32
+       //define something for Windows (32-bit and 64-bit, this part is common)
+        system("mkdir Plan-GUI-Logs");
+
+    #elif __linux__
+        system("mkdir Plan-GUI-Logs");
+    #endif
 }
 
 bool DataLogger::startLogging(int devId, bool logAdditionalFieldInit)
@@ -187,8 +195,8 @@ void DataLogger::initializeSessionFolder()
 #ifdef _WIN32
    //define something for Windows (32-bit and 64-bit, this part is common)
 
-    sessionPath = "Log_File\\" + str + "\\";
-    str.insert(0,"mkdir Log_File\\");
+    sessionPath = "Plan-GUI-Logs\\" + str + "\\";
+    str.insert(0,"mkdir Plan-GUI-Logs\\");
     system(str.c_str());
 
    #ifdef _WIN64
@@ -208,9 +216,9 @@ void DataLogger::initializeSessionFolder()
     #   error "Unknown Apple platform"
     #endif
 #elif __linux__
-    sessionPath = "Log_File/" + str + "/";
-    str.insert(0,"mkdir Log_File/");
-    system("mkdir Log_File")
+    sessionPath = "Plan-GUI-Logs/" + str + "/";
+    str.insert(0,"mkdir Plan-GUI-Logs/");
+    system("mkdir Plan-GUI-Logs");
     system(str.c_str());
 #elif __unix__ // all unices not caught above
     // Unix
