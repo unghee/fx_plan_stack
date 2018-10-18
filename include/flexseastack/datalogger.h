@@ -54,6 +54,8 @@ struct LogRecord {
     unsigned int logAdditionalField;
 };
 
+    void initializeSessionFolder();
+
     std::vector<std::string> additionalColumnLabels;
     std::vector<int> additionalColumnValues;
 
@@ -65,8 +67,11 @@ struct LogRecord {
 
     FlexseaDeviceProvider *devProvider;
     int numLogDevices;
+    bool isFirstLogFile;
 
     std::mutex resMutex;
+
+    std::string sessionPath;
 
     void clearRecords();
     std::string generateFileName(FxDevicePtr dev, std::string suffix="");

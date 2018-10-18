@@ -5,11 +5,26 @@
 #include <algorithm>
 #include <iostream>
 
-DataLogger::DataLogger(FlexseaDeviceProvider* fdp) : devProvider(fdp), numLogDevices(0)
-{}
+DataLogger::DataLogger(FlexseaDeviceProvider* fdp) : devProvider(fdp), numLogDevices(0), isFirstLogFile(true)
+{
+
+    #ifdef _WIN32
+       //define something for Windows (32-bit and 64-bit, this part is common)
+        system("mkdir Plan-GUI-Logs");
+
+    #elif __linux__
+        system("mkdir Plan-GUI-Logs");
+    #endif
+}
 
 bool DataLogger::startLogging(int devId, bool logAdditionalFieldInit)
 {
+    if(isFirstLogFile)
+    {
+        initializeSessionFolder();
+        isFirstLogFile = false;
+    }
+
     FxDevicePtr dev = devProvider->getDevicePtr(devId);
     if(!dev ||
        dev->type == FX_NONE) return false;
@@ -165,6 +180,55 @@ bool DataLogger::logDevice(int idx)
     return true;
 }
 
+void DataLogger::initializeSessionFolder()
+{
+    // current date/time based on current system
+    time_t now = time(0);
+
+    // convert now to string form
+    char* dt = ctime(&now);
+    std::string str(dt);
+    str.erase(str.end() - 1);
+    replace(str.begin(), str.end(), ' ', '_');
+    replace(str.begin(), str.end(), ':', '.');
+
+#ifdef _WIN32
+   //define something for Windows (32-bit and 64-bit, this part is common)
+
+    sessionPath = "Plan-GUI-Logs\\" + str + "\\";
+    str.insert(0,"mkdir Plan-GUI-Logs\\");
+    system(str.c_str());
+
+   #ifdef _WIN64
+      //define something for Windows (64-bit only)
+   #else
+      //define something for Windows (32-bit only)
+   #endif
+#elif __APPLE__
+    #include "TargetConditionals.h"
+    #if TARGET_IPHONE_SIMULATOR
+         // iOS Simulator
+    #elif TARGET_OS_IPHONE
+        // iOS device
+    #elif TARGET_OS_MAC
+        // Other kinds of Mac OS
+    #else
+    #   error "Unknown Apple platform"
+    #endif
+#elif __linux__
+    sessionPath = "Plan-GUI-Logs/" + str + "/";
+    str.insert(0,"mkdir Plan-GUI-Logs/");
+    system("mkdir Plan-GUI-Logs");
+    system(str.c_str());
+#elif __unix__ // all unices not caught above
+    // Unix
+#elif defined(_POSIX_VERSION)
+    // POSIX
+#else
+#   error "Unknown compiler"
+#endif
+}
+
 void DataLogger::clearRecords()
 {
     for(auto&& r : logRecords)
@@ -207,6 +271,8 @@ std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
     // remove invalid characters
     result.erase( std::remove_if(result.begin(), result.end(), isIllegalFileChar),
                 result.end());
+
+    result.insert(0, sessionPath);
 
     return result;
 }
