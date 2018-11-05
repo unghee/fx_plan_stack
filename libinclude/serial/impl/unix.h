@@ -35,7 +35,7 @@
  *
  */
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__WIN64)
 
 #ifndef SERIAL_IMPL_UNIX_H
 #define SERIAL_IMPL_UNIX_H
@@ -218,4 +218,4 @@ private:
 
 #endif // SERIAL_IMPL_UNIX_H
 
-#endif // !defined(_WIN32)
+#endif // !defined(_WIN32) && !defined(__WIN64)

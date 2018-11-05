@@ -278,7 +278,7 @@ uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint3
         if(!IS_FIELD_HIGH(field, this->bitmap)) return timestamp;
 
     size_t i = findIndexAfterTime(timestamp), j;
-    size_t n = std::min(_data.count() - i, max);
+    size_t n = std::min((unsigned)(_data.count() - i), (unsigned)max);
     size_t nf = fieldIds.size();
 
     ts_output.clear();

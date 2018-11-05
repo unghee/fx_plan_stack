@@ -67,7 +67,8 @@ bool SerialDriver::tryOpen(const std::string &portName, uint16_t portIdx) {
         s->setStopbits(serial::stopbits_one);
         s->setFlowcontrol(serial::flowcontrol_hardware);
 
-#ifdef __WIN32
+//#ifdef __WIN32
+#if defined(__WIN32) || defined(__WIN64)
         try { s->openAsync(); } catch (...) {}
 #else
         try { s->open(); } catch (...) {}

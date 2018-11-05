@@ -34,7 +34,7 @@
  *
  */
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__WIN64)
 
 #ifndef SERIAL_IMPL_WINDOWS_H
 #define SERIAL_IMPL_WINDOWS_H
