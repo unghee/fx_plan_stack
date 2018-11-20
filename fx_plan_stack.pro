@@ -23,43 +23,43 @@ DEFINES += QT_DEPRECATED_WARNINGS \
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-INCLUDEPATH +=  inc \
-                include \
-                libinclude \
+INCLUDEPATH +=  inc         \
+                include     \
+                libinclude  \
                 libinclude/flexseastack/flexsea-comm/inc \
                 libinclude/flexseastack/flexsea-system/inc
 
-SOURCES += \
-        src/flexseaserial.cpp \
-        src/testserial.cpp \
-        src/flexseadevice.cpp \
-        src/commanager.cpp \
-        src/periodictask.cpp \
-    src/serialdriver.cpp \
-    src/flexseadeviceprovider.cpp \
-    src/commtester.cpp \
-    src/datalogger.cpp \
-    src/com_wrapper.cc \
-    src/comm_string_generation.cpp
+SOURCES +=                              \
+        src/flexseaserial.cpp           \
+        src/testserial.cpp              \
+        src/flexseadevice.cpp           \
+        src/commanager.cpp              \
+        src/periodictask.cpp            \
+        src/serialdriver.cpp            \
+        src/flexseadeviceprovider.cpp   \
+        src/commtester.cpp              \
+        src/datalogger.cpp              \
+        src/com_wrapper.cc              \
+        src/comm_string_generation.cpp
 
 HEADERS += \
-        include/flexseastack/flexseaserial.h \
-        include/flexseastack/testserial.h \
+        include/flexseastack/flexseaserial.h    \
+        include/flexseastack/testserial.h       \
         include/flexseastack/flexseadevicetypes.h \
-        include/flexseastack/flexseadevice.h \
-        include/flexseastack/circular_buffer.h \
-        include/flexseastack/fxdata.h \
-        include/flexseastack/commanager.h \
-        include/flexseastack/periodictask.h \
+        include/flexseastack/flexseadevice.h    \
+        include/flexseastack/circular_buffer.h  \
+        include/flexseastack/fxdata.h           \
+        include/flexseastack/commanager.h       \
+        include/flexseastack/periodictask.h     \
         include/flexseastack/flexsea-system/inc/flexsea_device_spec.h \
         include/flexseastack/flexsea-system/inc/flexsea_sys_def.h \
-    include/flexseastack/serialdriver.h \
+    include/flexseastack/serialdriver.h         \
     include/flexseastack/flexseadeviceprovider.h \
-    include/flexseastack/commtester.h \
+    include/flexseastack/commtester.h           \
     include/flexseastack/comm_string_generation.h \
-    include/flexseastack/datalogger.h \
-    include/flexseastack/com_wrapper.h \
-    include/flexseastack/fx_device_defs.h \
+    include/flexseastack/datalogger.h           \
+    include/flexseastack/com_wrapper.h          \
+    include/flexseastack/fx_device_defs.h       \
     include/flexseastack/rxhandler.h
 
 #flexsea stack headers
