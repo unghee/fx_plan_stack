@@ -186,7 +186,9 @@ void DataLogger::initializeSessionFolder()
     time_t now = time(0);
 
     // convert now to string form
-    char* dt = ctime(&now);
+    struct tm * timeinfo = localtime(&now);
+    char dt[80];
+    strftime (dt,80,"%Y-%m-%d_%Hh%Mm%Sss", timeinfo);
     std::string str(dt);
     str.erase(str.end() - 1);
     replace(str.begin(), str.end(), ' ', '_');
@@ -254,8 +256,7 @@ bool isIllegalFileChar(char c)
 std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
 {
     std::stringstream ss;
-    std::time_t logStart = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    ss << dev->getName() << "_id" << dev->id << "_" << std::ctime(&logStart);
+    ss << dev->getName() << "_id" << dev->id;
 
     if(suffix.compare("") != 0)
         ss << "_" << suffix;
@@ -263,6 +264,15 @@ std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
     ss << ".csv";
 
     std::string result = ss.str();
+
+    // current date/time based on current system
+    time_t now = time(0);
+    // convert now to string form and prepend date and time to file name.
+    struct tm * timeinfo = localtime(&now);
+    char dt[80];
+    strftime (dt,80,"%Y-%m-%d_%Hh%Mm%Ss_", timeinfo);
+
+    result.insert(0,dt);
 
     // replace spaces and : with _
     std::replace(result.begin(), result.end(), ' ', '_');
