@@ -8,6 +8,7 @@ extern "C" {
     @brief File that documents the API of the FlexSEA Plan Stack.
 */
     #include <stdint.h>
+    #include <stdbool.h>
 
     // --------------------------
     // Serial and Setup functions
