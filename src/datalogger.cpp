@@ -256,7 +256,7 @@ bool isIllegalFileChar(char c)
 std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
 {
     std::stringstream ss;
-    ss << dev->getName() << "_id" << dev->id;
+    ss << dev->getName() << "_id" << dev->getShortId() << "-" << dev->id;
 
     if(suffix.compare("") != 0)
         ss << "_" << suffix;
