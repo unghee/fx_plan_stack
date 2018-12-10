@@ -4,15 +4,18 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
+#include <windows.h>
+
 
 DataLogger::DataLogger(FlexseaDeviceProvider* fdp) : devProvider(fdp), numLogDevices(0), isFirstLogFile(true)
 {
 
     #ifdef _WIN32
        //define something for Windows (32-bit and 64-bit, this part is common)
-        system("mkdir Plan-GUI-Logs");
+        CreateDirectoryA("Plan-GUI-Logs", NULL);
 
     #elif __linux__
+        //TODO To be tested to make sure it's working on linux
         system("mkdir Plan-GUI-Logs");
     #endif
 }
@@ -197,9 +200,9 @@ void DataLogger::initializeSessionFolder()
 #ifdef _WIN32
    //define something for Windows (32-bit and 64-bit, this part is common)
 
-    sessionPath = "Plan-GUI-Logs\\" + str + "\\";
-    str.insert(0,"mkdir Plan-GUI-Logs\\");
-    system(str.c_str());
+    sessionPath = "Plan-GUI-Logs\\" + str;
+
+    CreateDirectoryA(sessionPath.c_str(), NULL);
 
    #ifdef _WIN64
       //define something for Windows (64-bit only)
@@ -218,6 +221,7 @@ void DataLogger::initializeSessionFolder()
     #   error "Unknown Apple platform"
     #endif
 #elif __linux__
+    //TODO To be tested to make sure it's working on linux
     sessionPath = "Plan-GUI-Logs/" + str + "/";
     str.insert(0,"mkdir Plan-GUI-Logs/");
     system("mkdir Plan-GUI-Logs");
@@ -256,7 +260,7 @@ bool isIllegalFileChar(char c)
 std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
 {
     std::stringstream ss;
-    ss << dev->getName() << "_id" << dev->getShortId() << "-" << dev->id;
+    ss << dev->getName() << "_id_" << dev->getShortId() << "_" << dev->id;
 
     if(suffix.compare("") != 0)
         ss << "_" << suffix;
@@ -281,7 +285,7 @@ std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
     // remove invalid characters
     result.erase( std::remove_if(result.begin(), result.end(), isIllegalFileChar),
                 result.end());
-
+    result.insert(0, "\\");
     result.insert(0, sessionPath);
 
     return result;
