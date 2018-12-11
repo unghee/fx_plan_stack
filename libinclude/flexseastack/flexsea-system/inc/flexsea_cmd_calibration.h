@@ -40,6 +40,7 @@ extern "C" {
 //****************************************************************************
 
 #include <stdint.h>
+#include "flexsea_global_structs.h"
 
 //****************************************************************************
 // Prototype(s):
@@ -50,6 +51,7 @@ typedef struct _MultiPacketInfo_s MultiPacketInfo;
 
 #ifdef BOARD_TYPE_FLEXSEA_PLAN
 uint16_t getUVLO(void);
+extern struct i2t_s i2tBattW, i2tBattR;
 #endif
 
 /* Initializes part of the array of function pointers which determines which
