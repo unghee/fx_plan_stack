@@ -16,7 +16,7 @@ CONFIG += c++14
 # depend on your compiler). Please consult the documentation of the
 # deprecated API in order to know how to port your code away from it.
 DEFINES += QT_DEPRECATED_WARNINGS \
-            BOARD_TYPE_FLEXSEA_PLAN
+			BOARD_TYPE_FLEXSEA_PLAN DEPHY
 
 # You can also make your code fail to compile if you use deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -74,6 +74,7 @@ HEADERS += \
     libinclude/flexseastack/flexsea-comm/inc/flexsea_payload.h \
     libinclude/flexseastack/flexsea-comm/inc/flexsea_comm_multi.h \
     libinclude/flexseastack/flexsea-comm/inc/flexsea_multi_frame_packet_def.h \
+	libinclude/flexseastack/flexsea-comm/inc/flexsea_multi_circbuff.h \
     libinclude/flexseastack/flexsea-system/inc/flexsea_system.h \
     libinclude/flexseastack/flexsea-system/inc/flexsea_sys_def.h \
     libinclude/flexseastack/flexsea-system/inc/flexsea_global_structs.h \

@@ -40,6 +40,7 @@ extern "C" {
 //****************************************************************************
 
 #include <stdint.h>
+#include "flexsea_global_structs.h"
 
 //****************************************************************************
 // Prototype(s):
@@ -47,6 +48,11 @@ extern "C" {
 
 struct _MultiPacketInfo_s;
 typedef struct _MultiPacketInfo_s MultiPacketInfo;
+
+#ifdef BOARD_TYPE_FLEXSEA_PLAN
+uint16_t getUVLO(void);
+extern struct i2t_s i2tBattW, i2tBattR;
+#endif
 
 /* Initializes part of the array of function pointers which determines which
 	function to call upon receiving a message
@@ -68,6 +74,8 @@ void tx_cmd_calibration_mode_r(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
 */
 void tx_cmd_calibration_mode_rw(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
 						uint16_t *len, uint8_t calibrationMode);
+void tx_cmd_calibration_mode_long_rw(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
+						uint16_t *len, uint8_t calibrationMode, uint16_t v);
 
 /* Master calls this function automatically after receiving a response from slave
 */

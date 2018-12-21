@@ -21,7 +21,7 @@ public:
     DataLogger(FlexseaDeviceProvider* fdp);
 
     /// \brief starts logging all data received by device with id=devId
-    bool startLogging(int devId);
+    bool startLogging(int devId, bool logAdditionalColumnsInit = false);
     /// \brief stops logging all data received by device with id=devId
     bool stopLogging(int devId);
 
@@ -30,6 +30,8 @@ public:
 
     /// \brief service all logs managed by this DataLogger (must be called periodically)
     void serviceLogs();
+    void setColumnValue(unsigned col, int val);
+    void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);
 
 protected:
 
@@ -48,9 +50,13 @@ struct LogRecord {
     unsigned int logFileSize;
     unsigned int logFileSplitIndex;
     unsigned int numActiveFields;
+    unsigned int logAdditionalField;
 };
 
-    unsigned int writeLogHeader(std::ofstream* fout, const FxDevicePtr dev);
+    void initializeSessionFolder();
+    std::vector<std::string> additionalColumnLabels;
+    std::vector<int> additionalColumnValues;
+    unsigned int writeLogHeader(std::ofstream* fout, const FxDevicePtr dev, bool logAdditionalColumnsInit);
     void swapFileObject(LogRecord &record, std::string newfilename, const FxDevicePtr dev);
 
     std::vector<LogRecord> logRecords;
@@ -58,9 +64,11 @@ struct LogRecord {
 
     FlexseaDeviceProvider *devProvider;
     int numLogDevices;
+    bool isFirstLogFile;
 
     std::mutex resMutex;
 
+    std::string sessionPath;
     void clearRecords();
     std::string generateFileName(FxDevicePtr dev, std::string suffix="");
 };

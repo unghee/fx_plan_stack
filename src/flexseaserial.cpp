@@ -14,6 +14,7 @@ extern "C" {
     #include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
     #include "flexseastack/flexsea-comm/inc/flexsea_payload.h"
     #include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
+    #include "flexseastack/flexsea-comm/inc/flexsea_multi_circbuff.h"
     #include "flexseastack/flexsea-system/inc/flexsea_system.h"
     #include "flexseastack/flexsea-system/inc/flexsea_dataformats.h"
 }
@@ -228,9 +229,13 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
                 {
                     // use c stack function
                     // c stack functions use device roles as ids...
-                    auto dev = getDevicePtr( cp->in.unpacked[MP_XID] );
+					int shortId = cp->in.unpacked[MP_XID];
+					int devId = LONG_ID(shortId, port);
+					auto dev = getDevicePtr(devId);
                     if(dev)
                             cp->in.unpacked[MP_XID] = dev->getRole();
+					else
+						std::cout << "Problem in processReceivedData(), invalid dev";
 
                         parseResult = parseReadyMultiString(cp);
                 }

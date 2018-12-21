@@ -4,14 +4,33 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
+#include <windows.h>
 
-DataLogger::DataLogger(FlexseaDeviceProvider* fdp) : devProvider(fdp), numLogDevices(0)
-{}
 
-bool DataLogger::startLogging(int devId)
+DataLogger::DataLogger(FlexseaDeviceProvider* fdp) : devProvider(fdp), numLogDevices(0), isFirstLogFile(true)
 {
+
+    #ifdef _WIN32
+       //define something for Windows (32-bit and 64-bit, this part is common)
+        CreateDirectoryA("Plan-GUI-Logs", NULL);
+
+    #elif __linux__
+        //TODO To be tested to make sure it's working on linux
+        system("mkdir Plan-GUI-Logs");
+    #endif
+}
+
+bool DataLogger::startLogging(int devId, bool logAdditionalFieldInit)
+{
+    if(isFirstLogFile)
+    {
+        initializeSessionFolder();
+        isFirstLogFile = false;
+    }
+
     FxDevicePtr dev = devProvider->getDevicePtr(devId);
-    if(!dev || dev->type == FX_NONE) return false;
+    if(!dev ||
+       dev->type == FX_NONE) return false;
 
     std::string fileName = generateFileName(dev);
     std::ofstream* fout = nullptr;
@@ -31,7 +50,7 @@ bool DataLogger::startLogging(int devId)
             throw std::bad_alloc();
         }
 
-        writeLogHeader(fout, dev);
+        writeLogHeader(fout, dev, logAdditionalFieldInit);
     }
 
     if(dev->dataCount())
@@ -41,7 +60,7 @@ bool DataLogger::startLogging(int devId)
 
     {
         std::lock_guard<std::mutex> lk(resMutex);
-        logRecords.push_back( {devId, fout, ts, 0, 0, numActiveFields} );
+        logRecords.push_back( {devId, fout, ts, 0, 0, numActiveFields, logAdditionalFieldInit} );
         numLogDevices++;
     }
 
@@ -57,6 +76,19 @@ bool DataLogger::stopLogging(int devId)
         ++i;
 
     return removeRecord(i);
+}
+
+
+void DataLogger::setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue)
+{
+    additionalColumnLabels = addLabel;
+    additionalColumnValues = addValue;
+}
+
+// public, allows user to set values
+void DataLogger::setColumnValue(unsigned col, int val)
+{
+    additionalColumnValues.at(col) = val;
 }
 
 bool DataLogger::removeRecord(int idx)
@@ -134,6 +166,12 @@ bool DataLogger::logDevice(int idx)
             {
                 (*fout) << ", " << dataline.at(fid);
             }
+            if(record.logAdditionalField)
+            {
+                for(auto&& l : additionalColumnValues)
+                    (*fout) << ", " << l;
+            }
+
             (*fout) << "\n";
         }
 
@@ -143,6 +181,58 @@ bool DataLogger::logDevice(int idx)
     }
 
     return true;
+}
+
+void DataLogger::initializeSessionFolder()
+{
+    // current date/time based on current system
+    time_t now = time(0);
+
+    // convert now to string form
+    struct tm * timeinfo = localtime(&now);
+    char dt[80];
+    strftime (dt,80,"%Y-%m-%d_%Hh%Mm%Sss", timeinfo);
+    std::string str(dt);
+    str.erase(str.end() - 1);
+    replace(str.begin(), str.end(), ' ', '_');
+    replace(str.begin(), str.end(), ':', '.');
+
+#ifdef _WIN32
+   //define something for Windows (32-bit and 64-bit, this part is common)
+
+    sessionPath = "Plan-GUI-Logs\\" + str;
+
+    CreateDirectoryA(sessionPath.c_str(), NULL);
+
+   #ifdef _WIN64
+      //define something for Windows (64-bit only)
+   #else
+      //define something for Windows (32-bit only)
+   #endif
+#elif __APPLE__
+    #include "TargetConditionals.h"
+    #if TARGET_IPHONE_SIMULATOR
+         // iOS Simulator
+    #elif TARGET_OS_IPHONE
+        // iOS device
+    #elif TARGET_OS_MAC
+        // Other kinds of Mac OS
+    #else
+    #   error "Unknown Apple platform"
+    #endif
+#elif __linux__
+    //TODO To be tested to make sure it's working on linux
+    sessionPath = "Plan-GUI-Logs/" + str + "/";
+    str.insert(0,"mkdir Plan-GUI-Logs/");
+    system("mkdir Plan-GUI-Logs");
+    system(str.c_str());
+#elif __unix__ // all unices not caught above
+    // Unix
+#elif defined(_POSIX_VERSION)
+    // POSIX
+#else
+#   error "Unknown compiler"
+#endif
 }
 
 void DataLogger::clearRecords()
@@ -170,8 +260,7 @@ bool isIllegalFileChar(char c)
 std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
 {
     std::stringstream ss;
-    std::time_t logStart = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    ss << dev->getName() << "_id" << dev->id << "_" << std::ctime(&logStart);
+    ss << dev->getName() << "_id_" << dev->getShortId() << "_" << dev->id;
 
     if(suffix.compare("") != 0)
         ss << "_" << suffix;
@@ -180,6 +269,15 @@ std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
 
     std::string result = ss.str();
 
+    // current date/time based on current system
+    time_t now = time(0);
+    // convert now to string form and prepend date and time to file name.
+    struct tm * timeinfo = localtime(&now);
+    char dt[80];
+    strftime (dt,80,"%Y-%m-%d_%Hh%Mm%Ss_", timeinfo);
+
+    result.insert(0,dt);
+
     // replace spaces and : with _
     std::replace(result.begin(), result.end(), ' ', '_');
     std::replace(result.begin(), result.end(), ':', '_');
@@ -187,6 +285,8 @@ std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
     // remove invalid characters
     result.erase( std::remove_if(result.begin(), result.end(), isIllegalFileChar),
                 result.end());
+    result.insert(0, "\\");
+    result.insert(0, sessionPath);
 
     return result;
 }
@@ -222,12 +322,17 @@ void DataLogger::serviceLogs()
     }
 }
 
-unsigned int DataLogger::writeLogHeader(std::ofstream* fout, const FxDevicePtr dev)
+unsigned int DataLogger::writeLogHeader(std::ofstream* fout, const FxDevicePtr dev, bool logAdditionalColumnsInit)
 {
     std::vector<std::string> fieldLabels = dev->getActiveFieldLabels();
     (*fout) << "timestamp";
     for(auto&& l : fieldLabels)
         (*fout) << ", " << l;
+    if(logAdditionalColumnsInit)
+    {
+        for(auto&& l : additionalColumnLabels)
+            (*fout) << ", " << l;
+    }
 
     (*fout) << "\n";
     fout->flush();
@@ -247,7 +352,7 @@ void DataLogger::swapFileObject(LogRecord &record, std::string newFileName, cons
 
     // generate the new file object
     record.fileObject = new std::ofstream(newFileName);
-    record.numActiveFields = writeLogHeader(record.fileObject, dev);
+    record.numActiveFields = writeLogHeader(record.fileObject, dev, record.logAdditionalField);
     record.logFileSize = 0;
 }
 
