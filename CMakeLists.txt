@@ -56,6 +56,7 @@ if(WIN32)
 	set(OUT_PREF "win")
 else()
 	set(OUT_PREF "unix")	
+	set (CMAKE_CXX_FLAGS "-fPIC")
 endif()
 
 if(CMAKE_SIZEOF_VOID_P GREATER 4)
