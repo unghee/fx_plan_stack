@@ -95,10 +95,10 @@ HEADERS += \
 
 #serial lib headers
 HEADERS += \
-    libinclude/serial/serial.h \
-    libinclude/serial/v8stdint.h \
-    libinclude/serial/impl/unix.h \
-    libinclude/serial/impl/win.h \
+	libinclude/serial/serial.h \
+	libinclude/serial/v8stdint.h \
+	libinclude/serial/impl/unix.h \
+	libinclude/serial/impl/win.h \
 
 # serialc library for win32
 win32: LIBS += -L$$PWD/lib/ -lserialc -lsetupapi -lFlexSEA-Stack-Plan

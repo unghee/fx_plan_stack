@@ -69,6 +69,7 @@ struct LogRecord {
     std::mutex resMutex;
 
     std::string sessionPath;
+
     void clearRecords();
     std::string generateFileName(FxDevicePtr dev, std::string suffix="");
 };
