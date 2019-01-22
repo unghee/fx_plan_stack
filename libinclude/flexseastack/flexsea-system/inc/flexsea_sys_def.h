@@ -177,6 +177,7 @@ extern "C" {
 #define CALIBRATION_FIND_CURRENT_ZEROES 	0x02
 #define CALIBRATION_BELT					0x04
 #define CALIBRATION_UVLO					0x08
+#define CALIBRATION_I2T						0x10
 
 //  (set gains with CMD_SET_Z_GAINS & CMD_CTRL_I_GAINS_WRITE)
 
@@ -191,12 +192,14 @@ extern "C" {
 #define Z_B		g1
 #define Z_I		g2
 
+/*
 typedef enum {
-    FX_NONE = 0,
-    FX_RIGID = 1,
-    FX_EXECUTE = 2,
-    FX_MANAGE = 3
+	FX_NONE = 0,
+	FX_RIGID = 1,
+	FX_EXECUTE = 2,
+	FX_MANAGE = 3
 } FlexseaDeviceType;
+*/
 
 //In Control combined fields:
 #define IN_CONTROL_CONTROLLER(x)		((x & 0xE000) >> 13)
