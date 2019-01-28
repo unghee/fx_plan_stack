@@ -167,6 +167,10 @@ extern "C" {
     /// @returns Nothing.
     void findPoles(int devId, int block);
 
+    /// \brief Return the revision information for the library as a string
+    /// @param None.
+    /// @returns a string that includes build date and time and 'GIT describe information'
+    char* fxGetRevision( void );
 #ifdef __cplusplus
 }
 #endif

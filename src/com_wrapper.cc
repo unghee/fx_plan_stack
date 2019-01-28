@@ -35,6 +35,9 @@ extern "C"
         typedef std::tuple<uint8_t, int32_t, uint8_t, int16_t, int16_t, int16_t, int16_t, uint8_t> CtrlParams;
         static std::unordered_map<int, CtrlParams> ctrlsMap;
 
+        extern char FX_PLAN_STACK_DATE[];
+        extern char FX_PLAN_STACK_GIT_INFO[];
+
         void fxSetup()
         {
                 initFlexSEAStack_minimalist(FLEXSEA_PLAN_1);
@@ -237,5 +240,21 @@ extern "C"
                     std::this_thread::sleep_for(1s);
                 }
             }
+        }
+
+        char* fxGetRevision( void)
+        {
+            size_t totalLength = strlen(FX_PLAN_STACK_DATE) + strlen(FX_PLAN_STACK_GIT_INFO) +1;
+            char* ptr = (char*)malloc( totalLength );
+            if( ! ptr )
+            {
+                return NULL;
+            }
+
+            memset( ptr, 0, totalLength);
+            unsigned dateLength = (unsigned)strlen(FX_PLAN_STACK_DATE);
+            memcpy(ptr, FX_PLAN_STACK_DATE, dateLength);
+            memcpy(ptr+dateLength, FX_PLAN_STACK_GIT_INFO, strlen(FX_PLAN_STACK_GIT_INFO));
+            return ptr;
         }
 }
