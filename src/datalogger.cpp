@@ -291,6 +291,9 @@ std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
     return result;
 }
 
+/*
+** This routine is called via the periodic task mechanism.
+*/
 void DataLogger::serviceLogs()
 {
     std::lock_guard<std::mutex> lk(resMutex);
