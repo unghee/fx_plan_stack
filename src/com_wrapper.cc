@@ -3,6 +3,7 @@
 #include "flexseastack/flexsea-projects/ActPack/inc/cmd-ActPack.h"
 #include "flexseastack/flexsea-system/inc/flexsea_system.h"
 #include "flexseastack/flexsea-comm/inc/flexsea_comm_def.h"
+#include "revision.h"
 
 #include <thread>
 #include <iostream>
@@ -34,9 +35,6 @@ extern "C"
 
         typedef std::tuple<uint8_t, int32_t, uint8_t, int16_t, int16_t, int16_t, int16_t, uint8_t> CtrlParams;
         static std::unordered_map<int, CtrlParams> ctrlsMap;
-
-        extern char FX_PLAN_STACK_DATE[];
-        extern char FX_PLAN_STACK_GIT_INFO[];
 
         void fxSetup()
         {
@@ -183,6 +181,58 @@ extern "C"
                 fflush(stdout);
                 return &devData[0];
         }
+        int fxReadDeviceEx(int devId, int* fieldIds, uint8_t* success, int* dataBuffer, int n)
+        {
+            // Initialize return values (ensure theya re all set to false)
+            memset(success, 0, n);
+            int returnCount = 0;
+
+            // Check input parameters
+            if(!dataBuffer)
+            {
+                std::cout << "Invalid Input buffer or size" << std::endl;
+                return returnCount;
+            }
+            auto dev = commManager.getDevicePtr(devId);
+            if(!dev)
+            {
+                std::cout << "Device does not exist" << std::endl;
+                return returnCount;
+            }
+            if(!dev->hasData())
+            {
+                std::cout << "Device does not have data" << std::endl;
+                return returnCount;
+            }
+            if(dev->getDataPtr( dev->dataCount()-1, (FX_DataPtr)devDataPriv, MAX_L ) == 0)
+            {
+                std::cout << "Failed to read device data" << std::endl;
+                return returnCount;
+            }
+
+            // We know we have data and a place to put it
+            auto activeIds = dev->getActiveFieldIds();
+            for(int i = 0; i < n; i++)
+            {
+                auto it = std::find(activeIds.begin(), activeIds.end(), fieldIds[i]);
+                if(it != activeIds.end())
+                {
+                    dataBuffer[i] = devDataPriv[1 + fieldIds[i]];
+                    success[i] = 1;
+                }
+                else
+                {
+                    std::cout << "Requested field not found" << std::endl;
+                    dataBuffer[i] = 0;
+                }
+
+                // We have increased the number of elements being returned
+                returnCount++;
+            }
+
+            // zzz fflush(stdout);
+            return returnCount;
+        }
 
         // -- control functions 
         void setControlMode(int devId, int ctrlMode)
@@ -241,7 +291,7 @@ extern "C"
                 }
             }
         }
-
+		
         char* fxGetRevision( void)
         {
             size_t totalLength = strlen(FX_PLAN_STACK_DATE) + strlen(FX_PLAN_STACK_GIT_INFO) +1;
@@ -257,4 +307,5 @@ extern "C"
             memcpy(ptr+dateLength, FX_PLAN_STACK_GIT_INFO, strlen(FX_PLAN_STACK_GIT_INFO));
             return ptr;
         }
+
 }

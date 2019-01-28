@@ -101,7 +101,7 @@ extern "C" {
     /// Each element in the success array will contain 1 if that fieldIds element contains valid
     /// data. Otherwise, the success array element will contain 0.
     /// @param n Specifies the length of the arrays fieldIds and success. The arrays must be preallocated
-    /// and the sze of the arrays must match.
+    /// and the size of the arrays must match.
     /// @returns Returns a pointer to an array that contains the data being read.
     /// @note This function will fail if the device is not configured to stream the requested field. Refer
     /// to fxSetStreamVariables().
@@ -112,6 +112,29 @@ extern "C" {
     /// @note The returned data array is reused by each call to fxReadDevice. If you need it to persist,
     /// copy the data out of the array.
     int* fxReadDevice(int devId, int* fieldIds, uint8_t* success, int n);
+
+    ///\brief This routine is meant to replace the fxReadDevice function. It takes an buffer for the data
+    /// to be returned. 
+    /// @param devId is the opaque handle for the device.
+    /// @param fieldIds Specify the field ids of variables to read. These must have been requested
+    /// in the fxSetStreamVariables. Refer to http://dephy.com/wiki/flexsea/doku.php?id=fxdevicefields
+    /// for a description of the field ids.
+    /// @param success An array of status codes indicating whether the returned data aray contains
+    /// valid data. This array must contain the same number of elements as the fieldIds array.
+    /// Each element in the success array will contain 1 if that fieldIds element contains valid
+    /// data. Otherwise, the success array element will contain 0.
+	/// @param This array will contain the data being returned. The user is reposible for allocating and
+	/// disposal of the memory.
+    /// @param n Specifies the length of the arrays fieldIds, success array, and bufferData array. The arrays must be preallocated
+    /// and the size of the arrays must match.
+    /// @returns Returns a pointer to an array that contains the data being read.
+    /// @note This function will fail if the device is not configured to stream the requested field. Refer
+    /// to fxSetStreamVariables().
+    ///
+    /// @note fieldIds and success arrays must be pre-allocated with enough space to hold all of the
+    /// variables being streamed from the FlexSEA device.
+    ///
+    int fxReadDeviceEx(int devId, int* fieldIds, uint8_t* success, int* dataBuffer, int n);
 
     // -----------------
     // Control functions
@@ -171,6 +194,7 @@ extern "C" {
     /// @param None.
     /// @returns a string that includes build date and time and 'GIT describe information'
     char* fxGetRevision( void );
+
 #ifdef __cplusplus
 }
 #endif
