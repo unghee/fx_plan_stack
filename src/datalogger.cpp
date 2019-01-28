@@ -4,7 +4,9 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 
 DataLogger::DataLogger(FlexseaDeviceProvider* fdp) : devProvider(fdp), numLogDevices(0), isFirstLogFile(true)

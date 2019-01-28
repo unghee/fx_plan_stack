@@ -26,16 +26,20 @@ ADD_LIBRARY(fx_plan_objs OBJECT ${FX_SRCFILES})
 ADD_LIBRARY(fx_plan_stack SHARED $<TARGET_OBJECTS:fx_plan_objs>)
 ADD_LIBRARY(fx_plan_stack_static STATIC $<TARGET_OBJECTS:fx_plan_objs>)
 
-
-
+if(CMAKE_SIZEOF_VOID_P GREATER 4)
+find_library(serialc_LIBRARY serialc PATHS ${PROJECT_SOURCE_DIR}/lib64)
+find_library(FlexSEA-Stack_LIBRARY FlexSEA-Stack-Plan PATHS ${PROJECT_SOURCE_DIR}/lib64)
+else()
 find_library(serialc_LIBRARY serialc PATHS ${PROJECT_SOURCE_DIR}/lib)
 find_library(FlexSEA-Stack_LIBRARY FlexSEA-Stack-Plan PATHS ${PROJECT_SOURCE_DIR}/lib)
+endif()
 
-target_link_libraries(fx_plan_stack ${serialc_LIBRARY})
-target_link_libraries(fx_plan_stack ${FlexSEA-Stack_LIBRARY})
+# --whole-archive
+target_link_libraries(fx_plan_stack -Wl,--whole-archive ${serialc_LIBRARY} -Wl,--no-whole-archive)
+target_link_libraries(fx_plan_stack -Wl,--whole-archive ${FlexSEA-Stack_LIBRARY} -Wl,--no-whole-archive)
 
-target_link_libraries(fx_plan_stack_static ${serialc_LIBRARY})
-target_link_libraries(fx_plan_stack_static ${FlexSEA-Stack_LIBRARY})
+target_link_libraries(fx_plan_stack_static -Wl,--whole-archive ${serialc_LIBRARY} -Wl,--no-whole-archive)
+target_link_libraries(fx_plan_stack_static -Wl,--whole-archive ${FlexSEA-Stack_LIBRARY} -Wl,--no-whole-archive)
 
 IF(WIN32)
 	target_link_libraries(fx_plan_stack setupapi)
@@ -56,6 +60,7 @@ if(WIN32)
 	set(OUT_PREF "win")
 else()
 	set(OUT_PREF "unix")	
+	set (CMAKE_CXX_FLAGS "-fPIC")
 endif()
 
 if(CMAKE_SIZEOF_VOID_P GREATER 4)
