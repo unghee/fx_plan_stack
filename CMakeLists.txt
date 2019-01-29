@@ -18,6 +18,7 @@ set(FX_SRCFILES
 	src/datalogger.cpp
 	src/com_wrapper.cc
 	src/comm_string_generation.cpp
+	src/revision.cpp
 )
 
 ADD_LIBRARY(fx_plan_objs OBJECT ${FX_SRCFILES})
