@@ -52,8 +52,6 @@ HEADERS += \
 		include/flexseastack/fxdata.h           \
 		include/flexseastack/commanager.h       \
 		include/flexseastack/periodictask.h     \
-		include/flexseastack/flexsea-system/inc/flexsea_device_spec.h \
-		include/flexseastack/flexsea-system/inc/flexsea_sys_def.h \
 		include/flexseastack/serialdriver.h         \
 		include/flexseastack/flexseadeviceprovider.h \
 		include/flexseastack/commtester.h           \
