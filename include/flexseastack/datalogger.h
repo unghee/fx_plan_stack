@@ -10,6 +10,7 @@
 
 #define MAX_LOG_SIZE 50000
 #define DEFAULT_LOG_FOLDER "Plan-GUI-Logs"
+#define LOG_FOLDER_CONFIG_FILE "logFolderConfigFile.txt"
 
 /// \brief class which manages creating log files
 /// reads data from FlexseaDevices provided by a FlexseaDeviceProvider
@@ -78,6 +79,8 @@ struct LogRecord {
     void clearRecords();
     std::string generateFileName(FxDevicePtr dev, std::string suffix="");
     void createFolder(std::string path);
+    void loadLogFolderConfig();
+    void saveLogFolderConfig();
 };
 
 #endif // DATALOGGER_H

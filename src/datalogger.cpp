@@ -15,6 +15,7 @@ DataLogger::DataLogger(FlexseaDeviceProvider* fdp, std::string logFolderPath)
     , isFirstLogFile(true)
     , _logFolderPath(logFolderPath)
 {
+    loadLogFolderConfig();
     createFolder(_logFolderPath);
 }
 
@@ -45,7 +46,7 @@ bool DataLogger::startLogging(int devId, bool logAdditionalFieldInit)
         {
             if(fout) delete fout;
             fout = nullptr;
-
+            std::cout << "Can't open file";
             throw std::bad_alloc();
         }
 
@@ -88,6 +89,7 @@ void DataLogger::setLogFolder(std::string folderPath)
 {
     _logFolderPath = folderPath;
     createFolder(_logFolderPath);
+    saveLogFolderConfig();
     isFirstLogFile = true;
 }
 
@@ -231,7 +233,7 @@ void DataLogger::clearRecords()
 
 bool isIllegalFileChar(char c)
 {
-    return c == '\n' || c == '\t' || c == ' ';
+    return c == '\n' || c == '\t';
 }
 
 std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
@@ -284,6 +286,38 @@ void DataLogger::createFolder(std::string path)
 #else
 #   error "Unknown compiler"
 #endif
+}
+
+void DataLogger::loadLogFolderConfig()
+{
+    const int MAX = 256;
+    char temp[MAX];
+
+    std::ifstream fin;
+    std::cout << "Opening file...";
+    fin.open(LOG_FOLDER_CONFIG_FILE, std::ifstream::in);
+
+    if(!fin.is_open()) return;
+    std::cout << "worked.";
+
+    fin.getline(temp, MAX);
+
+    _logFolderPath = temp;
+    fin.close();
+}
+
+void DataLogger::saveLogFolderConfig()
+{
+
+    std::ofstream fout;
+    std::cout << "Opening file...";
+    fout.open(LOG_FOLDER_CONFIG_FILE, std::ios::trunc);
+
+    if(!fout.is_open()) return;
+    std::cout << "worked.";
+
+    fout << _logFolderPath;
+    fout.close();
 }
 
 /*
