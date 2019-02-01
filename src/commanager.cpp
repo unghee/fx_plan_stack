@@ -291,6 +291,16 @@ void CommManager::setColumnValue(unsigned col, int val)
     dataLogger->setColumnValue(col, val);
 }
 
+void CommManager::setLogFolder(std::string logFolderPath)
+{
+    dataLogger->setLogFolder(logFolderPath);
+}
+
+void CommManager::setDefaultLogFolder()
+{
+    dataLogger->setDefaultLogFolder();
+}
+
 int CommManager::writeDeviceMap(const FxDevicePtr d, uint32_t *map)
 {
     uint16_t mapLen = 0;

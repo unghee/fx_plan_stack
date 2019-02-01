@@ -9,6 +9,7 @@
 #include "flexseastack/flexseadeviceprovider.h"
 
 #define MAX_LOG_SIZE 50000
+#define DEFAULT_LOG_FOLDER "Plan-GUI-Logs"
 
 /// \brief class which manages creating log files
 /// reads data from FlexseaDevices provided by a FlexseaDeviceProvider
@@ -18,7 +19,7 @@
 class DataLogger : public PeriodicTask
 {
 public:
-    DataLogger(FlexseaDeviceProvider* fdp);
+    DataLogger(FlexseaDeviceProvider* fdp, std::string logFolderPath = DEFAULT_LOG_FOLDER);
 
     /// \brief starts logging all data received by device with id=devId
     bool startLogging(int devId, bool logAdditionalColumnsInit = false);
@@ -32,6 +33,8 @@ public:
     void serviceLogs();
     void setColumnValue(unsigned col, int val);
     void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);
+    void setLogFolder(std::string folderPath);
+    void setDefaultLogFolder();
 
 protected:
 
@@ -68,10 +71,13 @@ struct LogRecord {
 
     std::mutex resMutex;
 
-    std::string sessionPath;
+    std::string _logFolderPath;
+
+    std::string _sessionPath;
 
     void clearRecords();
     std::string generateFileName(FxDevicePtr dev, std::string suffix="");
+    void createFolder(std::string path);
 };
 
 #endif // DATALOGGER_H
