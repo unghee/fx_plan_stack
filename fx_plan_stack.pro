@@ -60,7 +60,8 @@ HEADERS += \
 		include/flexseastack/com_wrapper.h          \
 		include/flexseastack/fx_device_defs.h       \
 		include/flexseastack/rxhandler.h \
-		include/revision.h
+		include/revision.h \
+    include/git_rev_data.h
 
 #flexsea stack headers
 HEADERS += \

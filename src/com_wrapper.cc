@@ -295,7 +295,6 @@ extern "C"
 		
         const char* fxGetRevision( LIB_REVISION_E whichLib )
         {
-            size_t totalLength = 0;
             std::string ptr;
             std::string seperator = " @ ";
 
