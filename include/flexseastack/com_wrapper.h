@@ -193,7 +193,8 @@ extern "C" {
     /// \brief Return the revision information for the library as a string
     /// @param None.
     /// @returns a string that includes build date and time and 'GIT describe information'
-    char* fxGetRevision( void );
+    enum LIB_REVISION_E {FX_PLAN_STACK_E, FLEXSEA_LIB_E };
+    const char* fxGetRevision( LIB_REVISION_E );
 
 #ifdef __cplusplus
 }

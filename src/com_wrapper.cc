@@ -13,6 +13,7 @@
 #include <exception>
 #include <algorithm>
 #include <cstring>
+#include <string>
 
 using namespace std::chrono_literals;
 
@@ -292,20 +293,26 @@ extern "C"
             }
         }
 		
-        char* fxGetRevision( void)
+        const char* fxGetRevision( LIB_REVISION_E whichLib )
         {
-            size_t totalLength = strlen(FX_PLAN_STACK_DATE) + strlen(FX_PLAN_STACK_GIT_INFO) +1;
-            char* ptr = (char*)malloc( totalLength );
-            if( ! ptr )
+            size_t totalLength = 0;
+            std::string ptr;
+            std::string seperator = " @ ";
+
+            if( whichLib == FX_PLAN_STACK_E )
             {
-                return NULL;
+                std::string d = FX_PLAN_STACK_DATE;
+                std::string g = FX_PLAN_STACK_GIT_INFO;
+                ptr = g.substr( g.find(':') + 1);
+                ptr += seperator;
+                ptr += d.substr( d.find(':') + 1);
+            }
+            else
+            {
+                std::string unknown = "Unknown @ Unknown";
+                return unknown.c_str();
             }
 
-            memset( ptr, 0, totalLength);
-            unsigned dateLength = (unsigned)strlen(FX_PLAN_STACK_DATE);
-            memcpy(ptr, FX_PLAN_STACK_DATE, dateLength);
-            memcpy(ptr+dateLength, FX_PLAN_STACK_GIT_INFO, strlen(FX_PLAN_STACK_GIT_INFO));
-            return ptr;
+            return ptr.c_str();
         }
-
 }
