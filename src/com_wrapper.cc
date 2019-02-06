@@ -231,7 +231,7 @@ extern "C"
                 returnCount++;
             }
 
-            // zzz fflush(stdout);
+            fflush(stdout);
             return returnCount;
         }
 
@@ -316,13 +316,11 @@ extern "C"
             }
             else
             {
-                //std::string d = SERIAL_LIB_DATE;
-                //std::string g = SERIAL_LIB_GIT_INFO;
-                //ptr = g.substr( g.find(':') + 1);
-                //ptr += seperator;
-                //ptr += d.substr( d.find(':') + 1);
-
-                ptr = "unknown @ unknown ";
+                std::string d = SERIAL_LIB_DATE;
+                std::string g = SERIAL_LIB_GIT_INFO;
+                ptr = g.substr( g.find(':') + 1);
+                ptr += seperator;
+                ptr += d.substr( d.find(':') + 1);
             }
 
             return ptr.c_str();
