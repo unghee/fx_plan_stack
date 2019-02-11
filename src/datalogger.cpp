@@ -4,8 +4,11 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
+
 #ifdef _WIN32
 #include <windows.h>
+#elif __linux__
+#include<sys/stat.h>
 #endif
 
 
@@ -282,18 +285,17 @@ bool DataLogger::createFolder(std::string path)
 #ifdef _WIN32
    //define something for Windows (32-bit and 64-bit, this part is common)
     std::replace(pathOK.begin(), pathOK.end(), '/', '\\');
-    success = CreateDirectoryA(pathOK.c_str(), NULL);
-    if(success == false)
-    {
-        int errorCode= GetLastError();
-        if(errorCode == ERROR_ALREADY_EXISTS) success = true;
-    }
+
+    CreateDirectoryA(pathOK.c_str(), NULL);
+
+    int status = GetLastError();
+    if(status == ERROR_ALREADY_EXISTS || status == 0) success = true;
 
 #elif __linux__
     std::replace(pathOK.begin(), pathOK.end(), '\\', '/');
-    std::string cmd = "mkdir " + pathOK;
-    system(cmd.c_str());
-    success = true;
+
+    mkdir(pathOK.c_str());
+    if(errno == EEXIST || errno == 0) success = true;
 
 #else
 #   error "Unknown compiler"
