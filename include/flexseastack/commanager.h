@@ -66,8 +66,8 @@ public:
     void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);
     void setColumnValue(unsigned col, int val);
 
-    void setLogFolder(std::string logFolderPath);
-    void setDefaultLogFolder();
+    bool setLogFolder(std::string logFolderPath);
+    bool setDefaultLogFolder();
 
     /// \brief adds a message to a queue of messages to be written to the port periodically
     template<typename T, typename... Args>

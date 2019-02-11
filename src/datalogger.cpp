@@ -9,11 +9,11 @@
 #endif
 
 
-DataLogger::DataLogger(FlexseaDeviceProvider* fdp, std::string logFolderPath)
+DataLogger::DataLogger(FlexseaDeviceProvider* fdp)
     : devProvider(fdp)
     , numLogDevices(0)
     , isFirstLogFile(true)
-    , _logFolderPath(logFolderPath)
+    , _logFolderPath(DEFAULT_LOG_FOLDER)
 {
     loadLogFolderConfig();
     createFolder(_logFolderPath);
@@ -46,7 +46,7 @@ bool DataLogger::startLogging(int devId, bool logAdditionalFieldInit)
         {
             if(fout) delete fout;
             fout = nullptr;
-            std::cout << "Can't open file";
+            std::cout << "Can't open file" << std::endl;
             throw std::bad_alloc();
         }
 
@@ -85,17 +85,22 @@ void DataLogger::setAdditionalColumn(std::vector<std::string> addLabel, std::vec
     additionalColumnValues = addValue;
 }
 
-void DataLogger::setLogFolder(std::string folderPath)
+bool DataLogger::setLogFolder(std::string folderPath)
 {
-    _logFolderPath = folderPath;
-    createFolder(_logFolderPath);
-    saveLogFolderConfig();
-    isFirstLogFile = true;
+    bool success = createFolder(folderPath);
+
+    if(success)
+    {
+        _logFolderPath = folderPath;
+        saveLogFolderConfig();
+        isFirstLogFile = true;
+    }
+    return success;
 }
 
-void DataLogger::setDefaultLogFolder()
+bool DataLogger::setDefaultLogFolder()
 {
-    setLogFolder(DEFAULT_LOG_FOLDER);
+   return setLogFolder(DEFAULT_LOG_FOLDER);
 }
 
 // public, allows user to set values
@@ -196,7 +201,7 @@ bool DataLogger::logDevice(int idx)
     return true;
 }
 
-void DataLogger::initializeSessionFolder()
+bool DataLogger::initializeSessionFolder()
 {
     // current date/time based on current system
     time_t now = time(0);
@@ -211,7 +216,7 @@ void DataLogger::initializeSessionFolder()
     replace(str.begin(), str.end(), ':', '.');
 
     _sessionPath = _logFolderPath + "\\" + str;
-    createFolder(_sessionPath);
+    return createFolder(_sessionPath);
 }
 
 void DataLogger::clearRecords()
@@ -270,51 +275,63 @@ std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
     return result;
 }
 
-void DataLogger::createFolder(std::string path)
+bool DataLogger::createFolder(std::string path)
 {
+   bool success = false;
    std::string pathOK = path;
 #ifdef _WIN32
    //define something for Windows (32-bit and 64-bit, this part is common)
     std::replace(pathOK.begin(), pathOK.end(), '/', '\\');
-    CreateDirectoryA(pathOK.c_str(), NULL);
+    success = CreateDirectoryA(pathOK.c_str(), NULL);
+    if(success == false)
+    {
+        int errorCode= GetLastError();
+        if(errorCode == ERROR_ALREADY_EXISTS) success = true;
+    }
 
 #elif __linux__
     std::replace(pathOK.begin(), pathOK.end(), '\\', '/');
     std::string cmd = "mkdir " + pathOK;
     system(cmd.c_str());
+    success = true;
 
 #else
 #   error "Unknown compiler"
 #endif
+   if(success) std::cout << "Folder created : " << pathOK << std::endl;
+
+   return success;
 }
 
-void DataLogger::loadLogFolderConfig()
+bool DataLogger::loadLogFolderConfig()
 {
     const int MAX = 256;
     char temp[MAX];
+    bool success = false;
 
     std::ifstream fin;
-    std::cout << "Opening file...";
     fin.open(LOG_FOLDER_CONFIG_FILE, std::ifstream::in);
 
-    if(!fin.is_open()) return;
-    std::cout << "worked.";
+    if(!fin.is_open()) return success;
 
     fin.getline(temp, MAX);
-
-    _logFolderPath = temp;
     fin.close();
+
+    success = createFolder(temp);
+
+    if(success)
+    {
+        _logFolderPath = temp;
+    }
+    return success;
 }
 
 void DataLogger::saveLogFolderConfig()
 {
-
     std::ofstream fout;
-    std::cout << "Opening file...";
     fout.open(LOG_FOLDER_CONFIG_FILE, std::ios::trunc);
 
     if(!fout.is_open()) return;
-    std::cout << "worked.";
 
     fout << _logFolderPath;
     fout.close();

@@ -20,7 +20,7 @@
 class DataLogger : public PeriodicTask
 {
 public:
-    DataLogger(FlexseaDeviceProvider* fdp, std::string logFolderPath = DEFAULT_LOG_FOLDER);
+    DataLogger(FlexseaDeviceProvider* fdp);
 
     /// \brief starts logging all data received by device with id=devId
     bool startLogging(int devId, bool logAdditionalColumnsInit = false);
@@ -34,8 +34,8 @@ public:
     void serviceLogs();
     void setColumnValue(unsigned col, int val);
     void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);
-    void setLogFolder(std::string folderPath);
-    void setDefaultLogFolder();
+    bool setLogFolder(std::string folderPath);
+    bool setDefaultLogFolder();
 
 protected:
 
@@ -57,7 +57,7 @@ struct LogRecord {
     unsigned int logAdditionalField;
 };
 
-    void initializeSessionFolder();
+    bool initializeSessionFolder();
     std::vector<std::string> additionalColumnLabels;
     std::vector<int> additionalColumnValues;
     unsigned int writeLogHeader(std::ofstream* fout, const FxDevicePtr dev, bool logAdditionalColumnsInit);
@@ -78,8 +78,8 @@ struct LogRecord {
 
     void clearRecords();
     std::string generateFileName(FxDevicePtr dev, std::string suffix="");
-    void createFolder(std::string path);
-    void loadLogFolderConfig();
+    bool createFolder(std::string path);
+    bool loadLogFolderConfig();
     void saveLogFolderConfig();
 };
 
