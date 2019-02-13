@@ -56,12 +56,12 @@ int SerialDriver::isOpen(uint16_t portIdx) const {
 bool SerialDriver::tryOpen(const std::string &portName, uint16_t portIdx) {
     CHECK_PORTIDX(portIdx);
     LOCK_MTX(portIdx);
-
+    int baud_rate = 230400;
     if(!ports[portIdx].isOpen())
     {
         serial::Serial *s = ports+portIdx;
         s->setPort(portName);
-        s->setBaudrate(400000);
+        s->setBaudrate(baud_rate);
         s->setBytesize(serial::eightbits);
         s->setParity(serial::parity_none);
         s->setStopbits(serial::stopbits_one);
