@@ -1,6 +1,8 @@
 #ifndef COMWRAPPER_H
 #define COMWRAPPER_H
 
+#include "flexseastack/commanager.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -194,6 +196,8 @@ extern "C" {
     /// @param None.
     /// @returns a string that includes build date and time and 'GIT describe information'
     char* fxGetRevision( void );
+
+    CommManager* fxGetManager(void);
 
 #ifdef __cplusplus
 }

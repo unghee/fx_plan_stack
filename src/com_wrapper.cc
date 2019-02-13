@@ -36,6 +36,11 @@ extern "C"
         typedef std::tuple<uint8_t, int32_t, uint8_t, int16_t, int16_t, int16_t, int16_t, uint8_t> CtrlParams;
         static std::unordered_map<int, CtrlParams> ctrlsMap;
 
+        CommManager* fxGetManager(void)
+        {
+            return &commManager;
+        }
+
         void fxSetup()
         {
                 initFlexSEAStack_minimalist(FLEXSEA_PLAN_1);
