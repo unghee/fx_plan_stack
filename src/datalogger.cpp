@@ -294,7 +294,12 @@ bool DataLogger::createFolder(std::string path)
 #elif __linux__
     std::replace(pathOK.begin(), pathOK.end(), '\\', '/');
 
-    mkdir(pathOK.c_str());
+#ifdef __linux__
+	mkdir(pathOK.c_str(), 777); // Is this too permissive?
+#else
+	_mkdir(pathOK.c_str());
+#endif
+
     if(errno == EEXIST || errno == 0) success = true;
 
 #else
