@@ -4,9 +4,7 @@ project(fx_plan_stack)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(UNIX)
-	add_compile_options(-fPIC -std=c++14)
-endif()
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(COMPILE_SHARED "compile as a shared lib vs. a static lib" ON)
 
