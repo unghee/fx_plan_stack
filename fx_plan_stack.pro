@@ -61,7 +61,7 @@ HEADERS += \
 		include/flexseastack/fx_device_defs.h       \
 		include/flexseastack/rxhandler.h \
 		include/revision.h \
-    include/git_rev_data.h
+		include/git_rev_data.h
 
 #flexsea stack headers
 HEADERS += \
@@ -111,5 +111,13 @@ win32:!win32-g++: PRE_TARGETDEPS += $$PWD/lib/serialc.lib
 else:win32-g++: PRE_TARGETDEPS += $$PWD/lib/libserialc.a
 
 PRE_TARGETDEPS += $$PWD/lib/libFlexSEA-Stack-Plan.a
+
+# Update revision information
+PRE_TARGETDEPS += git_rev_data.h
+QMAKE_EXTRA_TARGETS += revisionTarget
+revisionTarget.target = git_rev_data.h
+win32: revisionTarget.commands = cd $$PWD && python.exe $$PWD/git-revision.py -o $$PWD/include/git_rev_data.h
+else:  revisionTarget.commands = cd $$PWD; python.exe --version
+revisionTarget.depends = FORCE
 
 DESTDIR = $$PWD
