@@ -13,6 +13,7 @@
 #include <exception>
 #include <algorithm>
 #include <cstring>
+#include <string>
 
 using namespace std::chrono_literals;
 
@@ -230,7 +231,7 @@ extern "C"
                 returnCount++;
             }
 
-            // zzz fflush(stdout);
+            fflush(stdout);
             return returnCount;
         }
 
@@ -292,20 +293,36 @@ extern "C"
             }
         }
 		
-        char* fxGetRevision( void)
+        const char* fxGetRevision( LIB_REVISION_E whichLib )
         {
-            size_t totalLength = strlen(FX_PLAN_STACK_DATE) + strlen(FX_PLAN_STACK_GIT_INFO) +1;
-            char* ptr = (char*)malloc( totalLength );
-            if( ! ptr )
+            std::string ptr;
+            std::string seperator = " @ ";
+
+            if( whichLib == FX_PLAN_STACK_E )
             {
-                return NULL;
+                std::string d = FX_PLAN_STACK_DATE;
+                std::string g = FX_PLAN_STACK_GIT_INFO;
+                ptr = g.substr( g.find(':') + 1);
+                ptr += seperator;
+                ptr += d.substr( d.find(':') + 1);
+            }
+            else if(whichLib == FLEXSEA_LIB_E )
+            {
+                std::string d = FLEXSEA_LIB_DATE;
+                std::string g = FLEXSEA_LIB_GIT_INFO;
+                ptr = g.substr( g.find(':') + 1);
+                ptr += seperator;
+                ptr += d.substr( d.find(':') + 1);
+            }
+            else
+            {
+                std::string d = SERIAL_LIB_DATE;
+                std::string g = SERIAL_LIB_GIT_INFO;
+                ptr = g.substr( g.find(':') + 1);
+                ptr += seperator;
+                ptr += d.substr( d.find(':') + 1);
             }
 
-            memset( ptr, 0, totalLength);
-            unsigned dateLength = (unsigned)strlen(FX_PLAN_STACK_DATE);
-            memcpy(ptr, FX_PLAN_STACK_DATE, dateLength);
-            memcpy(ptr+dateLength, FX_PLAN_STACK_GIT_INFO, strlen(FX_PLAN_STACK_GIT_INFO));
-            return ptr;
+            return ptr.c_str();
         }
-
 }
