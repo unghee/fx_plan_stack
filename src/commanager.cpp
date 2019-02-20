@@ -233,12 +233,14 @@ void CommManager::serviceStreams(uint8_t milliseconds)
 
     for(i = 0; i < FX_NUMPORTS; ++i)
     {
+		mtOGBuffer.lock();
         if(outgoingBuffer[i].size())
         {
             auto& m = outgoingBuffer[i].front();
             this->write(m.numBytes, m.dataPacket.get(), i);
             outgoingBuffer[i].pop();
         }
+		mtOGBuffer.unlock();
     }
 
 }
@@ -247,7 +249,11 @@ bool CommManager::wakeFromLongSleep()
 {
     bool haveMsg = false;
     for(int i = 0; i < FX_NUMPORTS && !haveMsg; ++i)
+	{
+		mtOGBuffer.lock();
         haveMsg = outgoingBuffer[i].size();
+		mtOGBuffer.unlock();
+	}
 
     return FlexseaSerial::wakeFromLongSleep() || (haveMsg || this->streamCount > 0);
 }
@@ -358,15 +364,17 @@ int CommManager::enqueueMultiPacket(int, int port, MultiWrapper *out)
         // if this is the last frame in the packet we extend it in order to ensure it gets pushed through
         if(!out->frameMap)
             nb = MAX(nb, PACKET_WRAPPER_LEN * 2 / 3);
-
+		mtOGBuffer.lock();
         outgoingBuffer[port].push(Message( nb ,out->packed[frameId]  ));
-        frameId++;
+        mtOGBuffer.unlock();
+		frameId++;
     }
 
     out->isMultiComplete = 1;
-
+	mtOGBuffer.lock();
     while(outgoingBuffer[port].size() > MAX_Q_SIZE)
         outgoingBuffer[port].pop();
+	mtOGBuffer.unlock();
 
     return 0;
 }
@@ -374,6 +382,7 @@ int CommManager::enqueueMultiPacket(int, int port, MultiWrapper *out)
 bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
 {
     //If we are over a max size, clear the queue
+	mtOGBuffer.lock();
     if(outgoingBuffer[portIdx].size() > MAX_Q_SIZE)
     {
         std::cout << "ComManager::enqueueCommand, queue is above max size (" << MAX_Q_SIZE  << "), clearing queue..." << std::endl;
@@ -382,6 +391,7 @@ bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
     }
 
     outgoingBuffer[portIdx].push(Message(numb, dataPacket));
+	mtOGBuffer.unlock();
 
     bool doNotify;
     {

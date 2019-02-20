@@ -12,6 +12,20 @@
 #include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
 #include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
 
+#include <exception>
+
+struct InvalidIndex : public std::exception {
+   const char * what () const throw () {
+      return "Invalid index requested..";
+   }
+};
+
+struct InaccessiblePointer : public std::exception {
+   const char * what () const throw () {
+      return "Error accessing data ptr";
+   }
+};
+
 /// \brief FlexseaDevice class provides read access to connected devices
 class FlexseaDevice
 {
