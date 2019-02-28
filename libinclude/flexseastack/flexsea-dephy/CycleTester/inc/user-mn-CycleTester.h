@@ -15,7 +15,6 @@
 	*
 ****************************************************************************/
 
-#ifdef INCLUDE_UPROJ_CYCLE_TESTER
 #ifdef BOARD_TYPE_FLEXSEA_MANAGE
 
 #ifndef INC_USER_CYCLE_TESTER_H
@@ -133,4 +132,3 @@ extern struct profile_s ctProfile;
 #endif	//INC_USER_CYCLE_TESTER_H
 
 #endif //BOARD_TYPE_FLEXSEA_MANAGE
-#endif //INCLUDE_UPROJ_CYCLE_TESTER

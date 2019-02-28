@@ -15,7 +15,6 @@
 	*
 ****************************************************************************/
 
-#ifdef INCLUDE_UPROJ_CYCLE_TESTER
 
 #ifndef INC_FLEXSEA_CMD_CYCLE_TESTER_H
 #define INC_FLEXSEA_CMD_CYCLE_TESTER_H
@@ -112,4 +111,3 @@ extern uint16_t ctProfileInUseCurr[2];
 #endif
 
 #endif	//INC_FLEXSEA_CMD_CYCLE_TESTER_H
-#endif //INCLUDE_UPROJ_CYCLE_TESTER

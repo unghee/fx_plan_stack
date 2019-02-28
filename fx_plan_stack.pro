@@ -27,7 +27,7 @@ INCLUDEPATH +=  inc         \
 				include     \
 				libinclude  \
 				libinclude/flexseastack/flexsea-comm/inc \
-				libinclude/flexseastack/flexsea-system/inc
+				libinclude/flexseastack/flexsea-system/inc \
 
 SOURCES +=                              \
 		src/flexseaserial.cpp           \
@@ -93,6 +93,9 @@ HEADERS += \
 	libinclude/flexseastack/flexsea_board.h \
 	libinclude/flexseastack/flexsea_config.h \
 	libinclude/flexseastack/trapez.h \
+	libinclude/flexseastack/flexsea-projects/inc/flexsea_cmd_user.h \
+	libinclude/flexseastack/flexsea-dephy/CycleTester/inc/cmd-CycleTester.h \
+	libinclude/flexseastack/flexsea-dephy/CycleTester/inc/user-mn-CycleTester.h
 
 #serial lib headers
 HEADERS += \
