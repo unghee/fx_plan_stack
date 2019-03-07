@@ -9,6 +9,8 @@
 #include "flexseastack/flexseadeviceprovider.h"
 
 #define MAX_LOG_SIZE 50000
+#define DEFAULT_LOG_FOLDER "Plan-GUI-Logs"
+#define LOG_FOLDER_CONFIG_FILE "logFolderConfigFile.txt"
 
 /// \brief class which manages creating log files
 /// reads data from FlexseaDevices provided by a FlexseaDeviceProvider
@@ -32,6 +34,8 @@ public:
     void serviceLogs();
     void setColumnValue(unsigned col, int val);
     void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);
+    bool setLogFolder(std::string folderPath);
+    bool setDefaultLogFolder();
 
 protected:
 
@@ -53,7 +57,7 @@ struct LogRecord {
     unsigned int logAdditionalField;
 };
 
-    void initializeSessionFolder();
+    bool initializeSessionFolder();
     std::vector<std::string> additionalColumnLabels;
     std::vector<int> additionalColumnValues;
     unsigned int writeLogHeader(std::ofstream* fout, const FxDevicePtr dev, bool logAdditionalColumnsInit);
@@ -68,10 +72,15 @@ struct LogRecord {
 
     std::mutex resMutex;
 
-    std::string sessionPath;
+    std::string _logFolderPath;
+
+    std::string _sessionPath;
 
     void clearRecords();
     std::string generateFileName(FxDevicePtr dev, std::string suffix="");
+    bool createFolder(std::string path);
+    bool loadLogFolderConfig();
+    void saveLogFolderConfig();
 };
 
 #endif // DATALOGGER_H

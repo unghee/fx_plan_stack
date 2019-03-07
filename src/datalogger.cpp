@@ -4,22 +4,22 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
+
 #ifdef _WIN32
 #include <windows.h>
+#elif __linux__
+#include<sys/stat.h>
 #endif
 
 
-DataLogger::DataLogger(FlexseaDeviceProvider* fdp) : devProvider(fdp), numLogDevices(0), isFirstLogFile(true)
+DataLogger::DataLogger(FlexseaDeviceProvider* fdp)
+    : devProvider(fdp)
+    , numLogDevices(0)
+    , isFirstLogFile(true)
+    , _logFolderPath(DEFAULT_LOG_FOLDER)
 {
-
-    #ifdef _WIN32
-       //define something for Windows (32-bit and 64-bit, this part is common)
-        CreateDirectoryA("Plan-GUI-Logs", NULL);
-
-    #elif __linux__
-        //TODO To be tested to make sure it's working on linux
-        system("mkdir Plan-GUI-Logs");
-    #endif
+    loadLogFolderConfig();
+    createFolder(_logFolderPath);
 }
 
 bool DataLogger::startLogging(int devId, bool logAdditionalFieldInit)
@@ -42,13 +42,14 @@ bool DataLogger::startLogging(int devId, bool logAdditionalFieldInit)
 
     if(numActiveFields)
     {
+        std::replace(fileName.begin(), fileName.end(), '\\', '/');
         fout = new std::ofstream(fileName);
 
         if(!fout || !fout->is_open())
         {
             if(fout) delete fout;
             fout = nullptr;
-
+            std::cout << "Can't open file" << std::endl;
             throw std::bad_alloc();
         }
 
@@ -85,6 +86,24 @@ void DataLogger::setAdditionalColumn(std::vector<std::string> addLabel, std::vec
 {
     additionalColumnLabels = addLabel;
     additionalColumnValues = addValue;
+}
+
+bool DataLogger::setLogFolder(std::string folderPath)
+{
+    bool success = createFolder(folderPath);
+
+    if(success)
+    {
+        _logFolderPath = folderPath;
+        saveLogFolderConfig();
+        isFirstLogFile = true;
+    }
+    return success;
+}
+
+bool DataLogger::setDefaultLogFolder()
+{
+   return setLogFolder(DEFAULT_LOG_FOLDER);
 }
 
 // public, allows user to set values
@@ -185,12 +204,12 @@ bool DataLogger::logDevice(int idx)
     return true;
 }
 
-void DataLogger::initializeSessionFolder()
+bool DataLogger::initializeSessionFolder()
 {
     // current date/time based on current system
     time_t now = time(0);
 
-    // convert now to string form
+    // convert now to string form and format properly
     struct tm * timeinfo = localtime(&now);
     char dt[80];
     strftime (dt,80,"%Y-%m-%d_%Hh%Mm%Sss", timeinfo);
@@ -199,42 +218,8 @@ void DataLogger::initializeSessionFolder()
     replace(str.begin(), str.end(), ' ', '_');
     replace(str.begin(), str.end(), ':', '.');
 
-#ifdef _WIN32
-   //define something for Windows (32-bit and 64-bit, this part is common)
-
-    sessionPath = "Plan-GUI-Logs\\" + str;
-
-    CreateDirectoryA(sessionPath.c_str(), NULL);
-
-   #ifdef _WIN64
-      //define something for Windows (64-bit only)
-   #else
-      //define something for Windows (32-bit only)
-   #endif
-#elif __APPLE__
-    #include "TargetConditionals.h"
-    #if TARGET_IPHONE_SIMULATOR
-         // iOS Simulator
-    #elif TARGET_OS_IPHONE
-        // iOS device
-    #elif TARGET_OS_MAC
-        // Other kinds of Mac OS
-    #else
-    #   error "Unknown Apple platform"
-    #endif
-#elif __linux__
-    //TODO To be tested to make sure it's working on linux
-    sessionPath = "Plan-GUI-Logs/" + str + "/";
-    str.insert(0,"mkdir Plan-GUI-Logs/");
-    system("mkdir Plan-GUI-Logs");
-    system(str.c_str());
-#elif __unix__ // all unices not caught above
-    // Unix
-#elif defined(_POSIX_VERSION)
-    // POSIX
-#else
-#   error "Unknown compiler"
-#endif
+    _sessionPath = _logFolderPath + "\\" + str;
+    return createFolder(_sessionPath);
 }
 
 void DataLogger::clearRecords()
@@ -256,7 +241,7 @@ void DataLogger::clearRecords()
 
 bool isIllegalFileChar(char c)
 {
-    return c == '\\' || c == '\n' || c == '\t' || c == ' ';
+    return c == '\n' || c == '\t';
 }
 
 std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
@@ -287,10 +272,76 @@ std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
     // remove invalid characters
     result.erase( std::remove_if(result.begin(), result.end(), isIllegalFileChar),
                 result.end());
-    result.insert(0, "\\");
-    result.insert(0, sessionPath);
+    result.insert(0, "/");
+    result.insert(0, _sessionPath);
 
     return result;
+}
+
+bool DataLogger::createFolder(std::string path)
+{
+   bool success = false;
+   std::string pathOK = path;
+#ifdef _WIN32
+   //define something for Windows (32-bit and 64-bit, this part is common)
+    std::replace(pathOK.begin(), pathOK.end(), '/', '\\');
+
+    CreateDirectoryA(pathOK.c_str(), NULL);
+
+    int status = GetLastError();
+    if(status == ERROR_ALREADY_EXISTS || status == 0) success = true;
+
+#elif __linux__
+    std::replace(pathOK.begin(), pathOK.end(), '\\', '/');
+
+#ifdef __linux__
+	mkdir(pathOK.c_str(), 777); // Is this too permissive?
+#else
+	_mkdir(pathOK.c_str());
+#endif
+
+    if(errno == EEXIST || errno == 0) success = true;
+
+#else
+#   error "Unknown compiler"
+#endif
+   if(success) std::cout << "Folder created : " << pathOK << std::endl;
+
+   return success;
+}
+
+bool DataLogger::loadLogFolderConfig()
+{
+    const int MAX = 256;
+    char temp[MAX];
+    bool success = false;
+
+    std::ifstream fin;
+    fin.open(LOG_FOLDER_CONFIG_FILE, std::ifstream::in);
+
+    if(!fin.is_open()) return success;
+
+    fin.getline(temp, MAX);
+    fin.close();
+
+    success = createFolder(temp);
+
+    if(success)
+    {
+        _logFolderPath = temp;
+    }
+    return success;
+}
+
+void DataLogger::saveLogFolderConfig()
+{
+    std::ofstream fout;
+    fout.open(LOG_FOLDER_CONFIG_FILE, std::ios::trunc);
+
+    if(!fout.is_open()) return;
+
+    fout << _logFolderPath;
+    fout.close();
 }
 
 /*
@@ -356,6 +407,7 @@ void DataLogger::swapFileObject(LogRecord &record, std::string newFileName, cons
     }
 
     // generate the new file object
+    std::replace(newFileName.begin(), newFileName.end(), '\\', '/');
     record.fileObject = new std::ofstream(newFileName);
     record.numActiveFields = writeLogHeader(record.fileObject, dev, record.logAdditionalField);
     record.logFileSize = 0;

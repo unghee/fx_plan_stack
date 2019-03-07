@@ -62,6 +62,28 @@ include_directories(
 	libinclude/flexseastack/flexsea-user/inc
 )
 
+## Force generation of the revision header file BEFORE building targets
+##  Create a psuedo-target to be created before the library
+IF(WIN32)
+add_custom_target(
+    revisionTarget
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.bat ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
+    COMMENT "Updating revision information"
+)
+
+ELSE()
+add_custom_target(
+   revisionTarget
+   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.sh ${CMAKE_CURRENT_SOURCE_DIR}/git-revision.py ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
+   COMMENT "Updating revision information"
+)
+
+ENDIF()
+
+#Now add the psuedo-target to the dependency list for the project
+add_dependencies(fx_plan_objs revisionTarget)
+#add_dependencies(fx_plan_stack_static revisionTarget)
+
 # output folder naming stuff
 
 if(WIN32)
