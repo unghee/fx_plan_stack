@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+add_definitions(
+    -DBOARD_TYPE_FLEXSEA_PLAN
+)
+
 option(COMPILE_SHARED "compile as a shared lib vs. a static lib" ON)
 
 set(FX_SRCFILES
