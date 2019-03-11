@@ -12,6 +12,18 @@ add_definitions(
 
 option(COMPILE_SHARED "compile as a shared lib vs. a static lib" ON)
 
+include_directories(
+	include
+	include/flexseastack
+	libinclude/serial
+	${CMAKE_CURRENT_SOURCE_DIR}/../../FlexSEA-Stack-SharedLib/flexsea-comm/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../../FlexSEA-Stack-SharedLib/flexsea-dephy/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../../FlexSEA-Stack-SharedLib/flexsea-shared/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../../FlexSEA-Stack-SharedLib/flexsea-system/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../../FlexSEA-Stack-SharedLib/flexsea-projects/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../../FlexSEA-Stack-SharedLib/flexsea-projects/ActPack/inc
+)
+
 set(FX_SRCFILES
 	src/flexseaserial.cpp
 	src/testserial.cpp
@@ -57,14 +69,6 @@ IF(WIN32)
 	target_link_libraries(fx_plan_stack setupapi)
 	target_link_libraries(fx_plan_stack_static setupapi)
 ENDIF()
-
-include_directories(
-	include 
-	libinclude 
-	libinclude/flexseastack/flexsea-comm/inc 
-	libinclude/flexseastack/flexsea-system/inc
-	libinclude/flexseastack/flexsea-user/inc
-)
 
 ## Force generation of the revision header file BEFORE building targets
 ##  Create a psuedo-target to be created before the library

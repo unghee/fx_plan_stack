@@ -1,8 +1,8 @@
 
-#include "flexseastack/commanager.h"
-#include "flexseastack/flexsea-projects/ActPack/inc/cmd-ActPack.h"
-#include "flexseastack/flexsea-system/inc/flexsea_system.h"
-#include "flexseastack/flexsea-comm/inc/flexsea_comm_def.h"
+#include "commanager.h"
+#include "cmd-ActPack.h"
+#include "flexsea_system.h"
+#include "flexsea_comm_def.h"
 #include "revision.h"
 
 #include <thread>
@@ -27,9 +27,9 @@ auto get_tuple(std::tuple<types...> &mytup )
 
 extern "C"
 {
-	#include "flexseastack/com_wrapper.h"
-	#include "flexseastack/flexsea_config.h"
-	#include "flexseastack/flexsea-system/inc/flexsea_cmd_calibration.h"
+	#include "com_wrapper.h"
+	#include "flexsea_config.h"
+	#include "flexsea_cmd_calibration.h"
 
 	static CommManager commManager;
 	static std::thread *commThread = nullptr;

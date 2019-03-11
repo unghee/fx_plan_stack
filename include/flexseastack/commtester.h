@@ -1,7 +1,7 @@
 #ifndef INCCOMMTESTER_H
 #define INCCOMMTESTER_H
 
-#include "flexseastack/commanager.h"
+#include "commanager.h"
 #include <chrono>
 #include <tuple>
 

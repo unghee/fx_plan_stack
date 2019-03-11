@@ -1,7 +1,7 @@
 #ifndef SERIALDRIVER_H
 #define SERIALDRIVER_H
 
-#include "serial/serial.h"
+#include "serial.h"
 
 #include <vector>
 #include <string>

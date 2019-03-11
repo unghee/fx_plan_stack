@@ -1,7 +1,7 @@
 #ifndef COMWRAPPER_H
 #define COMWRAPPER_H
 
-#include "flexseastack/commanager.h"
+#include "commanager.h"
 
 #ifdef __cplusplus
 extern "C" {
