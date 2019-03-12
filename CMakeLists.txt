@@ -52,6 +52,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-dep
 add_subdirectory(serial)
 
 file(GLOB PLAN_STACK_SRCS
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/src/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
