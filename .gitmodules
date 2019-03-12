@@ -1,0 +1,6 @@
+[submodule "serial"]
+	path = serial
+	url = https://github.com/DephyInc/serial.git
+[submodule "FlexSEA-Stack-SharedLib"]
+	path = FlexSEA-Stack-SharedLib
+	url = https://github.com/DephyInc/FlexSEA-Stack-SharedLib.git
