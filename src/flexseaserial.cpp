@@ -3,7 +3,7 @@
 #include <algorithm>
 
 #include "flexseaserial.h"
-#include "serial.h"
+#include <serial/serial.h>
 #include "flexsea_comm_multi.h"
 #include "flexsea_multi_frame_packet_def.h"
 #include "comm_string_generation.h"
