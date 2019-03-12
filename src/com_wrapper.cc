@@ -322,14 +322,14 @@ extern "C"
 			ptr += seperator;
 			ptr += d.substr( d.find(':') + 1);
 		}
-		else if(whichLib == FLEXSEA_LIB_E )
-		{
-			std::string d = FLEXSEA_LIB_DATE;
-			std::string g = FLEXSEA_LIB_GIT_INFO;
-			ptr = g.substr( g.find(':') + 1);
-			ptr += seperator;
-			ptr += d.substr( d.find(':') + 1);
-		}
+		// else if(whichLib == FLEXSEA_LIB_E )
+		// {
+		// 	std::string d = FLEXSEA_LIB_DATE;
+		// 	std::string g = FLEXSEA_LIB_GIT_INFO;
+		// 	ptr = g.substr( g.find(':') + 1);
+		// 	ptr += seperator;
+		// 	ptr += d.substr( d.find(':') + 1);
+		// }
 		else
 		{
 			std::string d = SERIAL_LIB_DATE;
