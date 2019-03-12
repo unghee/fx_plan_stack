@@ -24,10 +24,9 @@ DEFINES += QT_DEPRECATED_WARNINGS \
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 INCLUDEPATH +=  inc         \
-				include     \
-				libinclude  \
-				libinclude/flexseastack/flexsea-comm/inc \
-				libinclude/flexseastack/flexsea-system/inc \
+                                include     \
+                                flexseastack/flexsea-comm/inc \
+                                flexseastack/flexsea-system/inc \
 
 SOURCES +=                              \
 		src/flexseaserial.cpp           \
@@ -65,55 +64,50 @@ HEADERS += \
 
 #flexsea stack headers
 HEADERS += \
-	libinclude/flexseastack/flexsea-shared/unity/unity.h \
-	libinclude/flexseastack/flexsea-shared/unity/unity_internals.h \
-	libinclude/flexseastack/flexsea-comm/inc/flexsea.h \
-	libinclude/flexseastack/flexsea-comm/inc/flexsea_comm_def.h \
-	libinclude/flexseastack/flexsea-comm/inc/flexsea_buffers.h \
-	libinclude/flexseastack/flexsea-comm/inc/flexsea_circular_buffer.h \
-	libinclude/flexseastack/flexsea-comm/inc/flexsea_comm.h \
-	libinclude/flexseastack/flexsea-comm/inc/flexsea_payload.h \
-	libinclude/flexseastack/flexsea-comm/inc/flexsea_comm_multi.h \
-	libinclude/flexseastack/flexsea-comm/inc/flexsea_multi_frame_packet_def.h \
-	libinclude/flexseastack/flexsea-comm/inc/flexsea_multi_circbuff.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_system.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_sys_def.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_global_structs.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_dataformats.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_data.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_external.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_sensors.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_calibration.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_control.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_tools.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_in_control.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_stream.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h \
-	libinclude/flexseastack/flexsea-system/inc/flexsea_device_spec.h \
-	libinclude/flexseastack/flexsea_board.h \
-	libinclude/flexseastack/flexsea_config.h \
-	libinclude/flexseastack/trapez.h \
-	libinclude/flexseastack/flexsea-projects/inc/flexsea_cmd_user.h \
-	libinclude/flexseastack/flexsea-dephy/CycleTester/inc/cmd-CycleTester.h \
-	libinclude/flexseastack/flexsea-dephy/CycleTester/inc/user-mn-CycleTester.h
+        flexseastack/flexsea-shared/unity/unity.h \
+        flexseastack/flexsea-shared/unity/unity_internals.h \
+        flexseastack/flexsea-comm/inc/flexsea.h \
+        flexseastack/flexsea-comm/inc/flexsea_comm_def.h \
+        flexseastack/flexsea-comm/inc/flexsea_buffers.h \
+        flexseastack/flexsea-comm/inc/flexsea_circular_buffer.h \
+        flexseastack/flexsea-comm/inc/flexsea_comm.h \
+        flexseastack/flexsea-comm/inc/flexsea_payload.h \
+        flexseastack/flexsea-comm/inc/flexsea_comm_multi.h \
+        flexseastack/flexsea-comm/inc/flexsea_multi_frame_packet_def.h \
+        flexseastack/flexsea-comm/inc/flexsea_multi_circbuff.h \
+        flexseastack/flexsea-system/inc/flexsea_system.h \
+        flexseastack/flexsea-system/inc/flexsea_sys_def.h \
+        flexseastack/flexsea-system/inc/flexsea_global_structs.h \
+        flexseastack/flexsea-system/inc/flexsea_dataformats.h \
+        flexseastack/flexsea-system/inc/flexsea_cmd_data.h \
+        flexseastack/flexsea-system/inc/flexsea_cmd_external.h \
+        flexseastack/flexsea-system/inc/flexsea_cmd_sensors.h \
+        flexseastack/flexsea-system/inc/flexsea_cmd_calibration.h \
+        flexseastack/flexsea-system/inc/flexsea_cmd_control.h \
+        flexseastack/flexsea-system/inc/flexsea_cmd_tools.h \
+        flexseastack/flexsea-system/inc/flexsea_cmd_in_control.h \
+        flexseastack/flexsea-system/inc/flexsea_cmd_stream.h \
+        flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h \
+        flexseastack/flexsea-system/inc/flexsea_device_spec.h \
+        flexseastack/flexsea_board.h \
+        flexseastack/flexsea_config.h \
+        flexseastack/trapez.h \
+        flexseastack/flexsea-projects/inc/flexsea_cmd_user.h \
+        flexseastack/flexsea-dephy/CycleTester/inc/cmd-CycleTester.h \
+        flexseastack/flexsea-dephy/CycleTester/inc/user-mn-CycleTester.h
 
 #serial lib headers
 HEADERS += \
-	libinclude/serial/serial.h \
-	libinclude/serial/v8stdint.h \
-	libinclude/serial/impl/unix.h \
-	libinclude/serial/impl/win.h \
+        serial/serial.h \
+        serial/v8stdint.h \
+        serial/impl/unix.h \
+        serial/impl/win.h \
 
 # serialc library for win32
-win32: LIBS += -L$$PWD/lib/ -lserialc -lsetupapi -lFlexSEA-Stack-Plan
+win32: LIBS += -L$$PWD/lib/ -lsetupapi
 
 INCLUDEPATH += $$PWD/libinclude
 DEPENDPATH += $$PWD/libinclude
-
-win32:!win32-g++: PRE_TARGETDEPS += $$PWD/lib/serialc.lib
-else:win32-g++: PRE_TARGETDEPS += $$PWD/lib/libserialc.a
-
-PRE_TARGETDEPS += $$PWD/lib/libFlexSEA-Stack-Plan.a
 
 # Update revision information
 PRE_TARGETDEPS += git_rev_data.h
