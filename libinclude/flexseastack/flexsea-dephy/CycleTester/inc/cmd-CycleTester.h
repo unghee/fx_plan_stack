@@ -15,6 +15,7 @@
 	*
 ****************************************************************************/
 
+//#ifdef INCLUDE_UPROJ_CYCLE_TESTER	//Problematic on Plan, why? ToDo
 
 #ifndef INC_FLEXSEA_CMD_CYCLE_TESTER_H
 #define INC_FLEXSEA_CMD_CYCLE_TESTER_H
@@ -29,12 +30,18 @@ extern "C" {
 
 #include <stdint.h>
 
+struct _MultiPacketInfo_s;
+typedef struct _MultiPacketInfo_s MultiPacketInfo;
+
 //****************************************************************************
 // Prototype(s):
 //****************************************************************************
 
+void rx_multi_cmd_cycle_tester_rw(uint8_t *msgBuf, MultiPacketInfo *mInfo, uint8_t *responseBuf, uint16_t* responseLen);
 void rx_cmd_cycle_tester_rw(uint8_t *buf, uint8_t *info);
+void rx_multi_cmd_cycle_tester_rr(uint8_t *msgBuf, MultiPacketInfo *mInfo, uint8_t *responseBuf, uint16_t* responseLen);
 void rx_cmd_cycle_tester_rr(uint8_t *buf, uint8_t *info);
+void rx_multi_cmd_cycle_tester_w(uint8_t *msgBuf, MultiPacketInfo *mInfo, uint8_t *responseBuf, uint16_t* responseLen);
 void rx_cmd_cycle_tester_w(uint8_t *buf, uint8_t *info);
 
 void tx_cmd_cycle_tester_r(uint8_t *shBuf, uint8_t *cmd, uint8_t *cmdType, \
@@ -111,3 +118,4 @@ extern uint16_t ctProfileInUseCurr[2];
 #endif
 
 #endif	//INC_FLEXSEA_CMD_CYCLE_TESTER_H
+//#endif //INCLUDE_UPROJ_CYCLE_TESTER
