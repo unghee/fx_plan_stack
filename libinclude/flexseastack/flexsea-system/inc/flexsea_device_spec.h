@@ -46,14 +46,13 @@ extern FlexseaDeviceSpec deviceSpecs[NUM_DEVICE_TYPES];
 	extern FlexseaDeviceSpec connectedDeviceSpecs[MAX_CONNECTED_DEVICES];
 	extern uint8_t* deviceData[MAX_CONNECTED_DEVICES];
 	extern uint8_t fx_spec_numConnectedDevices;
-	void initializeDeviceSpecs();
 	#ifdef BIG_ENDIAN
-#else
+		// TODO: nothing was here but appears like it should have one of these
+		// DEVICESPEC definitions
+	#else
 		#define DEVICESPEC_TYPE_BY_IDX(i) ( *(deviceData[i]) )
 		#define DEVICESPEC_UUID_BY_IDX(i) ( *((uint16_t*)(deviceData[i] + 1)) )
 	#endif
-#else
-
 #endif //BOARD_TYPE_FLEXSEA_PLAN
 
 void addConnectedDevice(uint8_t devType, uint16_t devId);

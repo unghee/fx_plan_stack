@@ -4,6 +4,7 @@
 
 #include <iostream>
 
+
 FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int role, int dataBuffSize):
 	id(_id)
 	, port(_port)
@@ -141,21 +142,33 @@ uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputS
 
 uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outputSize) const
 {
-	if(index >= dataCount())
+	int32_t *srcPtr = 0;
+	try
 	{
-		std::cout << "Invalid index requested.." << std::endl;
-		return 0;
-	}
-	int32_t *srcPtr = ((int32_t*)_data.peek(index));
-	if(!srcPtr)
-	{
-		std::cout << "Error accessing data ptr" << std::endl;
-		return 0;
-	}
+		if(index >= dataCount())
+		{
+			throw InvalidIndex();
+		}
+		srcPtr = ((int32_t*)_data.peek(index));
+		if(!srcPtr)
+		{
+			throw InaccessiblePointer();
+		}
 
-	int s = outputSize >  (1 + numFields) ? (1 + numFields) : outputSize;
-	size_t sizeData =  s  * sizeof(int32_t);
-	memcpy(ptr, srcPtr, sizeData);
+		int s = outputSize >  (1 + numFields) ? (1 + numFields) : outputSize;
+		size_t sizeData =  s  * sizeof(int32_t);
+		memcpy(ptr, srcPtr, sizeData);
+	}
+	catch(InvalidIndex& e)
+	{
+		std::cout << e.what() << std::endl;
+		return 0;	
+	}
+	catch(InaccessiblePointer& e)
+	{
+		std::cout << e.what() << std::endl;
+		return 0;
+	}
 
 	return srcPtr[0];
 }

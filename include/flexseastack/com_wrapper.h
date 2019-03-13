@@ -1,6 +1,8 @@
 #ifndef COMWRAPPER_H
 #define COMWRAPPER_H
 
+#include "flexseastack/commanager.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -195,6 +197,8 @@ extern "C" {
 	/// @returns a string that includes build date and time and 'GIT describe information'
 	enum LIB_REVISION_E {FX_PLAN_STACK_E, FLEXSEA_LIB_E, SERIAL_LIB_E };
 	const char* fxGetRevision( LIB_REVISION_E );
+
+    CommManager* fxGetManager(void);
 
 #ifdef __cplusplus
 }
