@@ -135,7 +135,10 @@ extern "C" {
 	/// variables being streamed from the FlexSEA device.
 	///
 	int fxReadDeviceEx(int devId, int* fieldIds, uint8_t* success, int* dataBuffer, int n);
-
+	int* updateUserRead();
+	void writeUser(int devId, int index, int val);
+	void readUser(int devId);
+	int* getUserWrite();
 	// -----------------
 	// Control functions
 	// -----------------

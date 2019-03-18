@@ -260,7 +260,29 @@ extern "C"
 		std::get<1> ( ctrlsMap.at(devId) ) = mV;
 		commManager.enqueueCommand(devId, sendCommandMessage, devId);
 	}
+	
+	void readUser(int devId)
+	{
+		commManager.enqueueCommand(devId, tx_cmd_data_user_r, 0);
+	}
+	
+	
+	void writeUser(int devId, int index, int val)
+	{
+		user_data_1.w[index] = val;
+		commManager.enqueueCommand(devId, tx_cmd_data_user_w, index);
+	}
 
+	int* getUserRead()
+	{
+		return &user_data_1.r[0];
+	}
+	
+	int* getUserWrite()
+	{
+		return &user_data_1.w[0];
+	}
+	
 	void setMotorCurrent(int devId, int cur)
 	{
 		if(!ctrlsMap.count(devId)) return;
