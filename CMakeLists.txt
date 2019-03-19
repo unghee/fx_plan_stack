@@ -25,8 +25,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_definitions(
 	-DBOARD_TYPE_FLEXSEA_PLAN
 	-DBUILD_SHARED_LIB_DLL
-	-DINCLUDE_UPROJ_ACTPACK
 	-DTEST_PC
+    -DDEPHY
+    -DINCLUDE_UPROJ_CYCLE_TESTER
+    -DINCLUDE_UPROJ_ACTPACK
+    -DINCLUDE_UPROJ_DPEB42
 )
 
 option(COMPILE_SHARED "compile as a shared lib vs. a static lib" ON)
@@ -37,8 +40,10 @@ include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/serial/include
 	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-comm/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-dephy/CycleTester/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-dephy/DpEb42/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-dephy/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-shared/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-shared/unity
 	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-system/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-projects/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-projects/ActPack/inc
@@ -57,8 +62,6 @@ file(GLOB PLAN_STACK_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
 )
-
-message(STATUS "PLAN_STACK_SRCS: ${PLAN_STACK_SRCS}")
 
 set(FX_SRCFILES
 	${PLAN_STACK_SRCS}
