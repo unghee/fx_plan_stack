@@ -78,17 +78,6 @@ add_library(fx_plan_objs OBJECT ${FX_SRCFILES})
 add_library(fx_plan_stack SHARED $<TARGET_OBJECTS:fx_plan_objs>)
 add_library(fx_plan_stack_static STATIC $<TARGET_OBJECTS:fx_plan_objs>)
 
-#find_library(serialc_LIBRARY serialc PATHS ${PROJECT_SOURCE_DIR}/libs/${PLAT_DIR})
-#find_library(FlexSEA-Stack_LIBRARY FlexSEA-Stack-Plan PATHS ${PROJECT_SOURCE_DIR}/libs/${PLAT_DIR})
-
-
-# --whole-archive
-#target_link_libraries(fx_plan_stack -Wl,--whole-archive ${serialc_LIBRARY} -Wl,--no-whole-archive)
-#target_link_libraries(fx_plan_stack -Wl,--whole-archive ${FlexSEA-Stack_LIBRARY} -Wl,--no-whole-archive)
-
-#target_link_libraries(fx_plan_stack_static -Wl,--whole-archive ${serialc_LIBRARY} -Wl,--no-whole-archive)
-#target_link_libraries(fx_plan_stack_static -Wl,--whole-archive ${FlexSEA-Stack_LIBRARY} -Wl,--no-whole-archive)
-
 if(WIN32)
 	target_link_libraries(fx_plan_stack setupapi)
 	target_link_libraries(fx_plan_stack_static setupapi)
