@@ -38,6 +38,7 @@ include_directories(
 	include
 	include/flexseastack
 	include/flex_lib
+	unity
 	${CMAKE_CURRENT_SOURCE_DIR}/serial/include
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-comm/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/CycleTester/inc
@@ -61,6 +62,7 @@ file(GLOB PLAN_STACK_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/unity/*.c
 )
 
 set(FX_SRCFILES
@@ -68,7 +70,6 @@ set(FX_SRCFILES
 	${FLEX_COMM_SRCS}
 	${FLEX_DEPHY_SRCS}
 	${FLEX_PROJECTS_SRCS}
-	${FLEX_SHARED_SRCS}
 	${FLEX_SYSTEM_SRCS}
 	${SERIAL_SRCS}
 )
