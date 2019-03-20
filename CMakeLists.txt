@@ -37,27 +37,27 @@ option(COMPILE_SHARED "compile as a shared lib vs. a static lib" ON)
 include_directories(
 	include
 	include/flexseastack
+	include/flex_lib
 	${CMAKE_CURRENT_SOURCE_DIR}/serial/include
-	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-comm/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-dephy/CycleTester/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-dephy/DpEb42/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-dephy/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-shared/unity
-	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-system/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-projects/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-projects/ActPack/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-projects/Rigid/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-comm/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/CycleTester/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/DpEb42/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared/unity
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-system/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-projects/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-projects/ActPack/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-projects/Rigid/inc
 )
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-comm)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-system)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-projects)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-dephy)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-comm)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-system)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-projects)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy)
 add_subdirectory(serial)
 
 file(GLOB PLAN_STACK_SRCS
-	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/src/*.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
