@@ -109,7 +109,7 @@ add_dependencies(fx_plan_objs revisionTarget)
 #add_dependencies(fx_plan_stack_static revisionTarget)
 
 # output folder naming stuff
-set(OUT_PREF ${PLAT_DIR})
+set(OUT_PREF "libs")
 
 set_target_properties( fx_plan_stack 
 	PROPERTIES
