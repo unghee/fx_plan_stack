@@ -1,117 +1,126 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(fx_plan_stack)
 
+if(WIN32)
+	set(PLAT_DIR "win")
+elseif(UNIX AND NOT APPLE)
+	set(PLAT_DIR "unix")
+else()
+	message(FATAL_ERROR " host OS not supported, exiting now!")
+endif()
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+	set(PLAT_DIR "${PLAT_DIR}64")
+else()
+	set(PLAT_DIR "${PLAT_DIR}32")
+endif()
+
+message(STATUS "PLAT_DIR is set to ${PLAT_DIR}")
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_definitions(
-    -DBOARD_TYPE_FLEXSEA_PLAN
+	-DBOARD_TYPE_FLEXSEA_PLAN
+	-DBUILD_SHARED_LIB_DLL
+	-DTEST_PC
+    -DDEPHY
+    -DINCLUDE_UPROJ_CYCLE_TESTER
+    -DINCLUDE_UPROJ_ACTPACK
+    -DINCLUDE_UPROJ_DPEB42
 )
 
 option(COMPILE_SHARED "compile as a shared lib vs. a static lib" ON)
 
-set(FX_SRCFILES
-	src/flexseaserial.cpp
-	src/testserial.cpp
-	src/flexseadevice.cpp
-	src/commanager.cpp
-	src/periodictask.cpp
-	src/serialdriver.cpp
-	src/flexseadeviceprovider.cpp
-	src/commtester.cpp
-	src/datalogger.cpp
-	src/com_wrapper.cc
-	src/comm_string_generation.cpp
-	src/revision.cpp
+include_directories(
+	include
+	include/flexseastack
+	${CMAKE_CURRENT_SOURCE_DIR}/serial/include
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-comm/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-dephy/CycleTester/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-dephy/DpEb42/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-dephy/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-shared/unity
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-system/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-projects/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-projects/ActPack/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-projects/Rigid/inc
 )
 
-ADD_LIBRARY(fx_plan_objs OBJECT ${FX_SRCFILES})
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-comm)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-system)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-projects)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/flexsea-dephy)
+add_subdirectory(serial)
 
+file(GLOB PLAN_STACK_SRCS
+	${CMAKE_CURRENT_SOURCE_DIR}/FlexSEA-Stack-SharedLib/src/*.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
+)
 
-ADD_LIBRARY(fx_plan_stack SHARED $<TARGET_OBJECTS:fx_plan_objs>)
-ADD_LIBRARY(fx_plan_stack_static STATIC $<TARGET_OBJECTS:fx_plan_objs>)
+set(FX_SRCFILES
+	${PLAN_STACK_SRCS}
+	${FLEX_COMM_SRCS}
+	${FLEX_DEPHY_SRCS}
+	${FLEX_PROJECTS_SRCS}
+	${FLEX_SHARED_SRCS}
+	${FLEX_SYSTEM_SRCS}
+	${SERIAL_SRCS}
+)
 
-if(CMAKE_SIZEOF_VOID_P GREATER 4)
-	if(WIN32)
-	find_library(serialc_LIBRARY serialc PATHS ${PROJECT_SOURCE_DIR}/lib64)
-	find_library(FlexSEA-Stack_LIBRARY FlexSEA-Stack-Plan PATHS ${PROJECT_SOURCE_DIR}/lib64)
-	else()
-	find_library(serialc_LIBRARY serialc PATHS ${PROJECT_SOURCE_DIR}/unix64)
-	find_library(FlexSEA-Stack_LIBRARY FlexSEA-Stack-Plan PATHS ${PROJECT_SOURCE_DIR}/unix64)
-	endif()
-else()
-find_library(serialc_LIBRARY serialc PATHS ${PROJECT_SOURCE_DIR}/lib)
-find_library(FlexSEA-Stack_LIBRARY FlexSEA-Stack-Plan PATHS ${PROJECT_SOURCE_DIR}/lib)
-endif()
+add_library(fx_plan_objs OBJECT ${FX_SRCFILES})
 
-# --whole-archive
-target_link_libraries(fx_plan_stack -Wl,--whole-archive ${serialc_LIBRARY} -Wl,--no-whole-archive)
-target_link_libraries(fx_plan_stack -Wl,--whole-archive ${FlexSEA-Stack_LIBRARY} -Wl,--no-whole-archive)
+add_library(fx_plan_stack SHARED $<TARGET_OBJECTS:fx_plan_objs>)
+add_library(fx_plan_stack_static STATIC $<TARGET_OBJECTS:fx_plan_objs>)
 
-target_link_libraries(fx_plan_stack_static -Wl,--whole-archive ${serialc_LIBRARY} -Wl,--no-whole-archive)
-target_link_libraries(fx_plan_stack_static -Wl,--whole-archive ${FlexSEA-Stack_LIBRARY} -Wl,--no-whole-archive)
-
-IF(WIN32)
+if(WIN32)
 	target_link_libraries(fx_plan_stack setupapi)
 	target_link_libraries(fx_plan_stack_static setupapi)
-ENDIF()
-
-include_directories(
-	include 
-	libinclude 
-	libinclude/flexseastack/flexsea-comm/inc 
-	libinclude/flexseastack/flexsea-system/inc
-	libinclude/flexseastack/flexsea-user/inc
-)
+else()
+	target_link_libraries(fx_plan_stack pthread)
+	target_link_libraries(fx_plan_stack_static pthread)
+endif()
 
 ## Force generation of the revision header file BEFORE building targets
 ##  Create a psuedo-target to be created before the library
-IF(WIN32)
+if(WIN32)
 add_custom_target(
-    revisionTarget
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.bat ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
-    COMMENT "Updating revision information"
+	revisionTarget
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.bat ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
+	COMMENT "Updating revision information"
 )
 
-ELSE()
+else()
 add_custom_target(
    revisionTarget
    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.sh ${CMAKE_CURRENT_SOURCE_DIR}/git-revision.py ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
    COMMENT "Updating revision information"
 )
 
-ENDIF()
+endif()
 
 #Now add the psuedo-target to the dependency list for the project
 add_dependencies(fx_plan_objs revisionTarget)
 #add_dependencies(fx_plan_stack_static revisionTarget)
 
 # output folder naming stuff
-
-if(WIN32)
-	set(OUT_PREF "win")
-else()
-	set(OUT_PREF "unix")	
-	target_link_libraries(fx_plan_stack pthread)
-	target_link_libraries(fx_plan_stack_static pthread)
-endif()
-
-if(CMAKE_SIZEOF_VOID_P GREATER 4)
-	set(OUT_PREF "${OUT_PREF}64")
-endif()
+set(OUT_PREF "libs")
 
 set_target_properties( fx_plan_stack 
-    PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUT_PREF}"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUT_PREF}"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUT_PREF}"
+	PROPERTIES
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUT_PREF}"
+	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUT_PREF}"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUT_PREF}"
 )
 
 set_target_properties( fx_plan_stack_static
-    PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUT_PREF}"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUT_PREF}"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUT_PREF}"
+	PROPERTIES
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUT_PREF}"
+	LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUT_PREF}"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${OUT_PREF}"
 )

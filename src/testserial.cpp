@@ -7,11 +7,11 @@
 #include <iostream>
 #include <assert.h>
 #include <cstring>
-#include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
-#include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
-#include "flexseastack/flexseadevicetypes.h"
-#include "flexseastack/flexsea-comm/inc/flexsea_multi_frame_packet_def.h"
-#include "flexseastack/testserial.h"
+#include "flexsea_device_spec.h"
+#include "flexsea_sys_def.h"
+#include "flexseadevicetypes.h"
+#include "flexsea_multi_frame_packet_def.h"
+#include "testserial.h"
 
 
 TestSerial::TestSerial() : notQuit(1), runVerbose(0)

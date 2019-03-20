@@ -1,16 +1,16 @@
-#include "flexseastack/commanager.h"
+#include "commanager.h"
 
 #include <chrono>
 #include <thread>
 #include <iostream>
 #include <cstring>
-#include "flexseastack/comm_string_generation.h"
+#include "comm_string_generation.h"
 
 extern "C" {
-	#include "flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h"
-	#include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
+	#include "flexsea_cmd_sysdata.h"
+	#include "flexsea_comm_multi.h"
 }
-#include "flexseastack/flexsea-system/inc/flexsea_system.h"
+#include "flexsea_system.h"
 
 namespace csg = CommStringGeneration;
 
