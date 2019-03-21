@@ -74,10 +74,10 @@ add_library(fx_plan_stack_static STATIC $<TARGET_OBJECTS:fx_plan_objs>)
 if(WIN32)
 	target_link_libraries(fx_plan_stack setupapi)
 	target_link_libraries(fx_plan_stack_static setupapi)
-else()
+endif()
 	target_link_libraries(fx_plan_stack pthread)
 	target_link_libraries(fx_plan_stack_static pthread)
-endif()
+
 
 ## Force generation of the revision header file BEFORE building targets
 ##  Create a psuedo-target to be created before the library
