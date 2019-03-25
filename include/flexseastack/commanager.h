@@ -71,7 +71,17 @@ public:
 
     /// \brief adds a message to a queue of messages to be written to the port periodically
     template<typename T, typename... Args>
-    bool enqueueCommand(int devId, T tx_func, Args&&... tx_args) { return enqueueCommand(connectedDevices.at(devId), tx_func, std::forward<Args>(tx_args)...); }  
+    bool enqueueCommand(int devId, T tx_func, Args&&... tx_args)
+    {
+        if(connectedDevices.find(devId) != connectedDevices.end())
+        {
+            return enqueueCommand(connectedDevices.at(devId), tx_func, std::forward<Args>(tx_args)...);
+        }
+        else
+        {
+            return false;
+        }
+    }
 
 protected:
     virtual void periodicTask();
