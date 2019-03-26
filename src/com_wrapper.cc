@@ -162,7 +162,6 @@ extern "C"
 	{
 		auto dev = commManager.getDevicePtr(devId);
 		memset(success, 0, n);
-
 		if(!dev)
 		{
 			std::cout << "Device does not exist" << std::endl;
@@ -178,7 +177,13 @@ extern "C"
 			std::cout << "Failed to read device data" << std::endl;
 			return &devData[0];
 		}
-
+		
+		// Patch to force bitmap to correct values
+		uint32_t bitmap[FX_BITMAP_WIDTH];
+		for(unsigned i = 0; i < n; ++i)
+			SET_FIELD_HIGH(fieldIds[i], bitmap);
+		dev->setBitmap(bitmap);
+		
 		auto activeIds = dev->getActiveFieldIds();
 		for(int i = 0; i < n; i++)
 		{
@@ -239,7 +244,7 @@ extern "C"
 			}
 			else
 			{
-				std::cout << "Requested field not found" << std::endl;
+				std::cout << "Requested field not found ex" << std::endl;
 				dataBuffer[i] = 0;
 			}
 
