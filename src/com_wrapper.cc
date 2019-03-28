@@ -177,14 +177,10 @@ extern "C"
 			std::cout << "Failed to read device data" << std::endl;
 			return &devData[0];
 		}
-		
-		// Patch to force bitmap to correct values
-		uint32_t bitmap[FX_BITMAP_WIDTH];
-		for(unsigned i = 0; i < n; ++i)
-			SET_FIELD_HIGH(fieldIds[i], bitmap);
-		dev->setBitmap(bitmap);
-		
+
 		auto activeIds = dev->getActiveFieldIds();
+
+		
 		for(int i = 0; i < n; i++)
 		{
 			auto it = std::find(activeIds.begin(), activeIds.end(), fieldIds[i]);
@@ -199,7 +195,6 @@ extern "C"
 				devData[i] = 0;
 			}
 		}
-
 		fflush(stdout);
 		return &devData[0];
 	}
