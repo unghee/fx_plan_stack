@@ -4,6 +4,12 @@ project(fx_plan_stack)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+add_definitions(
+    -DBOARD_TYPE_FLEXSEA_PLAN
+)
+
 option(COMPILE_SHARED "compile as a shared lib vs. a static lib" ON)
 
 set(FX_SRCFILES
@@ -28,8 +34,13 @@ ADD_LIBRARY(fx_plan_stack SHARED $<TARGET_OBJECTS:fx_plan_objs>)
 ADD_LIBRARY(fx_plan_stack_static STATIC $<TARGET_OBJECTS:fx_plan_objs>)
 
 if(CMAKE_SIZEOF_VOID_P GREATER 4)
-find_library(serialc_LIBRARY serialc PATHS ${PROJECT_SOURCE_DIR}/lib64)
-find_library(FlexSEA-Stack_LIBRARY FlexSEA-Stack-Plan PATHS ${PROJECT_SOURCE_DIR}/lib64)
+	if(WIN32)
+	find_library(serialc_LIBRARY serialc PATHS ${PROJECT_SOURCE_DIR}/lib64)
+	find_library(FlexSEA-Stack_LIBRARY FlexSEA-Stack-Plan PATHS ${PROJECT_SOURCE_DIR}/lib64)
+	else()
+	find_library(serialc_LIBRARY serialc PATHS ${PROJECT_SOURCE_DIR}/unix64)
+	find_library(FlexSEA-Stack_LIBRARY FlexSEA-Stack-Plan PATHS ${PROJECT_SOURCE_DIR}/unix64)
+	endif()
 else()
 find_library(serialc_LIBRARY serialc PATHS ${PROJECT_SOURCE_DIR}/lib)
 find_library(FlexSEA-Stack_LIBRARY FlexSEA-Stack-Plan PATHS ${PROJECT_SOURCE_DIR}/lib)
@@ -83,7 +94,8 @@ if(WIN32)
 	set(OUT_PREF "win")
 else()
 	set(OUT_PREF "unix")	
-	set (CMAKE_CXX_FLAGS "-fPIC")
+	target_link_libraries(fx_plan_stack pthread)
+	target_link_libraries(fx_plan_stack_static pthread)
 endif()
 
 if(CMAKE_SIZEOF_VOID_P GREATER 4)

@@ -19,6 +19,7 @@
 struct MultiWrapper_struct;
 typedef MultiWrapper_struct MultiWrapper;
 typedef std::function<void(uint8_t*, uint8_t*, uint8_t*, uint16_t*)> StreamFunc;
+static std::mutex mtOGBuffer;
 
 class CommManager : public FlexseaSerial
 {
@@ -26,7 +27,6 @@ class CommManager : public FlexseaSerial
 public:
     CommManager();
     virtual ~CommManager();
-
     static const int NUM_TIMER_FREQS = 11;
 
     /// \brief Returns a vector containing the frequencies that can be streamed at, in Hz
