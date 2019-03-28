@@ -37,6 +37,7 @@ include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/DpEb42/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared/unity
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared/i2t/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-system/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-projects/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-projects/ActPack/inc
