@@ -12,7 +12,7 @@
 
 #include "flexseaserial.h"
 #include "periodictask.h"
-#include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
+#include "flexsea_sys_def.h"
 #include "comm_string_generation.h"
 #include "datalogger.h"
 

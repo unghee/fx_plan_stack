@@ -1,7 +1,7 @@
 #ifndef TESTSERIAL_H
 #define TESTSERIAL_H
 
-#include "flexseastack/commanager.h"
+#include "commanager.h"
 
 class TestSerial : public CommManager
 {

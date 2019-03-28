@@ -1,8 +1,8 @@
 
-#include "flexseastack/commanager.h"
-#include "flexseastack/flexsea-projects/ActPack/inc/cmd-ActPack.h"
-#include "flexseastack/flexsea-system/inc/flexsea_system.h"
-#include "flexseastack/flexsea-comm/inc/flexsea_comm_def.h"
+#include "commanager.h"
+#include "cmd-ActPack.h"
+#include "flexsea_system.h"
+#include "flexsea_comm_def.h"
 #include "revision.h"
 
 #include <thread>
@@ -27,9 +27,9 @@ auto get_tuple(std::tuple<types...> &mytup )
 
 extern "C"
 {
-	#include "flexseastack/com_wrapper.h"
-	#include "flexseastack/flexsea_config.h"
-	#include "flexseastack/flexsea-system/inc/flexsea_cmd_calibration.h"
+	#include "com_wrapper.h"
+	#include "flexsea_config.h"
+	#include "flexsea_cmd_calibration.h"
 
 	static CommManager commManager;
 	static std::thread *commThread = nullptr;
@@ -37,17 +37,17 @@ extern "C"
 	typedef std::tuple<uint8_t, int32_t, uint8_t, int16_t, int16_t, int16_t, int16_t, uint8_t> CtrlParams;
 	static std::unordered_map<int, CtrlParams> ctrlsMap;
 
-        CommManager* fxGetManager(void)
-        {
-            return &commManager;
-        }
+	CommManager* fxGetManager(void)
+	{
+		return &commManager;
+	}
 
-        void fxSetup()
-        {
-                initFlexSEAStack_minimalist(FLEXSEA_PLAN_1);
-                commManager.taskPeriod = 2;
-                commThread = new std::thread(&CommManager::runPeriodicTask, &commManager);
-        }
+	void fxSetup()
+	{
+			initFlexSEAStack_minimalist(FLEXSEA_PLAN_1);
+			commManager.taskPeriod = 2;
+			commThread = new std::thread(&CommManager::runPeriodicTask, &commManager);
+	}
 
 	void fxCleanup()
 	{
@@ -162,7 +162,6 @@ extern "C"
 	{
 		auto dev = commManager.getDevicePtr(devId);
 		memset(success, 0, n);
-
 		if(!dev)
 		{
 			std::cout << "Device does not exist" << std::endl;
@@ -180,6 +179,8 @@ extern "C"
 		}
 
 		auto activeIds = dev->getActiveFieldIds();
+
+		
 		for(int i = 0; i < n; i++)
 		{
 			auto it = std::find(activeIds.begin(), activeIds.end(), fieldIds[i]);
@@ -194,7 +195,6 @@ extern "C"
 				devData[i] = 0;
 			}
 		}
-
 		fflush(stdout);
 		return &devData[0];
 	}
@@ -239,7 +239,7 @@ extern "C"
 			}
 			else
 			{
-				std::cout << "Requested field not found" << std::endl;
+				std::cout << "Requested field not found ex" << std::endl;
 				dataBuffer[i] = 0;
 			}
 
@@ -340,14 +340,6 @@ extern "C"
 		{
 			std::string d = FX_PLAN_STACK_DATE;
 			std::string g = FX_PLAN_STACK_GIT_INFO;
-			ptr = g.substr( g.find(':') + 1);
-			ptr += seperator;
-			ptr += d.substr( d.find(':') + 1);
-		}
-		else if(whichLib == FLEXSEA_LIB_E )
-		{
-			std::string d = FLEXSEA_LIB_DATE;
-			std::string g = FLEXSEA_LIB_GIT_INFO;
 			ptr = g.substr( g.find(':') + 1);
 			ptr += seperator;
 			ptr += d.substr( d.find(':') + 1);

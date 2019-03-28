@@ -7,10 +7,10 @@
 #include "flexseadevicetypes.h"
 #include "circular_buffer.h"
 
-#include "flexseastack/fxdata.h"
+#include "fxdata.h"
 
-#include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
-#include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
+#include "flexsea_device_spec.h"
+#include "flexsea_sys_def.h"
 
 #include <exception>
 

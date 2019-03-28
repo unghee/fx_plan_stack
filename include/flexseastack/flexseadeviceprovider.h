@@ -8,7 +8,7 @@
 #include <algorithm>
 #include "flexseadevicetypes.h"
 #include "circular_buffer.h"
-#include "flexseastack/flexseadevice.h"
+#include "flexseadevice.h"
 #include <memory>
 
 /// \brief convenience class which manages a thread safe vector of uint8_t* flags

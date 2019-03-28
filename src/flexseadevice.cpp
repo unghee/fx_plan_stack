@@ -1,6 +1,6 @@
-#include "flexseastack/flexseadevice.h"
+#include "flexseadevice.h"
 #include "cstring"
-#include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
+#include "flexsea_device_spec.h"
 
 #include <iostream>
 

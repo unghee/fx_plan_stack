@@ -3,8 +3,8 @@
 
 #include <utility>
 #include <cstring>
-#include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
-#include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
+#include "flexsea_comm_multi.h"
+#include "flexsea_sys_def.h"
 
 /// \brief This namespace contains some convenience functions for generalized method of generating comm strings
 namespace CommStringGeneration

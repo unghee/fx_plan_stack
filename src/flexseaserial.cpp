@@ -2,21 +2,21 @@
 #include <stdio.h>
 #include <algorithm>
 
-#include "flexseastack/flexseaserial.h"
-#include "serial/serial.h"
-#include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
-#include "flexseastack/flexsea-comm/inc/flexsea_multi_frame_packet_def.h"
-#include "flexseastack/comm_string_generation.h"
+#include "flexseaserial.h"
+#include <serial/serial.h>
+#include "flexsea_comm_multi.h"
+#include "flexsea_multi_frame_packet_def.h"
+#include "comm_string_generation.h"
 
 extern "C" {
-	#include "flexseastack/flexsea-system/inc/flexsea_device_spec.h"
-	#include "flexseastack/flexsea-system/inc/flexsea_cmd_sysdata.h"
-	#include "flexseastack/flexsea-system/inc/flexsea_sys_def.h"
-	#include "flexseastack/flexsea-comm/inc/flexsea_payload.h"
-	#include "flexseastack/flexsea-comm/inc/flexsea_comm_multi.h"
-	#include "flexseastack/flexsea-comm/inc/flexsea_multi_circbuff.h"
-	#include "flexseastack/flexsea-system/inc/flexsea_system.h"
-	#include "flexseastack/flexsea-system/inc/flexsea_dataformats.h"
+	#include "flexsea_device_spec.h"
+	#include "flexsea_cmd_sysdata.h"
+	#include "flexsea_sys_def.h"
+	#include "flexsea_payload.h"
+	#include "flexsea_comm_multi.h"
+	#include "flexsea_multi_circbuff.h"
+	#include "flexsea_system.h"
+	#include "flexsea_dataformats.h"
 }
 
 #define LONG_ID(shortId, port) ((shortId << 6) | port)

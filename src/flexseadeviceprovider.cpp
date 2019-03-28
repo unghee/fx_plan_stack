@@ -1,4 +1,4 @@
-#include "flexseastack/flexseadeviceprovider.h"
+#include "flexseadeviceprovider.h"
 #include <cstring>
 
 FlexseaDeviceProvider::FlexseaDeviceProvider() : defaultDevice(-1, -1, FX_NONE, FLEXSEA_MANAGE_1, 0)

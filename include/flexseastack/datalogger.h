@@ -5,8 +5,8 @@
 #include <fstream>
 #include <mutex>
 
-#include "flexseastack/periodictask.h"
-#include "flexseastack/flexseadeviceprovider.h"
+#include "periodictask.h"
+#include "flexseadeviceprovider.h"
 
 #define MAX_LOG_SIZE 50000
 #define DEFAULT_LOG_FOLDER "Plan-GUI-Logs"

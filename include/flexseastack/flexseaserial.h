@@ -9,13 +9,13 @@
 #include <functional>
 #include <atomic>
 
-#include "flexseastack/rxhandler.h"
+#include "rxhandler.h"
 #include "flexseadevicetypes.h"
 #include "flexseadevice.h"
 #include "circular_buffer.h"
 #include "periodictask.h"
-#include "flexseastack/serialdriver.h"
-#include "flexseastack/flexseadeviceprovider.h"
+#include "serialdriver.h"
+#include "flexseadeviceprovider.h"
 
 struct MultiCommPeriph_struct;
 typedef MultiCommPeriph_struct MultiCommPeriph;

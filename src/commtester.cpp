@@ -1,8 +1,8 @@
-#include "flexseastack/commtester.h"
+#include "commtester.h"
 #include <cstring>
 
 extern "C" {
-    #include "flexseastack/flexsea-system/inc/flexsea_cmd_tools.h"
+    #include "flexsea_cmd_tools.h"
 }
 
 class CommTestRecord
