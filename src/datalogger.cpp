@@ -26,8 +26,7 @@ bool DataLogger::startLogging(int devId, bool logAdditionalFieldInit)
 {
     if(isFirstLogFile)
     {
-        initializeSessionFolder();
-        isFirstLogFile = false;
+        createSessionFolder("");
     }
 
     FxDevicePtr dev = devProvider->getDevicePtr(devId);
@@ -204,22 +203,31 @@ bool DataLogger::logDevice(int idx)
     return true;
 }
 
-bool DataLogger::initializeSessionFolder()
+bool DataLogger::createSessionFolder(std::string session_name)
 {
     // current date/time based on current system
     time_t now = time(0);
+	if(session_name == "")
+	{
+		// convert now to string form and format properly
+		struct tm * timeinfo = localtime(&now);
+		char dt[80];
+		strftime (dt,80,"%Y-%m-%d_%Hh%Mm%Sss", timeinfo);
+		std::string str(dt);
+		str.erase(str.end() - 1);
+		replace(str.begin(), str.end(), ' ', '_');
+		replace(str.begin(), str.end(), ':', '.');
+		session_name = str;
+	}
+	_sessionPath = _logFolderPath + "\\" + session_name;
 
-    // convert now to string form and format properly
-    struct tm * timeinfo = localtime(&now);
-    char dt[80];
-    strftime (dt,80,"%Y-%m-%d_%Hh%Mm%Sss", timeinfo);
-    std::string str(dt);
-    str.erase(str.end() - 1);
-    replace(str.begin(), str.end(), ' ', '_');
-    replace(str.begin(), str.end(), ':', '.');
-
-    _sessionPath = _logFolderPath + "\\" + str;
-    return createFolder(_sessionPath);
+	bool folder_was_created = createFolder(_sessionPath);
+	// Change global variable to avoid having the file path reset
+	if(folder_was_created)
+	{
+		isFirstLogFile = false;
+	}
+	return folder_was_created;
 }
 
 void DataLogger::clearRecords()
@@ -310,7 +318,9 @@ bool DataLogger::createFolder(std::string path)
    return success;
 }
 
-bool DataLogger::loadLogFolderConfig()
+
+
+bool DataLogger::DataLogger::loadLogFolderConfig()
 {
     const int MAX = 256;
     char temp[MAX];

@@ -43,6 +43,11 @@ CommManager::~CommManager(){
 	dataLogger = nullptr;
 }
 
+bool CommManager::createSessionFolder(std::string sessionName)
+{
+	return dataLogger->createSessionFolder(sessionName);
+}
+
 int CommManager::getIndexOfFrequency(int freq)
 {
 	int indexOfFreq = -1;
