@@ -36,6 +36,7 @@ public:
     void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);
     bool setLogFolder(std::string folderPath);
     bool setDefaultLogFolder();
+	bool createSessionFolder(std::string session_name);
 
 protected:
 
@@ -57,7 +58,6 @@ struct LogRecord {
     unsigned int logAdditionalField;
 };
 
-    bool initializeSessionFolder();
     std::vector<std::string> additionalColumnLabels;
     std::vector<int> additionalColumnValues;
     unsigned int writeLogHeader(std::ofstream* fout, const FxDevicePtr dev, bool logAdditionalColumnsInit);

@@ -31,7 +31,7 @@ public:
 
     /// \brief Returns a vector containing the frequencies that can be streamed at, in Hz
     std::vector<int> getStreamingFrequencies() const;
-
+	bool createSessionFolder(std::string sessionName);
     /// \brief Tries to start streaming from the selected device with the given parameters.
     /// Streams all fields by default
     /// Returns true if the the attempt was successful. May be unsuccessful if:
