@@ -12,9 +12,9 @@
 extern "C" {
 #endif
 
-#define _rigid_mn_numFields 36
+#define _rigid_mn_numFields 41
 //TODO: properly separate device specs between mn and m7
-#define _rigid_m7_numFields 36
+#define _rigid_m7_numFields 41
 
 #ifdef __cplusplus
 }
