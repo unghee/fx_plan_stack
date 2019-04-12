@@ -50,6 +50,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-comm)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-system)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-projects)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared)
 add_subdirectory(serial)
 
 file(GLOB PLAN_STACK_SRCS
@@ -66,6 +67,7 @@ set(FX_SRCFILES
 	${FLEX_DEPHY_SRCS}
 	${FLEX_PROJECTS_SRCS}
 	${FLEX_SYSTEM_SRCS}
+	${FLEX_SHARED_SRCS}
 	${SERIAL_SRCS}
 )
 
