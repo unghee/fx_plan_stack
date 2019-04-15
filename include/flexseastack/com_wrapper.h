@@ -175,12 +175,12 @@ extern "C" {
 
 	/// \brief Sets the gains used by PID controllers on the FlexSEA device.
 	///  @param devId is the opaque handle for the device.
-	///  @param z_k : Damping factor (used for current in current control & position in position/impedance control)
-	///  @param z_b : Damping factor (used for current in current control & position in position/impedance control)
-	///  @param i_kp : Proportional (used for for the underlying current control within the impedance controller)
-	///  @param i_ki : Integral gain (used for for the underlying current control within the impedance controller)
+	///  @param g0 : Damping factor (used for current in current control & position in position/impedance control)
+	///  @param g1 : Damping factor (used for current in current control & position in position/impedance control)
+	///  @param g2 : Proportional (used for for the underlying current control within the impedance controller)
+	///  @param g3 : Integral gain (used for for the underlying current control within the impedance controller)
 	///  @returns Nothing.
-	void setZGains(int devId, int g0, int g1, int g2, int g3);
+	void setGains(int devId, int g0, int g1, int g2, int g3);
 
 	/// \brief Enables or disables the user FSM 2 on the FlexSEA device.
 	/// @param devId is the opaque handle for the device.
