@@ -302,10 +302,10 @@ extern "C"
 		commManager.enqueueCommand(devId, sendCommandMessage, devId);
 	}
 
-	void setZGains(int devId, int z_k, int z_b, int i_kp, int i_ki)
+	void setZGains(int devId, int g0, int g1, int g2, int g3)
 	{
 		if(!ctrlsMap.count(devId)) return;
-		get_tuple<2,3,4,5,6>( ctrlsMap.at(devId) ) = std::make_tuple(CHANGE, z_k, z_b, i_kp, i_ki);
+		get_tuple<2,3,4,5,6>( ctrlsMap.at(devId) ) = std::make_tuple(CHANGE, g0, g1, g2, g3);
 		commManager.enqueueCommand(devId, sendCommandMessage, devId);
 	}
 

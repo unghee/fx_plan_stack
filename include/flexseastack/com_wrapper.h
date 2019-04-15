@@ -180,7 +180,7 @@ extern "C" {
 	///  @param i_kp : Proportional (used for for the underlying current control within the impedance controller)
 	///  @param i_ki : Integral gain (used for for the underlying current control within the impedance controller)
 	///  @returns Nothing.
-	void setZGains(int devId, int z_k, int z_b, int i_kp, int i_ki);
+	void setZGains(int devId, int g0, int g1, int g2, int g3);
 
 	/// \brief Enables or disables the user FSM 2 on the FlexSEA device.
 	/// @param devId is the opaque handle for the device.
