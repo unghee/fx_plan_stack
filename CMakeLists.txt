@@ -77,11 +77,13 @@ add_library(fx_plan_stack SHARED $<TARGET_OBJECTS:fx_plan_objs>)
 add_library(fx_plan_stack_static STATIC $<TARGET_OBJECTS:fx_plan_objs>)
 
 if(WIN32)
+	message("Win32 detected")
 	target_link_libraries(fx_plan_stack setupapi)
+	set_target_properties(fx_plan_stack_static PROPERTIES LINK_FLAGS "/WHOLEARCHIVE")
 	target_link_libraries(fx_plan_stack_static setupapi)
 endif()
-	target_link_libraries(fx_plan_stack pthread)
-	target_link_libraries(fx_plan_stack_static pthread)
+target_link_libraries(fx_plan_stack pthread)
+target_link_libraries(fx_plan_stack_static pthread)
 
 
 ## Force generation of the revision header file BEFORE building targets
