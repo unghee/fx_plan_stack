@@ -4,6 +4,7 @@
 
 #include <iostream>
 
+
 FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int role, int dataBuffSize):
 	id(_id)
 	, port(_port)
@@ -16,9 +17,6 @@ FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int ro
 {
 	memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
 
-	//Debug only:
-	printf("numFields = %i\n", numFields);
-	
 	for(int i = 0; i < numFields; ++i)
 	{
 		const char* c_str = deviceSpecs[_type].fieldLabels[i];
@@ -40,9 +38,6 @@ FlexseaDevice::FlexseaDevice(int _id, int _shortid, int _port, FlexseaDeviceType
 	, _data(dataBuffSize, deviceSpecs[_type].numFields + 1 )
 {
 	memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
-	
-	//Debug only:
-	printf("numFields B = %i\n", numFields);
 
 	for(int i = 0; i < numFields; ++i)
 	{
