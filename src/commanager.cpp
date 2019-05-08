@@ -6,7 +6,9 @@
 #include <cstring>
 #include "comm_string_generation.h"
 
+
 extern "C" {
+	#include "log.h"
 	#include "flexsea_cmd_sysdata.h"
 	#include "flexsea_comm_multi.h"
 }
@@ -77,17 +79,17 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int should
 
 	if(indexOfFreq < 0 || indexOfFreq >= NUM_TIMER_FREQS)
 	{
-		//std::cout << "Invalid frequency" << std::endl;
+		LOG(lerror, "Invalid frequency");
 		return false;
 	}
 
 	if(!haveDevice(devId))
 	{
-		//std::cout << "Invalid device id" << std::endl;
+		LOG(lerror, "Invalid device id");
 		return false;
 	}
-
-	std::cout << "Started " << (shouldLog ? " logged " : "") << (shouldAuto ? "auto" : "") << "streaming cmd: " << (int)cmdCode << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
+	LOG(linfo, "Started stream with cmd %u for slave %u at frequency %u",(int)cmdCode, devId, freq);
+	//std::cout << "Started " << (shouldLog ? " logged " : "") << (shouldAuto ? "auto" : "") << "streaming cmd: " << (int)cmdCode << ", for slave id: " << devId << " at frequency: " << freq << std::endl;
 	if(shouldAuto)
 	{
 		sendAutoStream(devId, cmdCode, 1000 / freq, true);
@@ -115,6 +117,7 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int should
 
 	if(shouldLog)
 	{
+		LOG(linfo,"Started logging data");
 		dataLogger->startLogging(devId, true);
 	}
 
@@ -130,12 +133,13 @@ int CommManager::startStreaming(int devId, int freq, bool shouldLog, const Strea
 		return -1;
 
 	++cmdCodeBase;
-
-	std::cout << "Started " << (shouldLog ? " logged " : "") << "streaming cmd: custom for slave id: " << devId << " at frequency: " << freq << std::endl;
+	LOG(linfo, "Started stream for slave %u at frequency %u", devId, freq);
+	//std::cout << "Started " << (shouldLog ? " logged " : "") << "streaming cmd: custom for slave id: " << devId << " at frequency: " << freq << std::endl;
 	streamLists[idx].emplace_back(devId, cmdCodeBase, shouldLog, new StreamFunc(streamFunc));
 
 	if(shouldLog)
 	{
+		LOG(linfo,"Started logging data");
 		dataLogger->startLogging(devId, true);
 	}
 
@@ -185,18 +189,23 @@ bool CommManager::stopStreaming(int devId, int cmdCode)
 						std::lock_guard<std::mutex> l(conditionMutex);
 						streamCount--;
 					}
-
-					std::cout << "Stopped " << (listIndex == 0 ? "autostreaming" : "streaming");
-					if(record.cmdCode > 0) std::cout << " cmd: " << record.cmdCode;
-					else std::cout << " cmd: custom";
-
-					std::cout << ", for slave id: " << devId
-							  << " at frequency: " << timerFrequencies[indexOfFreq] << std::endl;
-
+					LOG(linfo,"Stopped streaming");
+					if(record.cmdCode > 0) 
+					{
+						LOG(linfo,"Received cmd: %u", (int) record.cmdCode);
+					}
+					else 
+					{
+						LOG(linfo,"Custom command");
+					}
+					LOG(linfo,", for slave id %u at frequency %u",devId , timerFrequencies[indexOfFreq]);
 					found = true;
 
 					if(record.shouldLog)
+					{
+						LOG(linfo,"Stopped logging");
 						dataLogger->stopLogging(devId);
+					}
 				}
 				else    //only increment i if we aren't erasing from the vector
 					i++;
@@ -214,10 +223,12 @@ void CommManager::periodicTask()
 
 	if(serviceCount % 4 == 0)
 	{
-	   serviceOpenPorts();
+		LOG(ldebug3,"Servicing open ports");
+		serviceOpenPorts();
 	}
 	if(dataLogger && serviceCount % 10 == 0)
 	{
+		LOG(ldebug3,"Servicing log");
 		dataLogger->serviceLogs();
 	}
 
@@ -284,20 +295,6 @@ void CommManager::close(uint16_t portIdx)
 		if(kvp.second->port == portIdx)
 			stopStreaming(kvp.second->id);
 	}
-
-	// -- Forcing remaining messages allows us to stop auto streaming when we disconnect
-	// -- However over bluetooth, we risk trying to send a message to a bluetooth port that's actually not open
-	// -- ie: connected over bluetooth, turn off device, then call into close()
-	// -- this causes caller of CommManager::close to hang while windows tries to write with BT driver :(
-
-//    while(outgoingBuffer[portIdx].size())
-//    {
-//        Message m = outgoingBuffer[portIdx].front();
-//        outgoingBuffer[portIdx].pop();
-
-//        if(isOpen(portIdx))
-//            this->write(m.numBytes, m.dataPacket.get(), portIdx);
-//    }
 
 	FlexseaSerial::close(portIdx);
 }
@@ -410,7 +407,7 @@ bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
 	mtOGBuffer.lock();
     if(outgoingBuffer[portIdx].size() > MAX_Q_SIZE)
     {
-        std::cout << "ComManager::enqueueCommand, queue is above max size (" << MAX_Q_SIZE  << "), clearing queue..." << std::endl;
+        LOG(lwarning,"ComManager::enqueueCommand, queue is above max size %u clearning queue", MAX_Q_SIZE);
         while(outgoingBuffer[portIdx].size())
             outgoingBuffer[portIdx].pop();
     }
@@ -443,7 +440,7 @@ void CommManager::sendCommands(int index)
 			enqueueCommand(record.devId, *record.func);
 		else
 		{
-			//std::cout<< "Unsupported command was given: " << record.cmdCode << std::endl;
+			LOG(lerror, "Unsupported command was given: %u", (int) record.cmdCode);
 			//stopStreaming(record.cmdType, record.slaveIndex, timerFrequencies[index]);
 		}
 	}
@@ -454,6 +451,7 @@ void CommManager::sendAutoStream(int devId, int cmd, int period, bool start)
 	enqueueCommand(devId,
 				   tx_cmd_stream_w,
 				   cmd, period, start, 0, 0);
+	LOG(linfo,"Sending autostream to dev %u", devId);
 }
 
 void CommManager::sendSysDataRead(int slaveId)
@@ -461,5 +459,5 @@ void CommManager::sendSysDataRead(int slaveId)
 	enqueueCommand(slaveId,
 				   tx_cmd_sysdata_r,
 				   nullptr, 0);
-//    std::cout << "Sending sysdata read [" << (int)(slaveId) << "]" << std::endl;
+	LOG(linfo,"Sending sysdata read %u", (int)(slaveId));
 }

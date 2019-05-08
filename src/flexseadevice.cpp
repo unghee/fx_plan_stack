@@ -1,7 +1,7 @@
 #include "flexseadevice.h"
 #include "cstring"
 #include "flexsea_device_spec.h"
-
+#include "log.h"
 #include <iostream>
 
 
@@ -23,7 +23,10 @@ FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int ro
 		if(c_str)
 			fieldLabels.push_back(c_str);
 		else
+		{
+			LOG(lerror, "Invalid device spec given");
 			throw std::invalid_argument("Device Spec for given type is invalid, causing null pointer access");
+		}
 	 }
 }
 
@@ -45,8 +48,11 @@ FlexseaDevice::FlexseaDevice(int _id, int _shortid, int _port, FlexseaDeviceType
 		if(c_str)
 			fieldLabels.push_back(c_str);
 		else
+		{
+			LOG(lerror, "Invalid device spec given");
 			throw std::invalid_argument("Device Spec for given type is invalid, causing null pointer access");
-	 }
+		}
+	}
 }
 
 FlexseaDevice::FlexseaDevice(int _id, int _port, std::vector<std::string> fieldLabels, int role, int dataBuffSize)
@@ -202,26 +208,6 @@ uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
 
 	return i + (t >= timestamp);
 }
-
-//uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, uint32_t *output, uint16_t outputSize) const
-//{
-//    size_t i = 0, j = 0, sizeData = (this->numFields+1)*sizeof(int32_t);
-
-//    std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
-
-//    while(i < _data.count() && _data.peek(i)[0] <= timestamp)
-//        i++;
-
-//    while(i < _data.count() && j < outputSize)
-//    {
-//        memcpy(output+j, _data.peek(i++), sizeData);
-//        j+=numFields+1;
-//    }
-
-//    uint32_t last = _data.peek(i-1)[0];
-
-//    return last;
-//}
 
 inline size_t FlexseaDevice::findIndexAfterTime(uint32_t timestamp) const
 {
@@ -385,6 +371,7 @@ double FlexseaDevice::getDataRate() const
 
 std::string FlexseaDevice::getName() const
 {
+	LOG(linfo,"Fetching device name");
 	if(this->type < NUM_DEVICE_TYPES && this->type != FX_NONE)
 		return ( fieldLabels.at(0) );
 	else if(this->type == FX_CUSTOM)

@@ -1,7 +1,7 @@
 #include "serialdriver.h"
 
 #include <iostream>
-
+#include "log.h"
 #define CHECK_PORTIDX(idx) do { if(idx >= _NUMPORTS) throw std::out_of_range("Port Index outside of range"); } while(0)
 #define LOCK_MTX(idx) std::lock_guard<std::mutex> lk(serialMutexes[idx])
 
@@ -81,7 +81,7 @@ bool SerialDriver::tryOpen(const std::string &portName, uint16_t portIdx) {
     {
         std::lock_guard<std::mutex> lk(_portCountMutex);
         openPorts++;
-        std::cout << "Port " << portIdx << " opened" << std::endl;
+        LOG(linfo,"Port %u opened", portIdx);
     }
 
     return isOpen;
@@ -116,6 +116,7 @@ size_t SerialDriver::bytesAvailable(int portIdx) const
         }
         catch (...)
         {
+			LOG(lwarning,"Bytes not available at port, did you close the device?");
             // we expect to hit this block if we turn off a physical device
             // before disconnecting the port
             serialError = true;
@@ -155,7 +156,7 @@ void SerialDriver::tryClose(uint16_t portIdx) {
 
     if(!ports[portIdx].isOpen() && isPortOpen[portIdx])
     {
-        std::cout << "Closed port " << portIdx << "." << std::endl;
+        LOG(linfo, "Closed port %u", portIdx);
         std::lock_guard<std::mutex> lk(_portCountMutex);
         openPorts--;
     }
@@ -174,9 +175,9 @@ void SerialDriver::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_
             ports[portIdx].write(serial_tx_data, bytes_to_send);
             success = true;
         } catch (serial::IOException e) {
-            std::cout << "IO Exception:  " << e.what() << std::endl;
+            LOG(lerror, "IO Exception: %s", e.what());
         } catch (serial::SerialException e) {
-            std::cout << "Serial Exception:  " << e.what() << std::endl;
+            LOG(lerror, "Serial Exception: %s", e.what());
         }
     }
 

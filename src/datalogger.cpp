@@ -4,6 +4,7 @@
 #include <string>
 #include <algorithm>
 #include <iostream>
+#include "log.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -48,7 +49,7 @@ bool DataLogger::startLogging(int devId, bool logAdditionalFieldInit)
         {
             if(fout) delete fout;
             fout = nullptr;
-            std::cout << "Can't open file" << std::endl;
+            LOG(lerror, "Can't open file");
             throw std::bad_alloc();
         }
 
@@ -169,7 +170,7 @@ bool DataLogger::logDevice(int idx)
         else
             nextFileName = generateFileName(dev);
 
-        std::cout << "Swapping files to new name: " << nextFileName << std::endl;
+        LOG(linfo, "Swapping files to new name: %s", nextFileName.c_str());
         swapFileObject(logRecords.at(idx), nextFileName, dev);
     }
 
@@ -247,10 +248,7 @@ void DataLogger::clearRecords()
     numLogDevices = 0;
 }
 
-bool isIllegalFileChar(char c)
-{
-    return c == '\n' || c == '\t';
-}
+
 
 std::string DataLogger::generateFileName(FxDevicePtr dev, std::string suffix)
 {
@@ -313,7 +311,14 @@ bool DataLogger::createFolder(std::string path)
 #else
 #   error "Unknown compiler"
 #endif
-   if(success) std::cout << "Folder created : " << pathOK << std::endl;
+   if(success)
+   {
+	   LOG(linfo, "Folder created: %s", pathOK.c_str()); // << std::endl;
+   }
+   else
+   {
+	LOG(lerror, "Failed to create folder: %s", pathOK.c_str());
+   }
 
    return success;
 }
