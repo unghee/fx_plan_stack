@@ -184,12 +184,12 @@ bool DataLogger::logDevice(int idx)
             auto&& dataline = data.at(line);
             for(auto&& fid : fids)
             {
-                (*fout) << ", " << dataline.at(fid);
+                (*fout) << "," << dataline.at(fid);
             }
             if(record.logAdditionalField)
             {
                 for(auto&& l : additionalColumnValues)
-                    (*fout) << ", " << l;
+                    (*fout) << "," << l;
             }
 
             (*fout) << "\n";
@@ -393,11 +393,11 @@ unsigned int DataLogger::writeLogHeader(std::ofstream* fout, const FxDevicePtr d
     std::vector<std::string> fieldLabels = dev->getActiveFieldLabels();
     (*fout) << "timestamp";
     for(auto&& l : fieldLabels)
-        (*fout) << ", " << l;
+        (*fout) << "," << l;
     if(logAdditionalColumnsInit)
     {
         for(auto&& l : additionalColumnLabels)
-            (*fout) << ", " << l;
+            (*fout) << "," << l;
     }
 
     (*fout) << "\n";
