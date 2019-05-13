@@ -45,7 +45,7 @@ extern "C"
 	void fxSetup()
 	{
 			initFlexSEAStack_minimalist(FLEXSEA_PLAN_1);
-			commManager.taskPeriod = 2;
+			commManager.taskPeriod = 1;
 			commThread = new std::thread(&CommManager::runPeriodicTask, &commManager);
 	}
 
