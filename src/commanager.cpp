@@ -403,6 +403,7 @@ int CommManager::enqueueMultiPacket(int, int port, MultiWrapper *out)
 
 bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
 {
+	commandEnqueued.lock();
     //If we are over a max size, clear the queue
 	mtOGBuffer.lock();
     if(outgoingBuffer[portIdx].size() > MAX_Q_SIZE)
@@ -422,7 +423,7 @@ bool CommManager::enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx)
 	}
 	if(doNotify)
 		wakeCV.notify_all();
-
+	commandEnqueued.unlock();
 	return true;
 }
 

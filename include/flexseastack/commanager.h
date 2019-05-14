@@ -15,12 +15,13 @@
 #include "flexsea_sys_def.h"
 #include "comm_string_generation.h"
 #include "datalogger.h"
+#include "log.h"
 
 struct MultiWrapper_struct;
 typedef MultiWrapper_struct MultiWrapper;
 typedef std::function<void(uint8_t*, uint8_t*, uint8_t*, uint16_t*)> StreamFunc;
 static std::mutex mtOGBuffer;
-
+static std::mutex commandEnqueued;
 class CommManager : public FlexseaSerial
 {
 
@@ -100,13 +101,14 @@ protected:
     {
         if(!d->isValid()) return false;
         MultiWrapper *out = &(portPeriphs[d->port].out);
-
+		commandEnqueued.lock();
         bool error = CommStringGeneration::generateCommString(d->getShortId(), out,
                                                        tx_func,
                                                        std::forward<Args>(tx_args)...);
+		commandEnqueued.unlock();
         if(error)
         {
-//            std::cout << "Error packing multipacket" << std::endl;
+			LOG(lerror, "Error packing multipacket");
             return false;
         }
 

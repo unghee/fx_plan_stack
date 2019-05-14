@@ -7,6 +7,7 @@
 #include "flexsea_comm_multi.h"
 #include "flexsea_multi_frame_packet_def.h"
 #include "comm_string_generation.h"
+#include "log.h"
 
 extern "C" {
 	#include "flexsea_device_spec.h"
@@ -60,7 +61,7 @@ inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
 	}
 	else if(connectedDevices.at(devId)->type != devType)
 	{
-		std::cout << "Device record's type does not match incoming message, something went wrong (two devices connected with same id?)" << std::endl;
+		LOG(lerror,"Device record's type does not match incoming message, something went wrong (two devices connected with same id?)");
 		removeDevice(devId);
 		addedDevice = !addDevice(devId, devShortId, port, static_cast<FlexseaDeviceType>(devType), devRole);
 	}
@@ -83,6 +84,7 @@ inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
 	if(bitmapChanged)
 	{
 		// need to clear old data ptrs as they are wrong size
+		LOG(lwarning, "Bitmap has been changed");
 		std::lock_guard<std::recursive_mutex> lk(*(dev->dataMutex));
 		dev->setBitmap(bitmap);
 		mapChangedFlags.notify();
@@ -90,7 +92,7 @@ inline int FlexseaSerial::updateDeviceMetadata(int port, uint8_t *buf)
 
 	if(addedDevice)
 	{
-		std::cout << "Added device\n";
+		LOG(linfo, "Added device\n");
 		fflush(stdout);
 		deviceConnectedFlags.notify();
 	}
@@ -145,7 +147,7 @@ inline int FlexseaSerial::updateDeviceData(int port, uint8_t *buf)
 	}
 	else
 	{
-		std::cout << "Couldn't allocate memory for reading data into FlexseaDevice " << devId << std::endl;
+		LOG(lerror, "Couldn't allocate memory for reading data into FlexseaDevice %u", devId);
 		return -1;
 	}
 
@@ -156,7 +158,7 @@ int FlexseaSerial::sysDataParser(int port)
 {
 	if(port < 0 || port >= FX_NUMPORTS)
 	{
-		std::cout << "invalid port" << std::endl;
+		LOG(lerror, "invalid port");
 		return 0;
 	}
 	MultiCommPeriph *cp = portPeriphs+port;
@@ -165,7 +167,8 @@ int FlexseaSerial::sysDataParser(int port)
 	bool isMeantForPlan = msgBuf[MP_RID] / 10 == 1;
 	if(!isMeantForPlan)
 	{
-		std::cout << "Received message with invalid RID, probably some kind of device-side error\n";
+		LOG(lerror, "Received message with invalid RID, probably some kind of device-side error\n");
+		std::cout << msgBuf << std::endl;
 		return -1;
 	}
 
@@ -194,7 +197,7 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
 		bytesToWrite = MIN(len, cbSpace);
 
 		error = circ_buff_write(&(portPeriphs[port].circularBuff), (largeRxBuffer+bytesWritten), bytesToWrite);
-		if(error) std::cout << "circ_buff_write error:" << error << std::endl;
+		if(error) LOG(lerror, "circ_buff_write error: %u", error)
 
 		do {
 			portPeriphs[port].bytesReadyFlag = 1;
@@ -236,7 +239,7 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
 					if(dev)
 						cp->in.unpacked[MP_XID] = dev->getRole();
 					else
-						std::cout << "Problem in processReceivedData(), invalid dev";
+						LOG(lerror, "Problem in processReceivedData(), invalid dev");
 
 					parseResult = parseReadyMultiString(cp);
 				}
@@ -253,7 +256,7 @@ void FlexseaSerial::processReceivedData(int port, size_t len)
 
 		if(CB_BUF_LEN == circ_buff_get_size(&(portPeriphs[port].circularBuff)) && len)
 		{
-			std::cout << "circ buffer is full with non valid frames; clearing..." << std::endl;
+			LOG(lerror, "circ buffer is full with non valid frames; clearing...");
 			// erase all the bytes except the ones we just wrote
 			circ_buff_move_head(&(portPeriphs[port].circularBuff), CB_BUF_LEN - bytesToWrite);
 		}
@@ -298,7 +301,9 @@ void FlexseaSerial::sendDeviceWhoAmI(int port)
 	error = CommStringGeneration::generateCommString(0, out, tx_cmd_sysdata_r, &flag, lenFlags);
 
 	if(error)
-		std::cout << "Error packing multipacket" << std::endl;
+	{
+		LOG(lerror, "Error packing multipacket");
+	}
 	else
 	{
 		unsigned int frameId = 0;
@@ -309,7 +314,7 @@ void FlexseaSerial::sendDeviceWhoAmI(int port)
 			frameId++;
 		}
 		out->isMultiComplete = 1;
-		std::cout << "Wrote who am i message" << std::endl;
+		LOG(linfo, "Wrote who am i message");
 	}
 }
 
@@ -350,7 +355,7 @@ void FlexseaSerial::close(uint16_t portIdx)
 	for(const int &id : idsToRemove)
 	{
 		this->removeDevice(id);
-		std::cout << "Removed device : " << id << std::endl;
+		LOG(lwarning, "Removed device: %u", id);
 	}
 
 	devicesAtPort[portIdx] = 0;
