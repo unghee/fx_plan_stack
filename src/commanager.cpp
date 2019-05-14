@@ -212,7 +212,7 @@ void CommManager::periodicTask()
 	serviceStreams(taskPeriod);
 	serviceOpenAttempts(taskPeriod);
 	// What's up with these magic numbers?
-	if(serviceCount % 2 == 0)
+	if(serviceCount % 1 == 0)
 	{
 	   serviceOpenPorts();
 	}
