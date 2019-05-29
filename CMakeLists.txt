@@ -22,6 +22,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# adding an easy way to compile differently for plan and manage
+set(FLEXSEA_TYPE "PLAN")
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/plan_definitions.cmake)
 
 option(COMPILE_SHARED "compile as a shared lib vs. a static lib" ON)
