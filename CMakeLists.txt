@@ -107,7 +107,7 @@ target_link_libraries(fx_plan_stack_static pthread)
 # endif()
 
 #Now add the psuedo-target to the dependency list for the project
-add_dependencies(fx_plan_objs revisionTarget)
+#add_dependencies(fx_plan_objs revisionTarget)
 #add_dependencies(fx_plan_stack_static revisionTarget)
 
 # output folder naming stuff
