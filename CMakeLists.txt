@@ -22,6 +22,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# adding an easy way to compile differently for plan and manage
+set(FLEXSEA_TYPE "PLAN")
+
 include(${CMAKE_CURRENT_SOURCE_DIR}/plan_definitions.cmake)
 
 option(COMPILE_SHARED "compile as a shared lib vs. a static lib" ON)
@@ -86,26 +89,25 @@ target_link_libraries(fx_plan_stack pthread)
 target_link_libraries(fx_plan_stack_static pthread)
 
 
-## Force generation of the revision header file BEFORE building targets
-##  Create a psuedo-target to be created before the library
-if(WIN32)
-add_custom_target(
-	revisionTarget
-	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.bat ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
-	COMMENT "Updating revision information"
-)
-
-else()
-add_custom_target(
-   revisionTarget
-   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.sh ${CMAKE_CURRENT_SOURCE_DIR}/git-revision.py ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
-   COMMENT "Updating revision information"
-)
-
-endif()
+# removing git_rev_data.h for now
+# ## Force generation of the revision header file BEFORE building targets
+# ##  Create a psuedo-target to be created before the library
+# if(WIN32)
+# add_custom_target(
+# 	revisionTarget
+# 	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.bat ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
+# 	COMMENT "Updating revision information"
+# )
+# else()
+# add_custom_target(
+#    revisionTarget
+#    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.sh ${CMAKE_CURRENT_SOURCE_DIR}/git-revision.py ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
+#    COMMENT "Updating revision information"
+# )
+# endif()
 
 #Now add the psuedo-target to the dependency list for the project
-add_dependencies(fx_plan_objs revisionTarget)
+#add_dependencies(fx_plan_objs revisionTarget)
 #add_dependencies(fx_plan_stack_static revisionTarget)
 
 # output folder naming stuff

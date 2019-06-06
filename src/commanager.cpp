@@ -11,6 +11,7 @@ extern "C" {
 	#include "flexsea_comm_multi.h"
 }
 #include "flexsea_system.h"
+#include "flexseadevicetypes.h"
 
 namespace csg = CommStringGeneration;
 
