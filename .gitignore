@@ -4,3 +4,4 @@ libinclude/flexseastack/flexsea-dephy/
 build/
 *.user
 lib/libFlexSEA-Stack-Plan.a
+include/git_rev_data.h
