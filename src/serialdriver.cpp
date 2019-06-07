@@ -65,7 +65,7 @@ bool SerialDriver::tryOpen(const std::string &portName, uint16_t portIdx) {
         s->setBytesize(serial::eightbits);
         s->setParity(serial::parity_none);
         s->setStopbits(serial::stopbits_one);
-        s->setFlowcontrol(serial::flowcontrol_hardware);
+        s->setFlowcontrol(serial::flowcontrol_none);
 
 //#ifdef __WIN32
 #if defined(__WIN32) || defined(__WIN64)
