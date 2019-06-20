@@ -37,7 +37,7 @@ include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/serial/include
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-comm/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/CycleTester/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/DpEb42/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/ExperimentalController/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared/unity
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared/i2t/inc
