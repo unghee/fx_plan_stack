@@ -36,9 +36,6 @@ include_directories(
 	unity
 	${CMAKE_CURRENT_SOURCE_DIR}/serial/include
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-comm/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/CycleTester/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/ExperimentalController/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared/unity
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared/i2t/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared/utilities/inc
@@ -52,7 +49,6 @@ include_directories(
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-comm)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-system)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-projects)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared)
 add_subdirectory(serial)
 
