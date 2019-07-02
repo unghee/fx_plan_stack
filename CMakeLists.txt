@@ -48,6 +48,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-comm ${CMAK
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-system ${CMAKE_CURRENT_SOURCE_DIR}/build/system)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-projects ${CMAKE_CURRENT_SOURCE_DIR}/build/projects)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-shared ${CMAKE_CURRENT_SOURCE_DIR}/build/shared)
+
 add_subdirectory(serial)
 
 if(PLAN_TYPE STREQUAL PLAN_GUI)
