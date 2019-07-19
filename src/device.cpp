@@ -179,14 +179,14 @@ void Device::enqueueCommand(T tx_func, Args&&... tx_args){
 
 void Device::startInitialThreads(){
 	shouldRun = true;
-	deviceReader = new std::thread(&Device::readFromDevice);
+	deviceReader = new std::thread(&Device::readFromDevice, this);
 }
 
 void Device::startStreamingThreads(){
 	assert(connectionState >= OPEN);
-	commandStreamer = new std::thread(&Device::streamCommands);
-	commandSender = new std::thread(&Device::sendCommands);
-	deviceLogger = new std::thread(&Device::logDevice);
+	commandStreamer = new std::thread(&Device::streamCommands, this);
+	commandSender = new std::thread(&Device::sendCommands, this);
+	deviceLogger = new std::thread(&Device::logDevice, this);
 }
 
 void Device::stopThreads(){
@@ -256,18 +256,9 @@ void Device::sendCommands(){
 }
 
 void Device::readFromDevice(){
-	size_t i, bytesToRead;
-	long int numBytes;
-	uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
 	while(shouldRun){
-		numBytes = flexseaSerial.bytesAvailable(portIdx);
-		while(numBytes > 0){
-			bytesToRead = numBytes > MAX_SERIAL_RX_LEN ? MAX_SERIAL_RX_LEN : numBytes;
-			numBytes -= bytesToRead;
-			flexseaSerial.readPort(portIdx, largeRxBuffer, bytesToRead);
-			flexseaSerial.processReceivedData(largeRxBuffer, bytesToRead, portIdx, serialDevice);
-		}
-
+		flexseaSerial.readAndProcessData(portIdx, serialDevice);
+		
 		if(!serialDeviceIsSetUp && serialDevice != nullptr){
 			connectionState = OPEN; //now it is actually open
 			serialDeviceIsSetUp = true;
@@ -301,7 +292,9 @@ void Device::setUpLogging(){
 
 bool Device::tryOpen(){
 	int attempts = 0;
-	while(flexseaSerial.open(portName, portIdx) || attempts++ < MAX_TRY_OPEN_ATTEMPTS){}
+	while(attempts++ < MAX_TRY_OPEN_ATTEMPTS){
+		flexseaSerial.open(portName, portIdx);
+	}
 
 	return attempts <= MAX_TRY_OPEN_ATTEMPTS;
 }

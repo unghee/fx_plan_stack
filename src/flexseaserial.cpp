@@ -100,6 +100,7 @@ void FlexseaSerial::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16
 	write(bytes_to_send, serial_tx_data, portIdx);
 }
 
+
 inline int updateDeviceMetadata(int port, FlexseaDevice* serialDevice, uint8_t *buf)
 {
 	uint16_t i = MP_DATA1 + 1;
@@ -236,4 +237,16 @@ void FlexseaSerial::processReceivedData(uint8_t* largeRxBuffer, size_t len, int 
 	}	
 }
 
+void FlexseaSerial::readAndProcessData(int portIdx, FlexseaDevice* serialDevice){
+	size_t i, bytesToRead;
+	long int numBytes;
+	uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
 
+	numBytes = bytesAvailable(portIdx);
+	while(numBytes > 0){
+		bytesToRead = numBytes > MAX_SERIAL_RX_LEN ? MAX_SERIAL_RX_LEN : numBytes;
+		numBytes -= bytesToRead;
+		readPort(portIdx, largeRxBuffer, bytesToRead);
+		processReceivedData(largeRxBuffer, bytesToRead, portIdx, serialDevice);
+	}
+}

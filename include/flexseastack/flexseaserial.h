@@ -49,11 +49,8 @@ public:
 
     /// \brief close the corresponding port
     void close(int portIdx);
-    void readDevice(std::string portName, uint16_t portIdx);
 
-    int sysDataParser(int port, MultiCommPeriph* mCP, FlexseaDevice* serialDevice);
-    // / \brief processes nb bytes at the port, analyses for packets, parses, etc
-    void processReceivedData(uint8_t* largeRxBuffer, size_t len, int portIdx, FlexseaDevice* serialDevice);
+    void readAndProcessData(int portIdx, FlexseaDevice* serialDevice);
 
     template<typename T, typename... Args>
     std::vector<Message> generateMessages(int devId, int port, T tx_func, Args&&... tx_args);
@@ -73,6 +70,14 @@ public:
     
 
 private:
+
+    void readDevice(std::string portName, uint16_t portIdx);
+
+    int sysDataParser(int port, MultiCommPeriph* mCP, FlexseaDevice* serialDevice);
+    // / \brief processes nb bytes at the port, analyses for packets, parses, etc
+    void processReceivedData(uint8_t* largeRxBuffer, size_t len, int portIdx, FlexseaDevice* serialDevice);
+
+    
     MultiCommPeriph* multiCommPeriphs;
 };
 

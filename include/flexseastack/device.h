@@ -15,6 +15,7 @@
 #include <functional>
 
 #include "flexsea_cmd_sysdata.h"
+#include "flexsea_cmd_stream.h"
 #include "flexsea_sys_def.h"
 
 #include "datalogger.h"

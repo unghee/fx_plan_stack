@@ -66,6 +66,8 @@ FlexseaDevice::FlexseaDevice(int id, int port, std::vector<std::string> fieldLab
 /* Returns a vector of strings which describe the fields specified by map  */
 std::vector<std::string> FlexseaDevice::getActiveFieldLabels() const
 {
+	std::unique_lock<std::mutex> lk(dataLock);
+
 	bool equal = true;
 	for(int i = 0; i < FX_BITMAP_WIDTH && equal; i++){
 		if(lastFieldLabelMap[i] != this->bitmap[i]){
@@ -96,6 +98,8 @@ std::vector<std::string> FlexseaDevice::getActiveFieldLabels() const
 
 std::vector<int> FlexseaDevice::getActiveFieldIds() const
 {
+	std::unique_lock<std::mutex> lk(dataLock);
+
 	std::vector<int> r;
 	r.reserve(_numFields);
 	for(int fieldId = 0; fieldId < _numFields; ++fieldId)
@@ -144,6 +148,8 @@ uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputS
 
 uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outputSize) const
 {
+	std::unique_lock<std::mutex> lk(dataLock);
+
 	int32_t *srcPtr = 0;
 	try{
 		if(index >= dataCount()){
@@ -172,6 +178,7 @@ uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outp
 
 uint32_t FlexseaDevice::getLatestTimestamp() const
 {
+	std::unique_lock<std::mutex> lk(dataLock);
 	if(_data.count()){
 		return _data.peekBack()[0];
 	}

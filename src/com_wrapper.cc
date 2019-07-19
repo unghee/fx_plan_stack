@@ -43,8 +43,9 @@ extern "C"
 
 	void fxSetup()
 	{
+		std::vector<std::string> portNames;
 		initFlexSEAStack_minimalist(FLEXSEA_PLAN_1);
-		commManager = new CommManager();
+		commManager = new CommManager(portNames);
 	}
 
 	void fxCleanup()
@@ -55,13 +56,13 @@ extern "C"
 	// open serial port named portName at portIdx [0-3],
 	void fxOpen(char* portName, int portIdx)
 	{
-		commManager->loadAndGetDevice(portIdx);
+		commManager->loadAndGetDeviceId(portIdx);
 		// commManager.open(std::string(portName), portIdx);
 	}
 
 	uint8_t fxIsOpen(int portIdx)
 	{
-		return commManger->isOpen(portIdx);
+		return commManager->isOpen(portIdx);
 	}
 
 	// close port at portIdx
@@ -85,7 +86,10 @@ extern "C"
 		}
 
 		//fill rest of array with -1
-		std::fill_n(std::begin(idarray) + i, std::end(idarray), -1);
+		while(i < n)
+		{
+				idarray[i++] = -1;
+		}
 	}
 
 	static CtrlParams defaultCtrlParams()
@@ -149,7 +153,7 @@ extern "C"
 
 	int* fxReadDevice(int devId, int* fieldIds, uint8_t* success, int n)
 	{
-		auto dev = commManager.getDevicePtr(devId);
+		auto dev = commManager->getDevicePtr(devId);
 		memset(success, 0, n);
 		if(!dev)
 		{
@@ -161,7 +165,8 @@ extern "C"
 			std::cout << "Device does not have data" << std::endl;
 			return &devData[0];
 		}
-		if(dev->getDataPtr( dev->dataCount()-1, (FX_DataPtr)devDataPriv, MAX_L ) == 0)
+		auto readSuccess = dev->getDataPtr( dev->dataCount()-1, (FX_DataPtr)devDataPriv, MAX_L );
+		if(readSuccess == 0)
 		{
 			std::cout << "Failed to read device data" << std::endl;
 			return &devData[0];
@@ -169,7 +174,6 @@ extern "C"
 
 		auto activeIds = dev->getActiveFieldIds();
 
-		
 		for(int i = 0; i < n; i++)
 		{
 			auto it = std::find(activeIds.begin(), activeIds.end(), fieldIds[i]);
@@ -192,6 +196,7 @@ extern "C"
 		// Initialize return values (ensure theya re all set to false)
 		memset(success, 0, n);
 		int returnCount = 0;
+		auto dev = commManager->getDevicePtr(devId);
 
 		// Check input parameters
 		if(!dataBuffer)
@@ -199,7 +204,6 @@ extern "C"
 			std::cout << "Invalid Input buffer or size" << std::endl;
 			return returnCount;
 		}
-		auto dev = commManager.getDevicePtr(devId);
 		if(!dev)
 		{
 			std::cout << "Device does not exist" << std::endl;
@@ -210,7 +214,8 @@ extern "C"
 			std::cout << "Device does not have data" << std::endl;
 			return returnCount;
 		}
-		if(dev->getDataPtr( dev->dataCount()-1, (FX_DataPtr)devDataPriv, MAX_L ) == 0)
+		auto readSuccess = dev->getDataPtr( dev->dataCount()-1, (FX_DataPtr)devDataPriv, MAX_L );
+		if(readSuccess == 0)
 		{
 			std::cout << "Failed to read device data" << std::endl;
 			return returnCount;
@@ -306,7 +311,7 @@ extern "C"
 
 	void findPoles(int devId, int block)
 	{
-		if(!commManager.haveDevice(devId)) return;
+		if(!commManager->isValidDevId(devId)) return;
 		commManager->enqueueCommand(devId, tx_cmd_calibration_mode_rw, CALIBRATION_FIND_POLES);
 
 		if(block)
