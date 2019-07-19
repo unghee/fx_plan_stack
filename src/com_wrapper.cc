@@ -1,4 +1,3 @@
-
 #include "commanager.h"
 #include "cmd-ActPack.h"
 #include "flexsea_system.h"
@@ -31,52 +30,45 @@ extern "C"
 	#include "flexsea_config.h"
 	#include "flexsea_cmd_calibration.h"
 
-	static CommManager commManager;
-	static std::thread *commThread = nullptr;
+	CommManager* commManager;
+	// static std::thread *commThread = nullptr;
 
 	typedef std::tuple<uint8_t, int32_t, uint8_t, int16_t, int16_t, int16_t, int16_t, uint8_t> CtrlParams;
 	static std::unordered_map<int, CtrlParams> ctrlsMap;
 
 	CommManager* fxGetManager(void)
 	{
-		return &commManager;
+		return commManager;
 	}
 
 	void fxSetup()
 	{
-			initFlexSEAStack_minimalist(FLEXSEA_PLAN_1);
-			commManager.taskPeriod = 2;
-			commThread = new std::thread(&CommManager::runPeriodicTask, &commManager);
+		initFlexSEAStack_minimalist(FLEXSEA_PLAN_1);
+		commManager = new CommManager();
 	}
 
 	void fxCleanup()
 	{
-		commManager.quitPeriodicTask();
-		if(commThread)
-		{
-			commThread->join();
-			delete commThread;
-			commThread = nullptr;
-		}
+		delete commManager;
 	}
 
 	// open serial port named portName at portIdx [0-3],
 	void fxOpen(char* portName, int portIdx)
 	{
-		std::string pn = portName;
-		//std::cout << pn << std::endl;
-		commManager.open(pn, portIdx);
+		commManager->loadAndGetDevice(portIdx);
+		// commManager.open(std::string(portName), portIdx);
 	}
 
 	uint8_t fxIsOpen(int portIdx)
 	{
-		return commManager.isOpen(portIdx);
+		return commManger->isOpen(portIdx);
 	}
 
 	// close port at portIdx
 	void fxClose(uint16_t portIdx)
 	{
-		commManager.close(portIdx);
+		return commManager->closeDevice(portIdx);
+		// commManager.close(portIdx);
 	}
 
 	// get the ids of all connected FlexSEA devices
@@ -85,18 +77,15 @@ extern "C"
 	// n is written with the new length of the array
 	void fxGetDeviceIds(int *idarray, int n)
 	{
-		std::vector<int> ids = commManager.getDeviceIds();
+		std::vector<int> ids = commManager->getDeviceIds();
 
-		int i;
-		for(i = 0; i < n && (unsigned int)i < ids.size(); ++i)
-		{
+		size_t i;
+		for(i = 0; i < n && i < ids.size(); ++i){
 				idarray[i] = ids[i];
 		}
 
-		while(i < n)
-		{
-				idarray[i++] = -1;
-		}
+		//fill rest of array with -1
+		std::fill_n(std::begin(idarray) + i, std::end(idarray), -1);
 	}
 
 	static CtrlParams defaultCtrlParams()
@@ -126,19 +115,19 @@ extern "C"
 	// start streaming data from device with id: devId, with given configuration
 	uint8_t fxStartStreaming(int devId, int freq, bool shouldLog, int shouldAuto)
 	{
-		if(!commManager.haveDevice(devId)) return 0;
+		if(!commManager->isValidDevId(devId)) return 0;
 		if(!ctrlsMap.count(devId))
 				ctrlsMap.insert({devId, defaultCtrlParams()});
 
 		// stream reading and commands at same rate
-		commManager.startStreaming(devId, freq, shouldLog, shouldAuto);
+		commManager->startStreaming(devId, freq, shouldLog, shouldAuto);
 		return 1;
 	}
 
 	// stop streaming data from device with id: devId
 	uint8_t fxStopStreaming(int devId)
 	{
-		return commManager.stopStreaming(devId);
+		return commManager->stopStreaming(devId);
 	}
 
 	uint8_t fxSetStreamVariables(int devId, int* fieldIds, int n)
@@ -151,7 +140,7 @@ extern "C"
 			m.push_back(fieldIds[i]);
 		}
 
-		return !commManager.writeDeviceMap(devId, m);
+		return !commManager->writeDeviceMap(devId, m);
 	}
 
 	const int MAX_L = 100;
@@ -256,26 +245,26 @@ extern "C"
 	{
 		if(!ctrlsMap.count(devId)) return;
 		std::get<0> ( ctrlsMap.at(devId) ) = ctrlMode;
-		commManager.enqueueCommand(devId, sendCommandMessage, devId);
+		commManager->enqueueCommand(devId, sendCommandMessage, devId);
 	}
 
 	void setMotorVoltage(int devId, int mV)
 	{
 		if(!ctrlsMap.count(devId)) return;
 		std::get<1> ( ctrlsMap.at(devId) ) = mV;
-		commManager.enqueueCommand(devId, sendCommandMessage, devId);
+		commManager->enqueueCommand(devId, sendCommandMessage, devId);
 	}
 	
 	void readUser(int devId)
 	{
-		commManager.enqueueCommand(devId, tx_cmd_data_user_r, 0);
+		commManager->enqueueCommand(devId, tx_cmd_data_user_r, 0);
 	}
 	
 	
 	void writeUser(int devId, int index, int val)
 	{
 		user_data_1.w[index] = val;
-		commManager.enqueueCommand(devId, tx_cmd_data_user_w, index);
+		commManager->enqueueCommand(devId, tx_cmd_data_user_w, index);
 	}
 
 	int* getUserRead()
@@ -292,33 +281,33 @@ extern "C"
 	{
 		if(!ctrlsMap.count(devId)) return;
 		std::get<1> ( ctrlsMap.at(devId) ) = cur;
-		commManager.enqueueCommand(devId, sendCommandMessage, devId);
+		commManager->enqueueCommand(devId, sendCommandMessage, devId);
 	}
 
 	void setPosition( int devId, int pos )
 	{
 		if(!ctrlsMap.count(devId)) return;
 		std::get<1> ( ctrlsMap.at(devId) ) = pos;
-		commManager.enqueueCommand(devId, sendCommandMessage, devId);
+		commManager->enqueueCommand(devId, sendCommandMessage, devId);
 	}
 
 	void setGains(int devId, int g0, int g1, int g2, int g3)
 	{
 		if(!ctrlsMap.count(devId)) return;
 		get_tuple<2,3,4,5,6>( ctrlsMap.at(devId) ) = std::make_tuple(CHANGE, g0, g1, g2, g3);
-		commManager.enqueueCommand(devId, sendCommandMessage, devId);
+		commManager->enqueueCommand(devId, sendCommandMessage, devId);
 	}
 
 	void actPackFSM2(int devId, int on)
 	{
 		get_tuple<0,7>( ctrlsMap.at(devId) ) = std::make_tuple(CTRL_NONE, on ? SYS_NORMAL : SYS_DISABLE_FSM2);
-		commManager.enqueueCommand(devId, sendCommandMessage, devId);
+		commManager->enqueueCommand(devId, sendCommandMessage, devId);
 	}
 
 	void findPoles(int devId, int block)
 	{
 		if(!commManager.haveDevice(devId)) return;
-		commManager.enqueueCommand(devId, tx_cmd_calibration_mode_rw, CALIBRATION_FIND_POLES);
+		commManager->enqueueCommand(devId, tx_cmd_calibration_mode_rw, CALIBRATION_FIND_POLES);
 
 		if(block)
 		{

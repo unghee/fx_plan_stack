@@ -5,55 +5,57 @@
 #include <iostream>
 
 
-FlexseaDevice::FlexseaDevice(int _id, int _port, FlexseaDeviceType _type, int role, int dataBuffSize):
-	id(_id)
-	, port(_port)
-	, type(_type)
-	, numFields( deviceSpecs[_type].numFields )
-	, dataMutex(&_dataMutex)
-	, shortId(id)
+FlexseaDevice::FlexseaDevice(int id, int port, FlexseaDeviceType type, int role, int dataBuffSize):
+	_devId(id)
+	, _portIdx(port)
+	, _devType(type)
+	, _numFields( deviceSpecs[type].numFields )
+	, _shortId(_devId)
 	, _role(role)
-	, _data(dataBuffSize, deviceSpecs[_type].numFields + 1 )
+	, _data(dataBuffSize, deviceSpecs[type].numFields + 1 )
 {
 	memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
 
-	for(int i = 0; i < numFields; ++i)
-	{
-		const char* c_str = deviceSpecs[_type].fieldLabels[i];
-		if(c_str)
+	for(int i = 0; i < _numFields; ++i){
+		const char* c_str = deviceSpecs[type].fieldLabels[i];
+		if(c_str){
 			fieldLabels.push_back(c_str);
-		else
+		}
+		else{
 			throw std::invalid_argument("Device Spec for given type is invalid, causing null pointer access");
-	 }
+		}
+	}
 }
 
-FlexseaDevice::FlexseaDevice(int _id, int _shortid, int _port, FlexseaDeviceType _type, int role, int dataBuffSize):
-	id(_id)
-	, port(_port)
-	, type(_type)
-	, numFields( deviceSpecs[_type].numFields )
-	, dataMutex(&_dataMutex)
-	, shortId(_shortid)
+FlexseaDevice::FlexseaDevice(int id, int shortid, int port, FlexseaDeviceType type, int role, int dataBuffSize):
+	_devId(id)
+	, _portIdx(port)
+	, _devType(type)
+	, _numFields( deviceSpecs[type].numFields )
+	, _shortId(shortid)
 	, _role(role)
-	, _data(dataBuffSize, deviceSpecs[_type].numFields + 1 )
+	, _data(dataBuffSize, deviceSpecs[type].numFields + 1 )
 {
 	memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
 
-	for(int i = 0; i < numFields; ++i)
-	{
-		const char* c_str = deviceSpecs[_type].fieldLabels[i];
-		if(c_str)
+	for(int i = 0; i < _numFields; ++i){
+		const char* c_str = deviceSpecs[type].fieldLabels[i];
+		if(c_str){
 			fieldLabels.push_back(c_str);
-		else
+		}
+		else{
 			throw std::invalid_argument("Device Spec for given type is invalid, causing null pointer access");
-	 }
+		}
+	}
+
 }
 
-FlexseaDevice::FlexseaDevice(int _id, int _port, std::vector<std::string> fieldLabels, int role, int dataBuffSize)
-	: id(_id), port(_port), type(FX_CUSTOM)
-	, numFields(fieldLabels.size())
-	, dataMutex(&_dataMutex)
-	, shortId(id)
+FlexseaDevice::FlexseaDevice(int id, int port, std::vector<std::string> fieldLabels, int role, int dataBuffSize)
+	: _devId(id)
+	, _portIdx(port)
+	, _devType(FX_CUSTOM)
+	, _numFields(fieldLabels.size())
+	, _shortId(id)
 	, _role(role)
 	, fieldLabels(fieldLabels)
 	, _data( dataBuffSize, fieldLabels.size() + 1 )
@@ -65,29 +67,29 @@ FlexseaDevice::FlexseaDevice(int _id, int _port, std::vector<std::string> fieldL
 std::vector<std::string> FlexseaDevice::getActiveFieldLabels() const
 {
 	bool equal = true;
-	for(int i = 0; i < FX_BITMAP_WIDTH && equal; i++)
-	{
-		if(lastFieldLabelMap[i] != this->bitmap[i])
+	for(int i = 0; i < FX_BITMAP_WIDTH && equal; i++){
+		if(lastFieldLabelMap[i] != this->bitmap[i]){
 			equal = false;
+		}
 	}
 
-	if(equal)
+	if(equal){
 		return lastRequest;
+	}
 
 	uint16_t fieldId = 0;
 	lastRequest.clear();
 
-	 while(fieldId < 32*FX_BITMAP_WIDTH && fieldId < numFields)
-	{
-		if(IS_FIELD_HIGH(fieldId, this->bitmap))
-		{
+	while(fieldId < 32*FX_BITMAP_WIDTH && fieldId < _numFields){
+		if(IS_FIELD_HIGH(fieldId, this->bitmap)){
 			lastRequest.push_back( fieldLabels.at(fieldId) );
 		}
 
 		fieldId++;
 	}
-	for(int i = 0; i < FX_BITMAP_WIDTH; i++)
+	for(int i = 0; i < FX_BITMAP_WIDTH; i++){
 		lastFieldLabelMap[i] = this->bitmap[i];
+	}
 
 	return lastRequest;
 }
@@ -95,8 +97,8 @@ std::vector<std::string> FlexseaDevice::getActiveFieldLabels() const
 std::vector<int> FlexseaDevice::getActiveFieldIds() const
 {
 	std::vector<int> r;
-	r.reserve(numFields);
-	for(int fieldId = 0; fieldId < numFields; ++fieldId)
+	r.reserve(_numFields);
+	for(int fieldId = 0; fieldId < _numFields; ++fieldId)
 	{
 		if(IS_FIELD_HIGH(fieldId, this->bitmap))
 			r.push_back( fieldId );
@@ -119,7 +121,7 @@ uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputS
 {
 	if(index < 0 || (unsigned int)index >= dataCount()) return 0;
 
-	std::lock_guard<std::recursive_mutex> lk(*dataMutex);
+	std::unique_lock<std::mutex> lk(dataLock);
 
 	int32_t *ptr = ((int32_t*)_data.peek(index));
 
@@ -128,7 +130,7 @@ uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputS
 	{
 		int field = fieldIds[i];
 
-		if( (field >= 0) && (field < numFields) && IS_FIELD_HIGH(field, bitmap)  )
+		if( (field >= 0) && (field < _numFields) && IS_FIELD_HIGH(field, bitmap)  )
 		{
 			output[outIdx] = ptr[ 1 + field ];
 			fieldIds[outIdx] = field;
@@ -143,29 +145,24 @@ uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputS
 uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outputSize) const
 {
 	int32_t *srcPtr = 0;
-	try
-	{
-		if(index >= dataCount())
-		{
+	try{
+		if(index >= dataCount()){
 			throw InvalidIndex();
 		}
 		srcPtr = ((int32_t*)_data.peek(index));
-		if(!srcPtr)
-		{
+		if(!srcPtr){
 			throw InaccessiblePointer();
 		}
 
-		int s = outputSize >  (1 + numFields) ? (1 + numFields) : outputSize;
+		int s = outputSize >  (1 + _numFields) ? (1 + _numFields) : outputSize;
 		size_t sizeData =  s  * sizeof(int32_t);
 		memcpy(ptr, srcPtr, sizeData);
 	}
-	catch(InvalidIndex& e)
-	{
+	catch(InvalidIndex& e){
 		std::cout << e.what() << std::endl;
 		return 0;	
 	}
-	catch(InaccessiblePointer& e)
-	{
+	catch(InaccessiblePointer& e){
 		std::cout << e.what() << std::endl;
 		return 0;
 	}
@@ -175,26 +172,28 @@ uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outp
 
 uint32_t FlexseaDevice::getLatestTimestamp() const
 {
-	if(_data.count())
+	if(_data.count()){
 		return _data.peekBack()[0];
+	}
 
 	return 0;
 }
 
 uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
 {
-	std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
+	std::unique_lock<std::mutex> lk(dataLock);
 
 	size_t lb = 0, ub = _data.count();
 	size_t i = ub/2;
 	uint32_t t = _data.peek(i)[0];
 
-	while(i != lb && lb != ub)
-	{
-		if(timestamp > t)
+	while(i != lb && lb != ub){
+		if(timestamp > t){
 			lb = i;             //go right
-		else
+		}
+		else{
 			ub = i;             //go left
+		}
 
 		i = (lb + ub) / 2;
 		t = _data.peek(i)[0];
@@ -234,17 +233,20 @@ inline size_t FlexseaDevice::findIndexAfterTime(uint32_t timestamp) const
 
 	size_t lb = 0, ub = _data.count();
 
-	if(ub == 0) return 0;
+	if(ub == 0){
+		return 0;
+	}
 
 	size_t i = ub / 2;
 	uint32_t t = _data.peek(i)[0];
 
-	while(i != lb && lb != ub)
-	{
-		if(timestamp >= t)
+	while(i != lb && lb != ub){
+		if(timestamp >= t){
 			lb = i;
-		else
+		}
+		else{
 			ub = i;
+		}
 
 		i = (lb + ub) / 2;
 		t = _data.peek(i)[0];
@@ -258,7 +260,7 @@ inline size_t FlexseaDevice::findIndexAfterTime(uint32_t timestamp) const
 
 uint32_t FlexseaDevice::getDataAfterTime(int field, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<int32_t> &data_output) const
 {
-	std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
+	std::unique_lock<std::mutex> lk(dataLock);
 
 	if(!IS_FIELD_HIGH(field, this->bitmap)) return timestamp;
 
@@ -270,25 +272,27 @@ uint32_t FlexseaDevice::getDataAfterTime(int field, uint32_t timestamp, std::vec
 	data_output.reserve(_data.count() - i);
 
 	FX_DataPtr p = nullptr;
-	while(i < _data.count())
-	{
+	while(i < _data.count()){
 		p = _data.peek(i++);
 		ts_output.push_back(p[0]);
 		data_output.push_back(p[field+1]);
 	}
 
-	if(p)
+	if(p){
 		return p[0];
-	else
+	}
+	else{
 		return timestamp;
+	}
 }
 
 uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<std::vector<int32_t>> &data_output, unsigned max) const
 {
-	std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
+	std::unique_lock<std::mutex> lk(dataLock);
 
-	for(auto && field : fieldIds )
+	for(auto && field : fieldIds ){
 		if(!IS_FIELD_HIGH(field, this->bitmap)) return timestamp;
+	}
 
 	size_t i = findIndexAfterTime(timestamp), j;
 	size_t n = std::min((unsigned)(_data.count() - i), (unsigned)max);
@@ -299,23 +303,26 @@ uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint3
 	data_output.clear();
 	data_output.resize( nf );
 
-	for(j = 0; j < nf; ++j)
+	for(j = 0; j < nf; ++j){
 		data_output.at(j).reserve(n);
+	}
 
 	FX_DataPtr p = nullptr;
-	while(i < _data.count() && --n)
-	{
+	while(i < _data.count() && --n){
 		p = _data.peek((int)i++);
 		ts_output.push_back(p[0]);
 
-		for(j = 0; j < nf; ++j)
+		for(j = 0; j < nf; ++j){
 			data_output.at(j).push_back(p[fieldIds.at(j)+1]);
+		}
 	}
 
-	if(p)
+	if(p){
 		return p[0];
-	else
+	}
+	else{
 		return timestamp;
+	}
 }
 
 
@@ -326,11 +333,12 @@ uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint3
 
 uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, std::vector<uint32_t> &timestamps, std::vector<std::vector<int32_t>> &outputData) const
 {
-	size_t i = 0, sizeData = numFields * sizeof(int32_t);
-	std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
+	std::unique_lock<std::mutex> lk(dataLock);
+	size_t i = 0, sizeData = _numFields * sizeof(int32_t);
 
-	while(i < _data.count() && _data.peek(i)[0] <= timestamp)
+	while(i < _data.count() && _data.peek(i)[0] <= timestamp){
 		i++;
+	}
 
 	timestamps.clear();
 	timestamps.reserve(_data.count() - i);
@@ -339,18 +347,19 @@ uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, std::vector<uint32_
 
 	FX_DataPtr p = nullptr;
 
-	while(i < _data.count())
-	{
+	while(i < _data.count()){
 		p = _data.peek(i++);
 		timestamps.push_back(p[0]);
-		outputData.emplace_back(numFields);
+		outputData.emplace_back(_numFields);
 		memcpy(outputData.back().data(), p+1, sizeData);
 	}
 
-	if(p)
+	if(p){
 		return p[0];
-	else
+	}
+	else{
 		return timestamp;
+	}
 }
 
 // looks awful but works
@@ -364,19 +373,22 @@ uint32_t numberOfSetBits(uint32_t i)
 
 int FlexseaDevice::getNumActiveFields() const
 {
+	std::unique_lock<std::mutex> lk(dataLock);
 	int count = 0;
-	for(int i = 0; i < FX_BITMAP_WIDTH; i++)
+	for(int i = 0; i < FX_BITMAP_WIDTH; i++){
 		count += numberOfSetBits(this->bitmap[i]);
+	}
 
 	return count;
 }
 
 double FlexseaDevice::getDataRate() const
 {
-	std::lock_guard<std::recursive_mutex> lk(*dataMutex);
+	std::unique_lock<std::mutex> lk(dataLock);
 	const int AVG_OVER = 10;
-	if(_data.count() < AVG_OVER)
+	if(_data.count() < AVG_OVER){
 		return -1;
+	}
 
 	size_t i = _data.count() - AVG_OVER;
 	double avg_period = ((double)(_data.peekBack()[0] - _data.peek(i)[0])) / AVG_OVER;
@@ -385,18 +397,56 @@ double FlexseaDevice::getDataRate() const
 
 std::string FlexseaDevice::getName() const
 {
-	if(this->type < NUM_DEVICE_TYPES && this->type != FX_NONE)
+	if(_devType < NUM_DEVICE_TYPES && _devType != FX_NONE){
 		return ( fieldLabels.at(0) );
-	else if(this->type == FX_CUSTOM)
+	}
+	else if(_devType == FX_CUSTOM){
 		return ( "Custom Device" );
-
-	return  "";
+	}
+	else{
+		return  "";
+	}
 }
 
 void FlexseaDevice::getBitmap(uint32_t* out) const {
+	std::unique_lock<std::mutex> lk(dataLock);
 	memcpy(out, bitmap, FX_BITMAP_WIDTH*sizeof(uint32_t));
 }
 
 void FlexseaDevice::setBitmap(uint32_t* in) {
+	std::unique_lock<std::mutex> lk(dataLock);
 	memcpy(bitmap, in, FX_BITMAP_WIDTH*sizeof(uint32_t));
+}
+
+void FlexseaDevice::updateData(uint8_t *buf){
+	std::unique_lock<std::mutex> lk(dataLock);
+
+	FlexseaDeviceSpec ds = deviceSpecs[_devType];
+	FX_DataPtr fxDataPtr = _data.getWrite();
+
+	// read into the rest of the data like a buffer
+	assert(fxDataPtr);
+	if(fxDataPtr){
+		memcpy(fxDataPtr, buf+MP_TSTP, sizeof(uint32_t));
+		uint8_t *dataPtr = (uint8_t*)(fxDataPtr+1);
+		uint16_t j, fieldOffset=0, index=MP_DATA1+1;
+		for(j = 0; j < ds.numFields; j++)
+		{
+			if(IS_FIELD_HIGH(j, bitmap))
+			{
+				uint8_t ft = ds.fieldTypes[j];
+				uint8_t fw = FORMAT_SIZE_MAP[ft];
+				memcpy(dataPtr + fieldOffset, buf + index, fw);
+
+				if( ft == FORMAT_16S || ft == FORMAT_8S )
+				{
+					uint8_t val = ( *(dataPtr + fieldOffset + fw - 1) >> 7 ) ? 0xFF : 0;
+					memset( dataPtr + fieldOffset + fw, val, sizeof(int32_t) - fw);
+				}
+
+				index+=fw;
+			}
+			fieldOffset += 4; // storing each value as a separate int32
+		}
+	}
 }

@@ -1,8 +1,11 @@
+
 #include "device.h"
 
 using namespace std::chrono_literals;
 
-Device::Device(int portIdx): portIdx(portIdx)
+Device::Device(std::string portName, int portIdx):
+											portName(portName), 
+											portIdx(portIdx)
 {
 	streamCmd = {false, CMD_CODE_BASE, nullptr};
 	serialDeviceIsSetUp = false;
@@ -18,7 +21,7 @@ Device::~Device(){
 	stopThreads();
 
 	if(serialDeviceIsSetUp){
-		if(streamCmd.func != nulptr){
+		if(streamCmd.func != nullptr){
 			delete streamCmd.func;
 		}
 		delete dataLogger;
@@ -27,7 +30,7 @@ Device::~Device(){
 
 }
 
-int getDevId(){
+int Device::getDevId(){
 	std::unique_lock<std::mutex> lk(stateLock);
 	if(serialDeviceIsSetUp){
 		return devId;
@@ -37,7 +40,7 @@ int getDevId(){
 	}
 }
 
-ConnectionState getDeviceStatus(){
+ConnectionState Device::getConnectionState(){
 	std::unique_lock<std::mutex> lk(stateLock);
 	return connectionState;
 }
@@ -59,12 +62,11 @@ std::vector<int> Device::getStreamingFreqs(){
 	std::unordered_set<int> communicatingFreqs;
 	{
 		std::unique_lock<std::mutex> lk(streamLock);
-		for(int freq : TIMER_FREQS_IN_HZ){
-			if(!streamList.at(freq).empty()){
-				communicatingFreqs.insert(freq);
-			}
+		if(streamCmd.shouldStream){
+			communicatingFreqs.insert(streamingFreq);
 		}
 	}
+
 	{
 		std::unique_lock<std::mutex> lk(autoStreamLock);
 		for(auto & autoStream : autoStreamList){
@@ -248,7 +250,7 @@ void Device::sendCommands(){
 			incomingCommands.pop();
 			lk.unlock();
 
-			flexseaSerial.write(m.numBytes, m.dataPacket.get(), serialDevice->portIdx);
+			flexseaSerial.write(m.numBytes, m.dataPacket.get(), portIdx);
 		}
 	}
 }
@@ -269,7 +271,7 @@ void Device::readFromDevice(){
 		if(!serialDeviceIsSetUp && serialDevice != nullptr){
 			connectionState = OPEN; //now it is actually open
 			serialDeviceIsSetUp = true;
-			devId = serialDevice->devId;
+			devId = serialDevice->_devId;
 			setUpLogging();
 			startStreamingThreads();
 		}

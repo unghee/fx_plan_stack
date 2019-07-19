@@ -39,13 +39,17 @@ public:
 	const std::string portName;
 	const int portIdx;
 
-	Device(int portIdx);
+	Device(std::string portName, int portIdx);
 	~Device();
+
+	// uses flexseaserial
+	bool tryOpen();
+	void close();
 
 	//return -1 if not set
 	int getDevId();
 
-	ConnectionState getDeviceStatus();
+	ConnectionState getConnectionState();
 
 	//Getters and setters
 	// bool getAutoStream();
@@ -125,9 +129,7 @@ private:
 	void startStreamingThreads();
 	void stopThreads();
 
-	// uses flexseaserial
-	bool tryOpen();
-	void close();
+
 
 	
     static const int CMD_CODE_BASE = 256;
