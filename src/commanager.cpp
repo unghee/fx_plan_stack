@@ -8,13 +8,10 @@ extern "C" {
 using namespace std::chrono_literals;
 
 
-CommManager::CommManager(std::vector<std::string> portNames, std::vector<uint16_t> ports)
+CommManager::CommManager(std::vector<std::string> portNames)
 {
-	if(portNames.size() != ports.size()){
-		return NULL;
-	}
 	for(int i = 0; i < portNames.size(); ++i){
-		devicePortMap[ports[i]] = new Device(portNames[i], ports[i]);
+		devicePortMap[i] = new Device(portNames[i], i);
 	}
 }
 
@@ -34,23 +31,23 @@ int CommManager::loadAndGetDevice(uint16_t portIdx){
 	int attempts = 0;
 	if(devicePortMap[portIdx]->tryOpen()){
 		while(devicePortMap[portIdx]->getDevId() == -1 && attempts++ <= 5){
-			this_thread::sleep_for(100ms);
+			std::this_thread::sleep_for(100ms);
 		}
 
 		if(attempts > 5){
 			return -1;
 		}
 		else{
-			int devId = devicePortMap[portIdx]->getDevId;
+			int devId = devicePortMap[portIdx]->getDevId();
 			deviceMap[devId] = devicePortMap[portIdx];
-			devIds.push_back(devId);
-			return devicePortMap[portIdx]->getDevId;
+			deviceIds.push_back(devId);
+			return devId;
 		}
 	}
 }
 
-int isOpen(int portIdx){
-	return (devicePortMap[portIdx]->getConnectionState >= OPEN);
+int CommManager::isOpen(int portIdx){
+	return (devicePortMap[portIdx]->getConnectionState() >= OPEN);
 }
 
 void CommManager::closeDevice(uint16_t portIdx)
@@ -63,11 +60,11 @@ std::vector<int> CommManager::getDeviceIds(){
 	return deviceIds;
 }
 
-int CommManager::getStreamingFrequencies(int freq)
+std::vector<int> CommManager::getStreamingFrequencies() const
 {
 	std::vector<int> frequencies;
 	frequencies.resize(NUM_TIMER_FREQS);
-	memcpy(frequencies.data, timerFrequencies, sizeof(int) * NUM_TIMER_FREQS);
+	memcpy(frequencies.data, TIMER_FREQS_IN_HZ, sizeof(int) * NUM_TIMER_FREQS);
 	return frequencies;
 }
 
@@ -80,7 +77,7 @@ bool isValidFreq(int freq){
 }
 
 // We may want to bake this in to accessing a device
-bool isValidDevId(int devId){
+bool CommManager::isValidDevId(int devId){
 	if(deviceMap.find(devId) == deviceMap.end()){
 		std::cerr << "Cannot find device with devId: " << devId << std::endl;
 		return false;
@@ -90,7 +87,7 @@ bool isValidDevId(int devId){
 
 bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode)
 {
-	if(!isValidFreq || !isValidDevId){
+	if(!isValidFreq(freq) || !isValidDevId(devId)){
 		return false;
 	}
 
@@ -102,14 +99,14 @@ bool CommManager::startStreaming(int devId, int freq, bool shouldLog, int should
 		device->addStream(freq, cmdCode);
 	}
 
-	device->setAutoStream(shouldAuto)
 	device->setShouldLog(shouldLog);
 }
 
 int CommManager::startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc)
 {
-	if(!isValidFreq || !isValidDevId)
+	if(!isValidFreq(freq) || !isValidDevId(devId)){
 		return false;
+	}
 
 	Device* device = deviceMap.at(devId);
 	device->addStream(freq, streamFunc);
@@ -148,7 +145,7 @@ void CommManager::setColumnValue(unsigned col, int val)
 	DataLogger::setColumnValue(col, val);
 }
 
-bool CommManager::writeDeviceMap(int devId, uint32_t *map)
+int CommManager::writeDeviceMap(int devId, uint32_t *map)
 {
 	if(!isValidDevId(devId))
 		return false;
@@ -175,6 +172,7 @@ int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
 	return writeDeviceMap(devId, map);
 }
 
+template<typename T, typename... Args>
 bool CommManager::enqueueCommand(int devId, T tx_func, Args&&... tx_args)
 {
 	if(!isValidDevId(devId))

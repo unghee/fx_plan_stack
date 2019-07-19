@@ -22,7 +22,7 @@ class CommManager
 {
 
 public:
-    CommManager();
+    CommManager(std::vector<std::string> portNames);
     ~CommManager();
 
     //returns -1 if cannot connect to device
@@ -31,6 +31,8 @@ public:
     int isOpen(int portIdx);
     void closeDevice(uint16_t portIdx);//
     std::vector<int> getDeviceIds();
+
+    bool isValidDevId(int devId);
 
 
     std::vector<int> getStreamingFrequencies() const;//

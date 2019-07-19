@@ -1,102 +1,102 @@
-#include "commtester.h"
-#include <cstring>
+// #include "commtester.h"
+// #include <cstring>
 
-extern "C" {
-    #include "flexsea_cmd_tools.h"
-}
+// extern "C" {
+//     #include "flexsea_cmd_tools.h"
+// }
 
-class CommTestRecord
-{
-public:
-    CommTestRecord(int id, int f, bool a) : devId(id), freq(f), usedAuto(a) {}
+// class CommTestRecord
+// {
+// public:
+//     CommTestRecord(int id, int f, bool a) : devId(id), freq(f), usedAuto(a) {}
 
-    int devId, freq;
-    bool usedAuto;
+//     int devId, freq;
+//     bool usedAuto;
 
-    float throughputRate, lossRate, qualityRate;
-    uint16_t  numPacketsReceived, numPacketsExpected;
-};
+//     float throughputRate, lossRate, qualityRate;
+//     uint16_t  numPacketsReceived, numPacketsExpected;
+// };
 
-CommTester::CommTester(CommManager &cm):
-    _commManager(cm)
-{
-    resetStats();
-}
-CommTester::~CommTester()
-{
-    if(isTesting)
-        stopTest();
-}
+// CommTester::CommTester(CommManager &cm):
+//     _commManager(cm)
+// {
+//     resetStats();
+// }
+// CommTester::~CommTester()
+// {
+//     if(isTesting)
+//         stopTest();
+// }
 
-void CommTester::startTest(int devId, const CommTestParams& params)
-{
-    if(!_commManager.haveDevice(devId))    return;
+// void CommTester::startTest(int devId, const CommTestParams& params)
+// {
+//     if(!_commManager.haveDevice(devId))    return;
 
-    testStartTime = std::chrono::system_clock::now();
+//     testStartTime = std::chrono::system_clock::now();
 
-    auto tx_func =
-            [this] (uint8_t* buf, uint8_t* cmdCode, uint8_t* cmdType, uint16_t* len)
-            {
-                tx_cmd_tools_comm_test_r(buf, cmdCode, cmdType, len, 1, 20, this->packetIndex);
-                this->packetIndex++;
-            };
+//     auto tx_func =
+//             [this] (uint8_t* buf, uint8_t* cmdCode, uint8_t* cmdType, uint16_t* len)
+//             {
+//                 tx_cmd_tools_comm_test_r(buf, cmdCode, cmdType, len, 1, 20, this->packetIndex);
+//                 this->packetIndex++;
+//             };
 
-    isTesting = _commManager.startStreaming(devId, params.freq, false, tx_func);
-    if(isTesting)
-        testId = devId;
-}
+//     isTesting = _commManager.startStreaming(devId, params.freq, false, tx_func);
+//     if(isTesting)
+//         testId = devId;
+// }
 
-void CommTester::stopTest()
-{
-    _commManager.stopStreaming(testId);
-    testId = -1;
-    isTesting = false;
+// void CommTester::stopTest()
+// {
+//     _commManager.stopStreaming(testId);
+//     testId = -1;
+//     isTesting = false;
 
-    prevSent=sentPackets;
-    prevReceived=goodPackets+badPackets;
-}
+//     prevSent=sentPackets;
+//     prevReceived=goodPackets+badPackets;
+// }
 
-void CommTester::resetStats()
-{
-    sentPackets = 0;
-    goodPackets = 0;
-    badPackets = 0;
-    prevSent = 0;
-    prevReceived = 0;
-    this->packetIndex = 0;
+// void CommTester::resetStats()
+// {
+//     sentPackets = 0;
+//     goodPackets = 0;
+//     badPackets = 0;
+//     prevSent = 0;
+//     prevReceived = 0;
+//     this->packetIndex = 0;
 
-    if(isTesting) testStartTime = std::chrono::system_clock::now();
-}
+//     if(isTesting) testStartTime = std::chrono::system_clock::now();
+// }
 
-int CommTester::getPacketsSent() const { return this->packetIndex; }
+// int CommTester::getPacketsSent() const { return this->packetIndex; }
 
-std::tuple<int, int, int> CommTester::getPacketsReceived() const {
-    std::tuple<int, int, int> r { goodPackets + badPackets, goodPackets, badPackets};
-    return r;
-}
+// std::tuple<int, int, int> CommTester::getPacketsReceived() const {
+//     std::tuple<int, int, int> r { goodPackets + badPackets, goodPackets, badPackets};
+//     return r;
+// }
 
-float CommTester::getThroughput() const { return sentPackets == 0 ? 0 : ((float)(goodPackets+badPackets)) / sentPackets; }
-float CommTester::getLossRate() const { return sentPackets == 0 ? 0 : ((float)(sentPackets-goodPackets-badPackets)) / sentPackets; }
-float CommTester::getQualityRate() const {
-    int received = goodPackets + badPackets;
-    return (received) == 0 ? 0 : ((float)goodPackets) / (received);
-}
+// float CommTester::getThroughput() const { return sentPackets == 0 ? 0 : ((float)(goodPackets+badPackets)) / sentPackets; }
+// float CommTester::getLossRate() const { return sentPackets == 0 ? 0 : ((float)(sentPackets-goodPackets-badPackets)) / sentPackets; }
+// float CommTester::getQualityRate() const {
+//     int received = goodPackets + badPackets;
+//     return (received) == 0 ? 0 : ((float)goodPackets) / (received);
+// }
 
-float CommTester::getSendRate() const {
-    if(!_commManager.haveDevice(testId))
-        isTesting = false;
+// float CommTester::getSendRate() const {
+//     if(!_commManager.haveDevice(testId))
+//         isTesting = false;
 
-    if(isTesting)
-        return (1000.0f * (sentPackets - prevSent)) / std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - this->testStartTime).count();
+//     if(isTesting)
+//         return (1000.0f * (sentPackets - prevSent)) / std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - this->testStartTime).count();
 
-    return 0;
-}
-float CommTester::getReceiveRate() const {
-    if(!_commManager.haveDevice(testId))
-        isTesting = false;
+//     return 0;
+// }
+// float CommTester::getReceiveRate() const {
+//     if(!_commManager.haveDevice(testId))
+//         isTesting = false;
 
-    if(isTesting)
-        return (1000.0f * (goodPackets+badPackets - prevReceived)) / std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - this->testStartTime).count();
+//     if(isTesting)
+//         return (1000.0f * (goodPackets+badPackets - prevReceived)) / std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - this->testStartTime).count();
 
-    return 0;
-}
+//     return 0;
+// }
