@@ -10,10 +10,10 @@
 #include <atomic>
 
 #include "rxhandler.h"
+#include "flexsea_comm_multi.h"
 #include "flexseadevicetypes.h"
 #include "flexseadevice.h"
 #include "circular_buffer.h"
-#include "periodictask.h"
 #include "serialdriver.h"
 #include "flexseadeviceprovider.h"
 
@@ -30,21 +30,32 @@ typedef std::vector<OpenAttempt> OpenAttemptList;
 #define FX_NUMPORTS 4
 
 //USB driver:
-#define CHUNK_SIZE				48
-#define MAX_SERIAL_RX_LEN		(CHUNK_SIZE*15 + 10)
-
+#define CHUNK_SIZE              48
+#define MAX_SERIAL_RX_LEN       (CHUNK_SIZE*15 + 10)
 
 /// \brief FlexseaSerial class manages serial ports and connected devices
-class FlexseaSerial : public PeriodicTask, public SerialDriver, public FlexseaDeviceProvider, public RxHandlerManager
+class FlexseaSerial : public SerialDriver, public RxHandlerManager
 {
 public:
+    class Message;
+
     FlexseaSerial();
     virtual ~FlexseaSerial();
 
     /// \brief opens portName at portIdx
     /// Starts an open attempt at the corresponding port. Later polls for the state of the port
     /// If the port opens successfully, FlexseaSerial periodically sends whoami messages until metadata is received
-    void open(std::string portName, int portIdx);
+    void open(std::string portName, uint16_t portIdx);
+
+    /// \brief close the corresponding port
+    virtual void close(uint16_t portIdx);
+    void readDevice(std::string portName, uint16_t portIdx);
+
+    // / \brief processes nb bytes at the port, analyses for packets, parses, etc
+    void processReceivedData(uint8_t* largeRxBuffer, size_t len, int port, int portIdx, FlexseaDevice* serialDevice);
+
+    template<typename T, typename... Args>
+    std::vector<Message> generateMessages(int devId, FlexseaDevice serialDevice, T tx_func, Args&&... tx_args);
 
     /// \brief DEPRECATED: sends a who am i (who are you really?) message at the given port
     /// You should never need to call this function explicitly, under the hood FlexseaSerial handles it for you
@@ -56,53 +67,27 @@ public:
     /// \brief [Blocking] write to the device specified by the device handle d
     /// GUI should prefer non blocking writes
     /// for a non blocking write, use CommManager::enqueueCommand
-    virtual void writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d);
+    virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t portIdx);
 
-    /// \brief close the corresponding port
-    virtual void close(uint16_t portIdx);
+    class Message {
+    public:
+        static void do_delete(uint8_t buf[]) { delete[] buf; }
 
-protected:
-    /// \brief see class PeriodicTask for more info
-    virtual void periodicTask();
-    /// \brief see class PeriodicTask for more info
-    virtual bool wakeFromLongSleep();
-    /// \brief see class PeriodicTask for more info
-    virtual bool goToLongSleep();
+        Message(uint8_t numberOfBytes, uint8_t* data): numBytes(numberOfBytes), 
+                                            dataPacket(std::shared_ptr<uint8_t>(new uint8_t[numberOfBytes], 
+                                            do_delete)){
+            uint8_t* temp = dataPacket.get();
+            for(int i = 0; i < numBytes; i++)
+                temp[i] = data[i];
+        }
 
-    /// \brief checks any ports that currently have open attempts
-    void serviceOpenAttempts(uint8_t delayed);
-
-    /// \brief checks any ports that currently open, receives data if any bytes are available
-    virtual void serviceOpenPorts();
-
-    /// \brief processes nb bytes at the port, analyses for packets, parses, etc
-    void processReceivedData(int port, size_t nb);
-
-    MultiCommPeriph *portPeriphs;
-    std::atomic<int> devicesAtPort[FX_NUMPORTS];
+        uint8_t numBytes;
+        std::shared_ptr<uint8_t> dataPacket;
+    };
 
 private:
-    int sysDataParser(int port);
-    inline int updateDeviceMetadata(int port, uint8_t *buf);
-    inline int updateDeviceData(int port, uint8_t *buf);
-
-    // open attempts needs serialization.
-    // It is written to from the control thread, read from the worker thread
-    OpenAttemptList openAttempts;
-    std::mutex openAttemptMut_;
-    std::atomic<int> haveOpenAttempts;
-    uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
+    MultiCommPeriph multiCommPeriph[FX_NUMPORTS];
 };
 
-class OpenAttempt {
-public:
-    explicit OpenAttempt(int portIdx_, std::string portName_, int tries_, int tryMax_, int delay_, int delayed_) :
-        portIdx(portIdx_), portName(portName_), tries(tries_), tryMax(tryMax_), delay(delay_), delayed(delayed_), markedToRemove(false) {}
-
-    int portIdx;
-    std::string portName;
-    int tries, tryMax, delay, delayed;
-    bool markedToRemove;
-};
 
 #endif // FLEXSEASERIAL_H
