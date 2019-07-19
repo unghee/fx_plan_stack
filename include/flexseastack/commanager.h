@@ -26,13 +26,15 @@ public:
     ~CommManager();
 
     //returns -1 if cannot connect to device
-    int loadAndGetDevice(uint16_t portIdx);
+    int loadAndGetDeviceId(uint16_t portIdx);
+    FlexseaDevice* getDevicePtr(int devId);
     /// \brief overloaded to manage streams and connected devices
     int isOpen(int portIdx);
     void closeDevice(uint16_t portIdx);//
     std::vector<int> getDeviceIds();
 
     bool isValidDevId(int devId);
+
 
 
     std::vector<int> getStreamingFrequencies() const;//

@@ -27,7 +27,7 @@ CommManager::~CommManager()
 }
 
 
-int CommManager::loadAndGetDevice(uint16_t portIdx){
+int CommManager::loadAndGetDeviceId(uint16_t portIdx){
 	int attempts = 0;
 	if(devicePortMap[portIdx]->tryOpen()){
 		while(devicePortMap[portIdx]->getDevId() == -1 && attempts++ <= 5){
@@ -44,6 +44,14 @@ int CommManager::loadAndGetDevice(uint16_t portIdx){
 			return devId;
 		}
 	}
+}
+
+FlexseaDevice* CommManager::getDevicePtr(int devId){
+	if(!isValidDevId(devId)){
+		return nullptr;
+	}
+
+	return deviceMap[devId]->getFlexseaDevice();
 }
 
 int CommManager::isOpen(int portIdx){
@@ -64,7 +72,7 @@ std::vector<int> CommManager::getStreamingFrequencies() const
 {
 	std::vector<int> frequencies;
 	frequencies.resize(NUM_TIMER_FREQS);
-	memcpy(frequencies.data, TIMER_FREQS_IN_HZ, sizeof(int) * NUM_TIMER_FREQS);
+	memcpy(frequencies.data(), TIMER_FREQS_IN_HZ, sizeof(int) * NUM_TIMER_FREQS);
 	return frequencies;
 }
 
@@ -151,13 +159,13 @@ int CommManager::writeDeviceMap(int devId, uint32_t *map)
 		return false;
 	Device* device = deviceMap.at(devId);
 
-	return device->writeDeviceMap(map);
-
+	device->writeDeviceMap(map);
+	return 0;
 }
 
 int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
 {
-	int nf = d->numFields;
+	int nf = deviceMap[devId]->getFlexseaDevice()->_numFields;
 	uint32_t map[FX_BITMAP_WIDTH];
 	memset(map, 0, sizeof(uint32_t)*FX_BITMAP_WIDTH);
 
