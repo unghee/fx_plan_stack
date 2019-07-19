@@ -4,9 +4,10 @@
 #include <vector>
 #include <fstream>
 #include <mutex>
-
-#include "periodictask.h"
-#include "flexseadeviceprovider.h"
+#include <shared_mutex>
+#include <assert.h>
+#include <atomic>
+#include "flexseadevice.h"
 
 #define MAX_LOG_SIZE 50000
 #define DEFAULT_LOG_FOLDER "Plan-GUI-Logs"
@@ -17,70 +18,59 @@
 /// employs a polling method therefore the owner MUST either
 ///  - trigger polls by calling serviceLogs, or
 ///  - run DataLogger on a thread using the PeriodicTask pattern
-class DataLogger : public PeriodicTask
-{
+class DataLogger {
+
 public:
-    DataLogger(FlexseaDeviceProvider* fdp);
+    DataLogger(bool logAdditionalField, FlexseaDevice* flexseaDevice);
+    ~DataLogger();
 
-    /// \brief starts logging all data received by device with id=devId
-    bool startLogging(int devId, bool logAdditionalColumnsInit = false);
-    /// \brief stops logging all data received by device with id=devId
-    bool stopLogging(int devId);
+    static bool sessionInitialized;
+    static bool createSessionFolder(std::string session_name);
 
-    /// \brief stops all logs managed by this DataLogger
-    bool stopAllLogs();
+    static bool setLogFolder(std::string folderPath);
+    static bool setDefaultLogFolder();
 
-    /// \brief service all logs managed by this DataLogger (must be called periodically)
-    void serviceLogs();
-    void setColumnValue(unsigned col, int val);
-    void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);
-    bool setLogFolder(std::string folderPath);
-    bool setDefaultLogFolder();
-	bool createSessionFolder(std::string session_name);
+    static void setColumnValue(unsigned col, int val);
+    static void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);
 
-protected:
-
-    virtual void periodicTask() {serviceLogs();}
-    virtual bool wakeFromLongSleep();
-    virtual bool goToLongSleep();
-
-    bool logDevice(int idx);
+    void initLogging();
+    void logDevice();
 
 private:
+    static const int MAX_PATH_LENGTH = 256;
 
-struct LogRecord {
-    int devId;
+    static std::mutex additionalValuesLock;
+    static std::vector<std::string> additionalColumnLabels;
+    static std::vector<int> additionalColumnValues;
+
+    // folderNumber is for each dataLogger object to make sure it reflect the most recent
+    // folder change. IE, if dataLogger.folderNumber != _folderNumber --> changeFilename() 
+    static std::atomic<int> _folderNumber;
+    // If we want to increase concurrency, we can switch this to a reader/writer lock
+    // I'm interested to see if it makes a difference
+    // static std::shared_timed_mutex rwFolderLock;
+    static std::mutex folderLock;
+    static std::string _logFolderPath;
+    static std::string _sessionPath;
+
+    bool initialized;
+    int folderNumber;
     std::ofstream* fileObject;
     unsigned int lastTimestamp;
     unsigned int logFileSize;
     unsigned int logFileSplitIndex;
     unsigned int numActiveFields;
     unsigned int logAdditionalField;
-};
+    FlexseaDevice* flexseaDevice;
 
-    std::vector<std::string> additionalColumnLabels;
-    std::vector<int> additionalColumnValues;
-    unsigned int writeLogHeader(std::ofstream* fout, const FxDevicePtr dev, bool logAdditionalColumnsInit);
-    void swapFileObject(LogRecord &record, std::string newfilename, const FxDevicePtr dev);
+    static bool createFolder(std::string path);
+    static bool loadLogFolderConfig();
+    static void saveLogFolderConfig();
+    
+    std::string generateFileName(std::string suffix="");
+    void writeLogHeader();
+    void changeFileName(std::string newfilename);
 
-    std::vector<LogRecord> logRecords;
-    bool removeRecord(int idx);
-
-    FlexseaDeviceProvider *devProvider;
-    int numLogDevices;
-    bool isFirstLogFile;
-
-    std::mutex resMutex;
-
-    std::string _logFolderPath;
-
-    std::string _sessionPath;
-
-    void clearRecords();
-    std::string generateFileName(FxDevicePtr dev, std::string suffix="");
-    bool createFolder(std::string path);
-    bool loadLogFolderConfig();
-    void saveLogFolderConfig();
 };
 
 #endif // DATALOGGER_H

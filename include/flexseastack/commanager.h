@@ -8,170 +8,54 @@
 #include <condition_variable>
 #include <vector>
 #include <string>
+#include <unordered_map>
 #include <functional>
+#include <cstring>
+#include <thread>
+#include <chrono>
 
-#include "flexseaserial.h"
-#include "periodictask.h"
-#include "flexsea_sys_def.h"
-#include "comm_string_generation.h"
-#include "datalogger.h"
+// #include "flexsea_system.h"
+#include "flexseadevicetypes.h"
+#include "device.h"
 
-struct MultiWrapper_struct;
-typedef MultiWrapper_struct MultiWrapper;
-typedef std::function<void(uint8_t*, uint8_t*, uint8_t*, uint16_t*)> StreamFunc;
-static std::mutex mtOGBuffer;
-
-class CommManager : public FlexseaSerial
+class CommManager
 {
 
 public:
     CommManager();
-    virtual ~CommManager();
-    static const int NUM_TIMER_FREQS = 11;
+    ~CommManager();
 
-    /// \brief Returns a vector containing the frequencies that can be streamed at, in Hz
-    std::vector<int> getStreamingFrequencies() const;
-	bool createSessionFolder(std::string sessionName);
-    /// \brief Tries to start streaming from the selected device with the given parameters.
-    /// Streams all fields by default
-    /// Returns true if the the attempt was successful. May be unsuccessful if:
-    ///     no device exists with device id == devId
-    ///     freq not in getStreamingFrequences()
-    virtual bool startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode=CMD_SYSDATA);
-
-    /// \brief Tries to start streaming from the selected device using a custom function to build comm msgs.
-    /// Returns true if the the attempt was successful. May be unsuccessful if:
-    ///     no device exists with device id == devId
-    ///     freq not in getStreamingFrequences()
-    int startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc);
-
-    /// \brief Tries to start streaming from the selected device with the given parameters.
-    /// Streams all fields if fieldIds is empty. Otherwise only streams ids in fieldIds
-    /// Returns true if the attempt was successful. May be unsuccessful if:
-    ///     no device exists with device id == devId
-    ///     freq not in getStreamingFrequences()
-    ///     fieldIds contains an invalid id
-
-    /// \brief Tries to stop streaming from the selected device with the given parameters.
-    /// Returns true if the attempt was successful. May be unsuccessful if no stream for given id exists
-    bool stopStreaming(int devId, int cmdCode=-1);
-
-    /// \brief writes a message to the device to set its active fields
-    int writeDeviceMap(int devId, const std::vector<int> &fields);
-    int writeDeviceMap(int devId, uint32_t* map);
-
+    //returns -1 if cannot connect to device
+    int loadAndGetDevice(uint16_t portIdx);
     /// \brief overloaded to manage streams and connected devices
-    virtual void close(uint16_t portIdx);
+    int isOpen(int portIdx);
+    void closeDevice(uint16_t portIdx);//
+    std::vector<int> getDeviceIds();
 
-    void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);
-    void setColumnValue(unsigned col, int val);
 
-    bool setLogFolder(std::string logFolderPath);
-    bool setDefaultLogFolder();
+    std::vector<int> getStreamingFrequencies() const;//
+    virtual bool startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode=CMD_SYSDATA);//
+    int startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc);//
+    bool stopStreaming(int devId, int cmdCode=-1);//
+    int writeDeviceMap(int devId, const std::vector<int> &fields);//
+    int writeDeviceMap(int devId, uint32_t* map);//
+
+
+    bool createSessionFolder(std::string sessionName);//
+    void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);//
+    void setColumnValue(unsigned col, int val);//
+    bool setLogFolder(std::string logFolderPath);//
+    bool setDefaultLogFolder();//
 
     /// \brief adds a message to a queue of messages to be written to the port periodically
     template<typename T, typename... Args>
-    bool enqueueCommand(int devId, T tx_func, Args&&... tx_args)
-    {
-        if(connectedDevices.find(devId) != connectedDevices.end())
-        {
-            return enqueueCommand(connectedDevices.at(devId), tx_func, std::forward<Args>(tx_args)...);
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-protected:
-    virtual void periodicTask();
-    virtual bool wakeFromLongSleep();
-    virtual bool goToLongSleep();
-
-    virtual int writeDeviceMap(const FxDevicePtr d, uint32_t* map);
-    int enqueueMultiPacket(int devId, MultiWrapper *out);
-    int enqueueMultiPacket(int devId, int port, MultiWrapper *out);
-
-    virtual void serviceStreams(uint8_t milliseconds);
-    uint8_t serviceCount = 0;
-
-    template<typename T, typename... Args>
-    bool enqueueCommand(const FxDevicePtr d, T tx_func, Args&&... tx_args)
-    {
-        if(!d->isValid()) return false;
-        MultiWrapper *out = &(portPeriphs[d->port].out);
-
-        bool error = CommStringGeneration::generateCommString(d->getShortId(), out,
-                                                       tx_func,
-                                                       std::forward<Args>(tx_args)...);
-        if(error)
-        {
-//            std::cout << "Error packing multipacket" << std::endl;
-            return false;
-        }
-
-        return !enqueueMultiPacket(d->id, d->port, out);
-    }
-
-    /// \brief adds a message to a queue of messages to be written to the port periodically
-    bool enqueueCommand(uint8_t numb, uint8_t* dataPacket, int portIdx=0);
-
+    bool enqueueCommand(int devId, T tx_func, Args&&... tx_args);
 
 private:
-	//Variables & Objects:
-    class Message;
-    struct StreamRcd;
-    typedef std::vector<StreamRcd> StreamList;
-
-    std::queue<Message> outgoingBuffer[FX_NUMPORTS];
-    const unsigned int MAX_Q_SIZE = 200;
-
-    StreamList autoStreamLists[NUM_TIMER_FREQS];
-    StreamList streamLists[NUM_TIMER_FREQS];
-
-    int getIndexOfFrequency(int freq);
-
-    int timerFrequencies[NUM_TIMER_FREQS];
-	float timerIntervals[NUM_TIMER_FREQS];
-    float msSinceLast[NUM_TIMER_FREQS] = {0};
-
-    void sendCommands(int index);
-    void sendAutoStream(int devId, int cmd, int period, bool start);
-    void sendSysDataRead(int slaveId);
-
-    int streamCount;
-    static const int CMD_CODE_BASE = 256;
-
-    DataLogger *dataLogger;
-};
-
-class CommManager::Message {
-public:
-    static void do_delete(uint8_t buf[]) { delete[] buf; }
-
-    Message(uint8_t nb, uint8_t* data):
-    numBytes(nb)
-    , dataPacket(std::shared_ptr<uint8_t>(new uint8_t[nb], do_delete))
-    {
-        uint8_t* temp = dataPacket.get();
-        for(int i = 0; i < numBytes; i++)
-            temp[i] = data[i];
-    }
-
-    uint8_t numBytes;
-    std::shared_ptr<uint8_t> dataPacket;
-};
-
-struct CommManager::StreamRcd {
-
-    StreamRcd(int id=-1, int cc=-1, bool sl=false, StreamFunc* fc=nullptr) : devId(id), cmdCode(cc), shouldLog(sl), func(fc) {}
-
-    int devId;
-    int cmdCode;
-    bool shouldLog;
-    StreamFunc* func;
+    std::unordered_map<int, Device*> deviceMap;
+    std::unordered_map<uint16_t, Device*> devicePortMap;
+    std::vector<int> deviceIds;
 
 };
-
 
 #endif // STREAMMANAGER_H

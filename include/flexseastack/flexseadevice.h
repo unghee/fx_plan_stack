@@ -4,8 +4,10 @@
 #include <vector>
 #include <string>
 #include <mutex>
+#include <cassert>
 #include "flexseadevicetypes.h"
 #include "circular_buffer.h"
+#include "flexsea_multi_frame_packet_def.h"
 
 #include "fxdata.h"
 
@@ -28,23 +30,25 @@ struct InaccessiblePointer : public std::exception {
 class FlexseaDevice
 {
 public:
-	explicit FlexseaDevice(int _id, int _port, FlexseaDeviceType _type,              int role, int dataBuffSize=FX_DATA_BUFFER_SIZE);
-	explicit FlexseaDevice(int _id, int _shortid, int _port, FlexseaDeviceType _type, int role, int dataBuffSize=FX_DATA_BUFFER_SIZE);
-	explicit FlexseaDevice(int _id, int _port, std::vector<std::string> fieldLabels, int role, int dataBuffSize);
+	explicit FlexseaDevice(int id, int port, FlexseaDeviceType type,              int role, int dataBuffSize=FX_DATA_BUFFER_SIZE);
+	explicit FlexseaDevice(int id, int shortid, int port, FlexseaDeviceType type, int role, int dataBuffSize=FX_DATA_BUFFER_SIZE);
+	explicit FlexseaDevice(int id, int port, std::vector<std::string> fieldLabels, int role, int dataBuffSize);
 
-	const int id;
-	const int port;
-	const FlexseaDeviceType type;
-	const int numFields;
+	const int _devId;
+	const int _portIdx;
+	const FlexseaDeviceType _devType;
+	const int _numFields;
 
-	int getShortId() const { return shortId; }
+	int getShortId() const { return _shortId; }
 	int getRole() const { return _role; }
 	bool hasData() const { return !_data.empty(); }
 	size_t dataCount() const { return _data.count(); }
 
+
 	// dataMutex should be locked while accessing data to ensure thread safety
 	// a const pointer to a (non-const) recursive_mutex
-	std::recursive_mutex *const dataMutex;
+	// std::recursive_mutex *const dataMutex;
+	void setMetaData(uint8_t shortId, FlexseaDeviceType devType, uint8_t devRole);
 
 	// Returns a vector of strings which describe the fields specified by map
 	std::vector<std::string> getActiveFieldLabels() const;
@@ -79,14 +83,17 @@ public:
 	void getBitmap(uint32_t* out) const;
 	void setBitmap(uint32_t* in);
 
+	void updateData(uint8_t* buf);
+
 	FxDevData* getCircBuff() { return &_data; }
 
-	bool isValid() const { return this->id != -1; }
+	bool isValid() const { return this->_devId != -1; }
 	/// \brief Returns the rate at which this device is/was receiving data in Hz
 	double getDataRate() const;
 
-protected:
 
+private:
+	inline size_t findIndexAfterTime(uint32_t timestamp) const;
 	/// bitmap indicating which fields are active for the device with specified id
 	/// bitmap is a uint32_t[FX_BITMAP_WIDTH]
 	/// so if (0x01 & active()[0]) then field 0 is active
@@ -98,14 +105,13 @@ protected:
 	mutable uint32_t lastFieldLabelMap[FX_BITMAP_WIDTH] = {0};
 	mutable std::vector<std::string> lastRequest;
 
-	int shortId;
-	int _role;
-	std::vector<std::string> fieldLabels;
-	std::recursive_mutex _dataMutex;
-	FxDevData _data;
+	mutable std::mutex dataLock;
 
-private:
-	inline size_t findIndexAfterTime(uint32_t timestamp) const;
+	int _shortId;
+	int _role;
+	
+	std::vector<std::string> fieldLabels;
+	FxDevData _data;
 };
 
 #endif // FLEXSEADEVICE_H
