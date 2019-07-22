@@ -43,9 +43,8 @@ extern "C"
 
 	void fxSetup()
 	{
-		std::vector<std::string> portNames;
 		initFlexSEAStack_minimalist(FLEXSEA_PLAN_1);
-		commManager = new CommManager(portNames);
+		commManager = new CommManager();
 	}
 
 	void fxCleanup()
@@ -56,7 +55,7 @@ extern "C"
 	// open serial port named portName at portIdx [0-3],
 	void fxOpen(char* portName, int portIdx)
 	{
-		commManager->loadAndGetDeviceId(portIdx);
+		commManager->loadAndGetDeviceId(portName, portIdx);
 		// commManager.open(std::string(portName), portIdx);
 	}
 

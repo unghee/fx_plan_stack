@@ -3,9 +3,8 @@
 
 using namespace std::chrono_literals;
 
-Device::Device(std::string portName, int portIdx):
-											portName(portName), 
-											portIdx(portIdx)
+Device::Device(int portIdx):
+							portIdx(portIdx)
 {
 	streamCmd = {false, CMD_CODE_BASE, nullptr};
 	serialDeviceIsSetUp = false;
@@ -185,16 +184,25 @@ void Device::startInitialThreads(){
 void Device::startStreamingThreads(){
 	assert(connectionState >= OPEN);
 	commandStreamer = new std::thread(&Device::streamCommands, this);
-	commandSender = new std::thread(&Device::sendCommands, this);
+	for(int i = 0; i < 5; ++i){
+		commandSenders.push_back(new std::thread(&Device::sendCommands, this));
+	}
+	// commandSender = new std::thread(&Device::sendCommands, this);
 	deviceLogger = new std::thread(&Device::logDevice, this);
 }
 
 void Device::stopThreads(){
 	shouldRun = false;
 
-	if(commandSender){
-		commandSender->join();
-		delete commandSender;
+	// if(commandSender){
+	// 	commandSender->join();
+	// 	delete commandSender;
+	// }
+	if(commandSenders.size()){
+		for(std::thread* th : commandSenders){
+			th->join();
+			delete th;
+		}
 	}
 	if(commandStreamer){
 		commandStreamer->join();
@@ -208,7 +216,8 @@ void Device::stopThreads(){
 		deviceLogger->join();
 		delete deviceLogger;
 	}
-	commandSender = nullptr;
+	// commandSender = nullptr;
+	commandSenders.clear();
 	commandStreamer = nullptr;
 	deviceReader = nullptr;
 	deviceLogger = nullptr;
@@ -290,7 +299,8 @@ void Device::setUpLogging(){
 	dataLogger = new DataLogger(true, this->serialDevice);
 }
 
-bool Device::tryOpen(){
+bool Device::tryOpen(std::string portName){
+	this->portName = portName;
 	int attempts = 0;
 	while(attempts++ < MAX_TRY_OPEN_ATTEMPTS){
 		flexseaSerial.open(portName, portIdx);
