@@ -8,10 +8,10 @@ extern "C" {
 using namespace std::chrono_literals;
 
 
-CommManager::CommManager(std::vector<std::string> portNames)
+CommManager::CommManager()
 {
-	for(int i = 0; i < portNames.size(); ++i){
-		devicePortMap[i] = new Device(portNames[i], i);
+	for(int i = 0; i < FX_NUMPORTS; ++i){
+		devicePortMap[i] = new Device(i);
 	}
 }
 
@@ -27,9 +27,9 @@ CommManager::~CommManager()
 }
 
 
-int CommManager::loadAndGetDeviceId(uint16_t portIdx){
+int CommManager::loadAndGetDeviceId(const char* portName, uint16_t portIdx){
 	int attempts = 0;
-	if(devicePortMap[portIdx]->tryOpen()){
+	if(devicePortMap[portIdx]->tryOpen(std::string(portName))){
 		while(devicePortMap[portIdx]->getDevId() == -1 && attempts++ <= 5){
 			std::this_thread::sleep_for(100ms);
 		}

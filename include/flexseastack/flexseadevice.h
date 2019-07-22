@@ -5,6 +5,7 @@
 #include <string>
 #include <mutex>
 #include <cassert>
+#include <limits>
 #include "flexseadevicetypes.h"
 #include "circular_buffer.h"
 #include "flexsea_multi_frame_packet_def.h"
@@ -93,24 +94,24 @@ public:
 
 
 private:
+	//MUST HOLD DATALOCK BEFORE CALLING
 	inline size_t findIndexAfterTime(uint32_t timestamp) const;
 	/// bitmap indicating which fields are active for the device with specified id
 	/// bitmap is a uint32_t[FX_BITMAP_WIDTH]
 	/// so if (0x01 & active()[0]) then field 0 is active
 	/// if (0x01 & active()[1]) then field 32 is active
 	/// or in general if (1 << x) & active()[y] then field 32*y+x is active
-	uint32_t bitmap[FX_BITMAP_WIDTH];
 
+	uint32_t bitmap[FX_BITMAP_WIDTH];
+	std::vector<std::string> fieldLabels;
 	//mutable because they're used for caching
 	mutable uint32_t lastFieldLabelMap[FX_BITMAP_WIDTH] = {0};
 	mutable std::vector<std::string> lastRequest;
 
-	mutable std::mutex dataLock;
-
 	int _shortId;
 	int _role;
 	
-	std::vector<std::string> fieldLabels;
+	mutable std::mutex dataLock;
 	FxDevData _data;
 };
 

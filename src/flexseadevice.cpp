@@ -127,42 +127,44 @@ uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputS
 
 	std::unique_lock<std::mutex> lk(dataLock);
 
-	int32_t *ptr = ((int32_t*)_data.peek(index));
+	int32_t *dataPtr = ((int32_t*)_data.peek(index));
 
 	int outIdx = 0;
 	for(int i = 0; i < outputSize; ++i)
 	{
 		int field = fieldIds[i];
 
-		if( (field >= 0) && (field < _numFields) && IS_FIELD_HIGH(field, bitmap)  )
+		assert(field >= 0 && field < _numFields); //just a sanity check
+		// if( (field >= 0) && (field < _numFields) && IS_FIELD_HIGH(field, bitmap)  )
+		if(IS_FIELD_HIGH(field, bitmap)  )
 		{
-			output[outIdx] = ptr[ 1 + field ];
+			output[outIdx] = dataPtr[ 1 + field ];
 			fieldIds[outIdx] = field;
-			outIdx++;
+			++outIdx;
 		}
 
 	}
 
-	return ptr[0];
+	return dataPtr[0]; //why do we return the data ptr?
 }
 
-uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outputSize) const
+uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr outPtr, uint16_t outputSize) const
 {
 	std::unique_lock<std::mutex> lk(dataLock);
 
-	int32_t *srcPtr = 0;
+	int32_t *dataPtr = 0;
 	try{
 		if(index >= dataCount()){
 			throw InvalidIndex();
 		}
-		srcPtr = ((int32_t*)_data.peek(index));
-		if(!srcPtr){
+		dataPtr = ((int32_t*)_data.peek(index));
+		if(!dataPtr){
 			throw InaccessiblePointer();
 		}
 
 		int s = outputSize >  (1 + _numFields) ? (1 + _numFields) : outputSize;
 		size_t sizeData =  s  * sizeof(int32_t);
-		memcpy(ptr, srcPtr, sizeData);
+		memcpy(outPtr, dataPtr, sizeData);
 	}
 	catch(InvalidIndex& e){
 		std::cout << e.what() << std::endl;
@@ -173,7 +175,7 @@ uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outp
 		return 0;
 	}
 
-	return srcPtr[0];
+	return dataPtr[0]; //why do we return the data ptr?
 }
 
 uint32_t FlexseaDevice::getLatestTimestamp() const
@@ -189,24 +191,24 @@ uint32_t FlexseaDevice::getLatestTimestamp() const
 uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
 {
 	std::unique_lock<std::mutex> lk(dataLock);
+	return findIndexAfterTime(timestamp);
+	// size_t lb = 0, ub = _data.count();
+	// size_t i = ub/2;
+	// uint32_t t = _data.peek(i)[0];
 
-	size_t lb = 0, ub = _data.count();
-	size_t i = ub/2;
-	uint32_t t = _data.peek(i)[0];
+	// while(i != lb && lb != ub){
+	// 	if(timestamp > t){
+	// 		lb = i;             //go right
+	// 	}
+	// 	else{
+	// 		ub = i;             //go left
+	// 	}
 
-	while(i != lb && lb != ub){
-		if(timestamp > t){
-			lb = i;             //go right
-		}
-		else{
-			ub = i;             //go left
-		}
+	// 	i = (lb + ub) / 2;
+	// 	t = _data.peek(i)[0];
+	// }
 
-		i = (lb + ub) / 2;
-		t = _data.peek(i)[0];
-	}
-
-	return i + (t >= timestamp);
+	// return i + (t >= timestamp);
 }
 
 //uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, uint32_t *output, uint16_t outputSize) const
@@ -237,7 +239,6 @@ inline size_t FlexseaDevice::findIndexAfterTime(uint32_t timestamp) const
 //        i++;
 
 // ---- Binary search O(logn)
-
 	size_t lb = 0, ub = _data.count();
 
 	if(ub == 0){
@@ -301,7 +302,8 @@ uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint3
 		if(!IS_FIELD_HIGH(field, this->bitmap)) return timestamp;
 	}
 
-	size_t i = findIndexAfterTime(timestamp), j;
+	size_t i = findIndexAfterTime(timestamp);
+	size_t j;
 	size_t n = std::min((unsigned)(_data.count() - i), (unsigned)max);
 	size_t nf = fieldIds.size();
 
@@ -335,7 +337,10 @@ uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint3
 
 uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<std::vector<int32_t>> &data_output) const
 {
-	return getDataAfterTime(fieldIds, timestamp, ts_output, data_output, -1);
+	// -1 ensures that std::min always returns (_data.count() - 1)
+	// unsigned(-1) = std::numeric_limits(size_t)
+	// return getDataAfterTime(fieldIds, timestamp, ts_output, data_output, -1);
+	return getDataAfterTime(fieldIds, timestamp, ts_output, data_output, std::numeric_limits<unsigned>::max());
 }
 
 uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, std::vector<uint32_t> &timestamps, std::vector<std::vector<int32_t>> &outputData) const
@@ -352,17 +357,17 @@ uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, std::vector<uint32_
 	outputData.clear();
 	outputData.reserve(_data.count() - i);
 
-	FX_DataPtr p = nullptr;
+	FX_DataPtr dataPtr = nullptr;
 
 	while(i < _data.count()){
-		p = _data.peek(i++);
-		timestamps.push_back(p[0]);
+		dataPtr = _data.peek(i++);
+		timestamps.push_back(dataPtr[0]);
 		outputData.emplace_back(_numFields);
-		memcpy(outputData.back().data(), p+1, sizeData);
+		memcpy(outputData.back().data(), dataPtr+1, sizeData);
 	}
 
-	if(p){
-		return p[0];
+	if(dataPtr){
+		return dataPtr[0];
 	}
 	else{
 		return timestamp;

@@ -22,11 +22,11 @@ class CommManager
 {
 
 public:
-    CommManager(std::vector<std::string> portNames);
+    CommManager();
     ~CommManager();
 
     //returns -1 if cannot connect to device
-    int loadAndGetDeviceId(uint16_t portIdx);
+    int loadAndGetDeviceId(const char* portName, uint16_t portIdx);
     FlexseaDevice* getDevicePtr(int devId);
     /// \brief overloaded to manage streams and connected devices
     int isOpen(int portIdx);
@@ -34,8 +34,6 @@ public:
     std::vector<int> getDeviceIds();
 
     bool isValidDevId(int devId);
-
-
 
     std::vector<int> getStreamingFrequencies() const;//
     virtual bool startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode=CMD_SYSDATA);//

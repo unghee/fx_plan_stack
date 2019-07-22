@@ -37,14 +37,15 @@ static const std::unordered_set<int> TIMER_FREQS_SET (TIMER_FREQS_IN_HZ, TIMER_F
 class Device {
 public:
 	
-	const std::string portName;
+	// const std::string portName;
 	const int portIdx;
+	std::string portName;
 
-	Device(std::string portName, int portIdx);
+	Device(int portIdx);
 	~Device();
 
 	// uses flexseaserial
-	bool tryOpen();
+	bool tryOpen(std::string portName);
 	void close();
 
 	//return -1 if not set
@@ -107,7 +108,8 @@ private:
 	std::vector<std::pair<int, uint8_t>> autoStreamList;
 
 	bool shouldRun;
-	std::thread* commandSender;
+	// std::thread* commandSender;
+	std::vector<std::thread*> commandSenders;
 	std::thread* commandStreamer;
 	std::thread* deviceReader;
 	std::thread* deviceLogger;
@@ -130,9 +132,6 @@ private:
 	void startStreamingThreads();
 	void stopThreads();
 
-
-
-	
     static const int CMD_CODE_BASE = 256;
 
 };
