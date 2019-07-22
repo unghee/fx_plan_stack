@@ -12,7 +12,14 @@
 #endif
 
 bool DataLogger::sessionInitialized = false;
+
+std::mutex DataLogger::_additionalValuesLock;
+std::vector<std::string> DataLogger::_additionalColumnLabels;
+std::vector<int> DataLogger::_additionalColumnValues;
 std::atomic<int> DataLogger::_folderNumber(0);
+std::mutex DataLogger::_folderLock;
+std::string DataLogger::_logFolderPath;
+std::string DataLogger::_sessionPath;
 
 DataLogger::DataLogger(bool logAdditionalField, FlexseaDevice* flexseaDevice):  logAdditionalField(logAdditionalField),
                                                                                 flexseaDevice(flexseaDevice)
@@ -55,7 +62,7 @@ bool DataLogger::createSessionFolder(std::string session_name)
     // Only update on success
     if(folder_was_created){
         // std::unique_lock<std::shared_timed_mutex> lk(rwFolderLock);
-        std::unique_lock<std::mutex> lk(folderLock);
+        std::unique_lock<std::mutex> lk(_folderLock);
         _folderNumber++;
         _sessionPath = sessionPath;
     }   
@@ -73,7 +80,7 @@ bool DataLogger::setLogFolder(std::string folderPath)
     // Only update on success
     if(success){
         // std::unique_lock<std::shared_timed_mutex> lk(rwFolderLock);
-        std::unique_lock<std::mutex> lk(folderLock);
+        std::unique_lock<std::mutex> lk(_folderLock);
         _logFolderPath = folderPath;
         saveLogFolderConfig();
     }
@@ -88,15 +95,15 @@ bool DataLogger::setDefaultLogFolder()
 
 void DataLogger::setColumnValue(unsigned col, int val)
 {
-    std::unique_lock<std::mutex> lk(additionalValuesLock);
-    additionalColumnValues.at(col) = val;
+    std::unique_lock<std::mutex> lk(_additionalValuesLock);
+    _additionalColumnValues.at(col) = val;
 }
 
 void DataLogger::setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue)
 {
-    std::unique_lock<std::mutex> lk(additionalValuesLock);
-    additionalColumnLabels = addLabel;
-    additionalColumnValues = addValue;
+    std::unique_lock<std::mutex> lk(_additionalValuesLock);
+    _additionalColumnLabels = addLabel;
+    _additionalColumnValues = addValue;
 }
 
 void DataLogger::initLogging()
@@ -150,8 +157,8 @@ void DataLogger::logDevice()
         }
 
         if(logAdditionalField){
-            std::unique_lock<std::mutex> lk(additionalValuesLock);
-            for(auto&& l : additionalColumnValues){
+            std::unique_lock<std::mutex> lk(_additionalValuesLock);
+            for(auto&& l : _additionalColumnValues){
                 (*fileObject) << ", " << l;
             }
         }
@@ -242,7 +249,7 @@ std::string DataLogger::generateFileName(std::string suffix)
 
     {
         // std::shared_lock<std::shared_timed_mutex> lk(rwFolderLock);
-        std::unique_lock<std::mutex> lk(folderLock);
+        std::unique_lock<std::mutex> lk(_folderLock);
         folderNumber = _folderNumber; //Synchronizes local folderNumber with global folder number 
         filename.insert(0, _sessionPath);
     }
@@ -270,7 +277,7 @@ bool DataLogger::loadLogFolderConfig()
 
     if(success){
         // std::unique_lock<std::shared_timed_mutex> lk(rwFolderLock);
-        std::unique_lock<std::mutex> lk(folderLock);
+        std::unique_lock<std::mutex> lk(_folderLock);
         _logFolderPath = tempPath;
     }
 
@@ -288,7 +295,7 @@ void DataLogger::saveLogFolderConfig()
 
     {
         // std::shared_lock<std::shared_timed_mutex> lk(rwFolderLock);
-        std::unique_lock<std::mutex> lk(folderLock);
+        std::unique_lock<std::mutex> lk(_folderLock);
         fout << _logFolderPath;
     }
     fout.close();
@@ -304,8 +311,8 @@ void DataLogger::writeLogHeader()
     }
 
     if(logAdditionalField){
-        std::unique_lock<std::mutex> lk(additionalValuesLock);
-        for(auto&& l : additionalColumnLabels){
+        std::unique_lock<std::mutex> lk(_additionalValuesLock);
+        for(auto&& l : _additionalColumnLabels){
             (*fileObject) << ", " << l;
         }
     }

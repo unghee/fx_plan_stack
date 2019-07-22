@@ -3,6 +3,8 @@
 
 using namespace std::chrono_literals;
 
+FlexseaSerial Device::flexseaSerial;
+
 Device::Device(int portIdx):
 							portIdx(portIdx)
 {
