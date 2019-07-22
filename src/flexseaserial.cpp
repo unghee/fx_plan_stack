@@ -78,7 +78,7 @@ template<typename T, typename... Args>
 std::vector<Message> FlexseaSerial::generateMessages(int devId, int portIdx, T tx_func, Args&&... tx_args)
 {
 	MultiWrapper* out = &multiCommPeriphs[portIdx].out;
-	CommStringGeneration::generateCommString(devId, out, tx_func, std::forward<Args>(tx_args)...);
+	generateCommString(devId, out, tx_func, std::forward<Args>(tx_args)...);
 
 	std::vector<Message> generateMessages;
 	uint8_t frameId = 0, nb;

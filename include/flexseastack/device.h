@@ -14,13 +14,14 @@
 #include <chrono>
 #include <functional>
 
+#include "flexseaserial.h"
+#include "flexseadevice.h"
+#include "datalogger.h"
+
 #include "flexsea_cmd_sysdata.h"
 #include "flexsea_cmd_stream.h"
 #include "flexsea_sys_def.h"
 
-#include "datalogger.h"
-#include "flexseaserial.h"
-#include "flexseadevice.h"
 
 typedef std::chrono::high_resolution_clock Clock;
 typedef std::function<void(uint8_t*, uint8_t*, uint8_t*, uint16_t*)> StreamFunc;

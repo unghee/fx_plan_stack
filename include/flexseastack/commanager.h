@@ -15,8 +15,8 @@
 #include <chrono>
 
 // #include "flexsea_system.h"
-#include "flexseadevicetypes.h"
 #include "device.h"
+#include "flexseadevicetypes.h"
 
 class CommManager
 {
@@ -36,7 +36,7 @@ public:
     bool isValidDevId(int devId);
 
     std::vector<int> getStreamingFrequencies() const;//
-    virtual bool startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode=CMD_SYSDATA);//
+    bool startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode=CMD_SYSDATA);//
     int startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc);//
     bool stopStreaming(int devId, int cmdCode=-1);//
     int writeDeviceMap(int devId, const std::vector<int> &fields);//

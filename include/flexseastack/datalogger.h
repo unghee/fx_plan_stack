@@ -39,9 +39,9 @@ public:
 private:
     static const int MAX_PATH_LENGTH = 256;
 
-    static std::mutex additionalValuesLock;
-    static std::vector<std::string> additionalColumnLabels;
-    static std::vector<int> additionalColumnValues;
+    static std::mutex _additionalValuesLock;
+    static std::vector<std::string> _additionalColumnLabels;
+    static std::vector<int> _additionalColumnValues;
 
     // folderNumber is for each dataLogger object to make sure it reflect the most recent
     // folder change. IE, if dataLogger.folderNumber != _folderNumber --> changeFilename() 
@@ -49,7 +49,7 @@ private:
     // If we want to increase concurrency, we can switch this to a reader/writer lock
     // I'm interested to see if it makes a difference
     // static std::shared_timed_mutex rwFolderLock;
-    static std::mutex folderLock;
+    static std::mutex _folderLock;
     static std::string _logFolderPath;
     static std::string _sessionPath;
 
