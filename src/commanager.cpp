@@ -29,12 +29,14 @@ CommManager::~CommManager()
 
 int CommManager::loadAndGetDeviceId(const char* portName, uint16_t portIdx){
 	int attempts = 0;
-	if(devicePortMap[portIdx]->tryOpen(std::string(portName))){
-		while(devicePortMap[portIdx]->getDevId() == -1 && attempts++ <= 5){
-			std::this_thread::sleep_for(100ms);
+	std::string pName = portName;
+	if(devicePortMap[portIdx]->tryOpen(pName)){
+		while(devicePortMap[portIdx]->getDevId() == -1 && attempts++ < 5){
+			std::this_thread::sleep_for(1s);
 		}
 
 		if(attempts > 5){
+			std::cout << "Exceeded number of attempts" << std::endl;
 			return -1;
 		}
 		else{
@@ -44,6 +46,7 @@ int CommManager::loadAndGetDeviceId(const char* portName, uint16_t portIdx){
 			return devId;
 		}
 	}
+	return -1; //weird error
 }
 
 FlexseaDevice* CommManager::getDevicePtr(int devId){
@@ -55,7 +58,9 @@ FlexseaDevice* CommManager::getDevicePtr(int devId){
 }
 
 int CommManager::isOpen(int portIdx){
-	return (devicePortMap[portIdx]->getConnectionState() >= OPEN);
+	// return true;
+	// return (devicePortMap[portIdx]->getDevId() != -1);
+	return devicePortMap[portIdx]->getConnectionState() >= OPEN;
 }
 
 void CommManager::closeDevice(uint16_t portIdx)
@@ -180,13 +185,3 @@ int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
 	return writeDeviceMap(devId, map);
 }
 
-template<typename T, typename... Args>
-bool CommManager::enqueueCommand(int devId, T tx_func, Args&&... tx_args)
-{
-	if(!isValidDevId(devId))
-		return -1;
-	Device* device = deviceMap.at(devId);
-	device->enqueueCommand(tx_func, std::forward<Args>(tx_args)...);
-
-	return true;
-}

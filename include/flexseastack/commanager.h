@@ -15,8 +15,8 @@
 #include <chrono>
 
 // #include "flexsea_system.h"
-#include "device.h"
 #include "flexseadevicetypes.h"
+#include "device.h"
 
 class CommManager
 {
@@ -51,7 +51,15 @@ public:
 
     /// \brief adds a message to a queue of messages to be written to the port periodically
     template<typename T, typename... Args>
-    bool enqueueCommand(int devId, T tx_func, Args&&... tx_args);
+    bool enqueueCommand(int devId, T tx_func, Args&&... tx_args)
+    {
+        if(!isValidDevId(devId))
+            return -1;
+        Device* device = deviceMap.at(devId);
+        device->enqueueCommand(tx_func, std::forward<Args>(tx_args)...);
+
+        return true;
+    }
 
 private:
     std::unordered_map<int, Device*> deviceMap;

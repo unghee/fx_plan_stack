@@ -5,7 +5,6 @@
 #include "flexseaserial.h"
 #include "flexsea_comm_multi.h"
 #include "flexsea_multi_frame_packet_def.h"
-#include "comm_string_generation.h"
 
 extern "C" {
 	#include "flexsea_device_spec.h"
@@ -64,44 +63,12 @@ void FlexseaSerial::sendDeviceWhoAmI(int port)
 	}
 }
 
-void FlexseaSerial::open(std::string portName, int portIdx)
+bool FlexseaSerial::open(std::string portName, int portIdx)
 {
-	tryOpen(portName, portIdx);
+	return tryOpen(portName, portIdx);
 }
 
-void FlexseaSerial::close(int portIdx)
-{
-	return close(portIdx);
-}
-
-template<typename T, typename... Args>
-std::vector<Message> FlexseaSerial::generateMessages(int devId, int portIdx, T tx_func, Args&&... tx_args)
-{
-	MultiWrapper* out = &multiCommPeriphs[portIdx].out;
-	generateCommString(devId, out, tx_func, std::forward<Args>(tx_args)...);
-
-	std::vector<Message> generateMessages;
-	uint8_t frameId = 0, nb;
-
-	while(out->frameMap > 0){
-		out->frameMap &= (   ~(1 << frameId)   );
-
-        nb = SIZE_OF_MULTIFRAME(out->packed[frameId]);
-        // if this is the last frame in the packet we extend it in order to ensure it gets pushed through
-        if(!out->frameMap)
-            nb = MAX(nb, PACKET_WRAPPER_LEN * 2 / 3);
-		generateMessages.push_back(Message(nb, out->packed[frameId]));
-		frameId++;
-    }
-    return generateMessages;
-}
-
-void FlexseaSerial::write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t portIdx) {
-	write(bytes_to_send, serial_tx_data, portIdx);
-}
-
-
-inline int updateDeviceMetadata(int port, FlexseaDevice* serialDevice, uint8_t *buf)
+inline int updateDeviceMetadata(int port, FlexseaDevice* &serialDevice, uint8_t *buf)
 {
 	uint16_t i = MP_DATA1 + 1;
 	uint8_t devType, devShortId, j, mapLen, devRole;
@@ -142,7 +109,7 @@ inline int updateDeviceData(FlexseaDevice* serialDevice, uint8_t *buf)
 }
 
 
-int FlexseaSerial::sysDataParser(int port, MultiCommPeriph* mCP, FlexseaDevice* serialDevice){
+int FlexseaSerial::sysDataParser(int port, MultiCommPeriph* mCP, FlexseaDevice* &serialDevice){
 	uint8_t *msgBuf = mCP->in.unpacked;
 	bool isMeantForPlan = msgBuf[MP_RID] / 10 == 1;
 	if(!isMeantForPlan){
@@ -159,7 +126,7 @@ int FlexseaSerial::sysDataParser(int port, MultiCommPeriph* mCP, FlexseaDevice* 
 	}
 }
 
-void FlexseaSerial::processReceivedData(uint8_t* largeRxBuffer, size_t len, int portIdx, FlexseaDevice* serialDevice){
+void FlexseaSerial::processReceivedData(uint8_t* largeRxBuffer, size_t len, int portIdx, FlexseaDevice* &serialDevice){
 //    int numMessagesExpected = (totalBuffered / COMM_STR_BUF_LEN);
 	// int maxMessagesExpected = (totalBuffered / COMM_STR_BUF_LEN + (totalBuffered % COMM_STR_BUF_LEN != 0));
 	MultiCommPeriph* mCP = multiCommPeriphs + portIdx;
@@ -237,7 +204,7 @@ void FlexseaSerial::processReceivedData(uint8_t* largeRxBuffer, size_t len, int 
 	}	
 }
 
-void FlexseaSerial::readAndProcessData(int portIdx, FlexseaDevice* serialDevice){
+void FlexseaSerial::readAndProcessData(int portIdx, FlexseaDevice* &serialDevice){
 	size_t i, bytesToRead;
 	long int numBytes;
 	uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];

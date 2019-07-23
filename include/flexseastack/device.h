@@ -76,7 +76,21 @@ public:
 
 
 	template<typename T, typename... Args>
-	void enqueueCommand(T tx_func, Args&&... tx_args);
+	bool enqueueCommand(T tx_func, Args&&... tx_args){
+		// assert(connectionState >= OPEN);
+		std::vector<Message> packedMessages = flexseaSerial.generateMessages(devId,
+														portIdx,
+														tx_func,
+														std::forward<Args>(tx_args)...);
+		if(packedMessages.empty()){
+			return false;
+		}
+		std::unique_lock<std::mutex> incomingQueueLock(incomingCommandsLock);
+		for(auto & message : packedMessages){
+			incomingCommands.push(message);
+		}
+		return true;
+	}
 
 	// void enqueueCommand(Message message);
 
@@ -109,8 +123,8 @@ private:
 	std::vector<std::pair<int, uint8_t>> autoStreamList;
 
 	bool shouldRun;
-	// std::thread* commandSender;
-	std::vector<std::thread*> commandSenders;
+	// std::vector<std::thread*> commandSenders;
+	std::thread* commandSender;
 	std::thread* commandStreamer;
 	std::thread* deviceReader;
 	std::thread* deviceLogger;
