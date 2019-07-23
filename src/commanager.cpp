@@ -13,6 +13,7 @@ CommManager::CommManager()
 	for(int i = 0; i < FX_NUMPORTS; ++i){
 		devicePortMap[i] = new Device(i);
 	}
+	DataLogger::setDefaultLogFolder();
 }
 
 CommManager::~CommManager()

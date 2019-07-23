@@ -145,6 +145,7 @@ private:
 
 	void startInitialThreads();
 	void startStreamingThreads();
+	void startLoggingThread();
 	void stopThreads();
 
     static const int CMD_CODE_BASE = 256;

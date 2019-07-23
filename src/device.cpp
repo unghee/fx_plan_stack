@@ -11,6 +11,7 @@ Device::Device(int portIdx):
 	streamCmd = {false, CMD_CODE_BASE, nullptr};
 	serialDeviceIsSetUp = false;
 	devId = -1;
+	shouldLog = false;
 
 	commandSender = nullptr;
 	commandStreamer = nullptr;
@@ -184,7 +185,13 @@ void Device::startStreamingThreads(){
 	// for(int i = 0; i < 5; ++i){
 	// 	commandSenders.push_back(new std::thread(&Device::sendCommands, this));
 	// }
-	deviceLogger = new std::thread(&Device::logDevice, this);
+}
+
+void Device::startLoggingThread(){
+	assert(connectionState == CONNECTED);
+	if(!deviceLogger){
+		deviceLogger = new std::thread(&Device::logDevice, this);
+	}
 }
 
 void Device::stopThreads(){
@@ -222,7 +229,7 @@ void Device::stopThreads(){
 void Device::streamCommands(){
 	auto t1 = Clock::now();
 	while(shouldRun){
-		std::lock_guard<std::mutex> lk(streamLock);
+		std::unique_lock<std::mutex> lk(streamLock);
 		if(streamCmd.shouldStream){
 			assert(connectionState == CONNECTED);
 			assert(TIMER_FREQS_SET.find(streamingFreq) != TIMER_FREQS_SET.end());
@@ -240,6 +247,7 @@ void Device::streamCommands(){
 			}
 		}
 		else{
+			lk.unlock();
 			std::this_thread::sleep_for(50ms);	
 		}
 	}
@@ -268,7 +276,7 @@ void Device::readFromDevice(){
 			connectionState = OPEN; //now it is actually open
 			serialDeviceIsSetUp = true;
 			devId = serialDevice->_devId;
-			setUpLogging();
+			// setUpLogging();
 			startStreamingThreads();
 		}
 	}
@@ -277,6 +285,7 @@ void Device::readFromDevice(){
 void Device::logDevice(){
 	while(shouldRun){
 		if(shouldLog){
+			startLoggingThread();
 			assert(connectionState == CONNECTED);
 			if(!dataLogger){
 				std::cerr << "Device has not been configured to log yet" << std::endl;
