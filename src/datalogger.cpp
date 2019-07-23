@@ -294,8 +294,6 @@ void DataLogger::saveLogFolderConfig()
     }
 
     {
-        // std::shared_lock<std::shared_timed_mutex> lk(rwFolderLock);
-        std::unique_lock<std::mutex> lk(_folderLock);
         fout << _logFolderPath;
     }
     fout.close();
