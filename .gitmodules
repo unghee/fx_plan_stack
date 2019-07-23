@@ -4,3 +4,6 @@
 [submodule "flexsea-dephy"]
 	path = flexsea-dephy
 	url = https://github.com/DephyInc/flexsea-dephy.git
+[submodule "flexsea-core"]
+	path = flexsea-core
+	url = https://github.com/DephyInc/flexsea-core.git
