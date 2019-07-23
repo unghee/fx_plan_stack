@@ -11,16 +11,22 @@ Device::Device(int portIdx):
 	streamCmd = {false, CMD_CODE_BASE, nullptr};
 	serialDeviceIsSetUp = false;
 	devId = -1;
+
+	commandSender = nullptr;
+	commandStreamer = nullptr;
+	deviceReader = nullptr;
+	deviceLogger = nullptr;
+
 	serialDevice = nullptr;
 	dataLogger = nullptr;
 	connectionState = NODEVICE;
-	startInitialThreads();
 
 }
 
 Device::~Device(){
 	stopThreads();
 
+	close();
 	if(serialDeviceIsSetUp){
 		if(streamCmd.func != nullptr){
 			delete streamCmd.func;
@@ -164,47 +170,35 @@ void Device::sendSysDataRead(){
 	enqueueCommand(tx_cmd_sysdata_r, nullptr, 0);
 }
 
-template<typename T, typename... Args>
-void Device::enqueueCommand(T tx_func, Args&&... tx_args){
-	assert(connectionState >= OPEN);
-	std::vector<Message> packedMessages = flexseaSerial.generateMessages(devId,
-													portIdx,
-													tx_func,
-													std::forward<Args>(tx_args)...);
-	
-	std::unique_lock<std::mutex> incomingQueueLock(incomingCommandsLock);
-	for(auto & message : packedMessages){
-		incomingCommands.push(message);
-	}
-}
+
 
 void Device::startInitialThreads(){
 	shouldRun = true;
 	deviceReader = new std::thread(&Device::readFromDevice, this);
+	commandSender = new std::thread(&Device::sendCommands, this);
 }
 
 void Device::startStreamingThreads(){
 	assert(connectionState >= OPEN);
 	commandStreamer = new std::thread(&Device::streamCommands, this);
-	for(int i = 0; i < 5; ++i){
-		commandSenders.push_back(new std::thread(&Device::sendCommands, this));
-	}
-	// commandSender = new std::thread(&Device::sendCommands, this);
+	// for(int i = 0; i < 5; ++i){
+	// 	commandSenders.push_back(new std::thread(&Device::sendCommands, this));
+	// }
 	deviceLogger = new std::thread(&Device::logDevice, this);
 }
 
 void Device::stopThreads(){
 	shouldRun = false;
 
-	// if(commandSender){
-	// 	commandSender->join();
-	// 	delete commandSender;
+	// if(commandSenders.size()){
+	// 	for(std::thread* th : commandSenders){
+	// 		th->join();
+	// 		delete th;
+	// 	}
 	// }
-	if(commandSenders.size()){
-		for(std::thread* th : commandSenders){
-			th->join();
-			delete th;
-		}
+	if(commandSender){
+		commandSender->join();
+		delete commandSender;
 	}
 	if(commandStreamer){
 		commandStreamer->join();
@@ -218,8 +212,8 @@ void Device::stopThreads(){
 		deviceLogger->join();
 		delete deviceLogger;
 	}
-	// commandSender = nullptr;
-	commandSenders.clear();
+	// commandSenders.clear();
+	commandSender = nullptr;
 	commandStreamer = nullptr;
 	deviceReader = nullptr;
 	deviceLogger = nullptr;
@@ -240,9 +234,9 @@ void Device::streamCommands(){
 				if(streamCmd.cmdCode == CMD_SYSDATA){
 					sendSysDataRead();
 				}
-				else{
-					enqueueCommand(streamCmd.func);
-				}
+				// else{
+				// 	enqueueCommand(streamCmd.func);
+				// }
 			}
 		}
 		else{
@@ -253,7 +247,7 @@ void Device::streamCommands(){
 
 void Device::sendCommands(){
 	while(shouldRun){
-		assert(connectionState >= OPEN);
+		// assert(connectionState >= OPEN);
 		std::unique_lock<std::mutex> lk(incomingCommandsLock);
 		//we can try writing more than 1 command per iteration if it's too slow
 		if(!incomingCommands.empty()){
@@ -303,12 +297,15 @@ void Device::setUpLogging(){
 
 bool Device::tryOpen(std::string portName){
 	this->portName = portName;
-	int attempts = 0;
-	while(attempts++ < MAX_TRY_OPEN_ATTEMPTS){
-		flexseaSerial.open(portName, portIdx);
+	startInitialThreads();
+	bool opened = flexseaSerial.open(portName, portIdx);
+	if(opened){
+		sendSysDataRead();
+		flexseaSerial.sendDeviceWhoAmI(portIdx);
+		// startInitialThreads();
 	}
-
-	return attempts <= MAX_TRY_OPEN_ATTEMPTS;
+	// flexseaSerial.open(portName, portIdx);
+	return opened;
 }
 
 void Device::close(){
