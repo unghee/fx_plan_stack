@@ -35,25 +35,25 @@ include_directories(
 	include/flex_lib
 	unity
 	${CMAKE_CURRENT_SOURCE_DIR}/serial/include
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-comm/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-comm/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/CycleTester/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/ExperimentalController/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared/unity
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared/i2t/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared/utilities/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared/logger/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-system/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-projects/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-projects/ActPack/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-projects/Rigid/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared/unity
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared/i2t/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared/utilities/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared/logger/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-system/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-projects/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-projects/ActPack/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-projects/Rigid/inc
 )
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-comm)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-system)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-projects)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-comm)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-system)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-projects)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-shared)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared)
 add_subdirectory(serial)
 
 file(GLOB PLAN_STACK_SRCS
