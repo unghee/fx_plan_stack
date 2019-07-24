@@ -71,14 +71,16 @@ public:
 	//Removes all streaming commands with cmdCode at all frequencies 
 	void stopStreaming(uint8_t cmdCode);
 
-	void sendAutoStream(uint8_t cmd, int freq, bool startFlag);
+	void sendAutoStream(int cmd, int freq, bool startFlag);
 	void sendSysDataRead();
 
 
 	template<typename T, typename... Args>
 	bool enqueueCommand(T tx_func, Args&&... tx_args){
 		// assert(connectionState >= OPEN);
-		std::vector<Message> packedMessages = flexseaSerial.generateMessages(devId,
+		int shortId = serialDevice == nullptr ? 0 : serialDevice->getShortId();
+
+		std::vector<Message> packedMessages = flexseaSerial.generateMessages(shortId,
 														portIdx,
 														tx_func,
 														std::forward<Args>(tx_args)...);

@@ -56,7 +56,7 @@ public:
     template<typename T, typename... Args>
     std::vector<Message> generateMessages(int devId, int portIdx, T tx_func, Args&&... tx_args)
     {
-        MultiWrapper* out = &multiCommPeriphs[portIdx].out;
+        MultiWrapper* out = &(multiCommPeriphs[portIdx].out);
         CommStringGeneration::generateCommString(devId, out, tx_func, std::forward<Args>(tx_args)...);
 
         std::vector<Message> generatedMessages;
@@ -72,6 +72,8 @@ public:
             generatedMessages.push_back(Message(nb, out->packed[frameId]));
             frameId++;
         }
+        out->isMultiComplete = 1;
+
         return generatedMessages;
     }
     /// \brief DEPRECATED: sends a who am i (who are you really?) message at the given port
