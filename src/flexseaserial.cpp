@@ -207,7 +207,7 @@ void FlexseaSerial::processReceivedData(uint8_t* largeRxBuffer, size_t len, int 
 void FlexseaSerial::readAndProcessData(int portIdx, FlexseaDevice* &serialDevice){
 	size_t i, bytesToRead;
 	long int numBytes;
-	uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
+	// uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
 
 	numBytes = bytesAvailable(portIdx);
 	while(numBytes > 0){

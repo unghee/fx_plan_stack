@@ -67,6 +67,9 @@ int CommManager::isOpen(int portIdx){
 void CommManager::closeDevice(uint16_t portIdx)
 {
 	Device* device = devicePortMap.at(portIdx);
+	int devId = device->getDevId();
+	deviceMap.erase(devId);
+	deviceIds.erase(std::remove(deviceIds.begin(), deviceIds.end(), devId), deviceIds.end());
 	device->close();
 }
 
