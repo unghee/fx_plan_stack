@@ -95,6 +95,7 @@ int getMapLen(const uint32_t* map){
 	}
 
 	mapLen = mapLen > 0 ? mapLen : 1;
+	return mapLen;
 }
 
 void Device::writeDeviceMap(uint32_t* map){
@@ -132,7 +133,7 @@ void Device::stopStreaming(uint8_t cmdCode){
 	//streamElement is a key-value pair <int, vector<uint8_t>>
 	{
 		std::unique_lock<std::mutex> lk(streamLock);
-		if(cmdCode == -1){
+		if(cmdCode == (uint8_t)-1){
 			streamCmd = {false, CMD_CODE_BASE, nullptr};
 		}
 		else if(cmdCode == streamCmd.cmdCode){
@@ -153,7 +154,7 @@ void Device::stopStreaming(uint8_t cmdCode){
 	connectionState = OPEN;
 }
 
-void Device::sendAutoStream(uint8_t cmdCode, int freq, bool startFlag){
+void Device::sendAutoStream(int cmdCode, int freq, bool startFlag){
 	assert(connectionState >= OPEN);
 	if(startFlag){
 		std::unique_lock<std::mutex> lk(autoStreamLock);
@@ -168,7 +169,7 @@ void Device::sendAutoStream(uint8_t cmdCode, int freq, bool startFlag){
 }
 
 void Device::sendSysDataRead(){
-	enqueueCommand(tx_cmd_sysdata_r, nullptr, 0);
+	enqueueCommand(tx_cmd_sysdata_r, nullptr, 1);
 }
 
 
@@ -255,15 +256,14 @@ void Device::streamCommands(){
 
 void Device::sendCommands(){
 	while(shouldRun){
-		// assert(connectionState >= OPEN);
 		std::unique_lock<std::mutex> lk(incomingCommandsLock);
 		//we can try writing more than 1 command per iteration if it's too slow
 		if(!incomingCommands.empty()){
-			Message& m = incomingCommands.front();
-			incomingCommands.pop();
-			lk.unlock();
-
+			Message m = incomingCommands.front();
 			flexseaSerial.write(m.numBytes, m.dataPacket.get(), portIdx);
+			std::this_thread::sleep_for(5ms);
+			incomingCommands.pop();
+			// lk.unlock();
 		}
 	}
 }
@@ -310,10 +310,7 @@ bool Device::tryOpen(std::string portName){
 	bool opened = flexseaSerial.open(portName, portIdx);
 	if(opened){
 		sendSysDataRead();
-		flexseaSerial.sendDeviceWhoAmI(portIdx);
-		// startInitialThreads();
 	}
-	// flexseaSerial.open(portName, portIdx);
 	return opened;
 }
 
