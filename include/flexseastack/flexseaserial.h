@@ -100,6 +100,7 @@ private:
 
     
     MultiCommPeriph* multiCommPeriphs;
+    uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
 };
 
 class Message {

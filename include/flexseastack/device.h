@@ -2,7 +2,7 @@
 #define DEVICE_H
 
 #include <string>
-#include <queue>
+#include <deque>
 #include <mutex>
 #include <thread>
 #include <atomic>
@@ -21,7 +21,6 @@
 #include "flexsea_cmd_sysdata.h"
 #include "flexsea_cmd_stream.h"
 #include "flexsea_sys_def.h"
-
 
 typedef std::chrono::high_resolution_clock Clock;
 typedef std::function<void(uint8_t*, uint8_t*, uint8_t*, uint16_t*)> StreamFunc;
@@ -69,7 +68,7 @@ public:
 	void addStream(int freq, const StreamFunc& func);
 	void addStream(int freq, uint8_t cmdCode);
 	//Removes all streaming commands with cmdCode at all frequencies 
-	void stopStreaming(uint8_t cmdCode);
+	void stopStreaming(uint8_t cmdCode = -1);
 
 	void sendAutoStream(int cmd, int freq, bool startFlag);
 	void sendSysDataRead();
@@ -89,7 +88,7 @@ public:
 		}
 		std::unique_lock<std::mutex> incomingQueueLock(incomingCommandsLock);
 		for(auto & message : packedMessages){
-			incomingCommands.push(message);
+			incomingCommands.push_back(message);
 		}
 		return true;
 	}
@@ -114,7 +113,7 @@ private:
 	std::atomic<ConnectionState> connectionState {NODEVICE};
 
 	std::mutex incomingCommandsLock;
-	std::queue<Message> incomingCommands;
+	std::deque<Message> incomingCommands;
 
 	//Maps streaming frequency to vector of commands
 	std::mutex streamLock;

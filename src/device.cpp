@@ -25,16 +25,16 @@ Device::Device(int portIdx):
 }
 
 Device::~Device(){
-	stopThreads();
-
-	close();
-	if(serialDeviceIsSetUp){
-		if(streamCmd.func != nullptr){
-			delete streamCmd.func;
-		}
-		delete dataLogger;
-		delete serialDevice;
+	if(devId != -1){
+		close();
 	}
+	// if(serialDeviceIsSetUp){
+	// 	if(streamCmd.func != nullptr){
+	// 		delete streamCmd.func;
+	// 	}
+	// 	delete dataLogger;
+	// 	delete serialDevice;
+	// }
 
 }
 
@@ -176,6 +176,10 @@ void Device::sendSysDataRead(){
 
 void Device::startInitialThreads(){
 	shouldRun = true;
+	if(deviceReader != nullptr || commandSender != nullptr){
+		std::cerr << "Starting initial threads when they already exist" << std::endl;
+		std::cerr << "Assuming this is not intended and will not spawn additional threads" << std::endl; 
+	}
 	deviceReader = new std::thread(&Device::readFromDevice, this);
 	commandSender = new std::thread(&Device::sendCommands, this);
 }
@@ -256,15 +260,16 @@ void Device::streamCommands(){
 
 void Device::sendCommands(){
 	while(shouldRun){
-		std::unique_lock<std::mutex> lk(incomingCommandsLock);
-		//we can try writing more than 1 command per iteration if it's too slow
-		if(!incomingCommands.empty()){
-			Message m = incomingCommands.front();
-			flexseaSerial.write(m.numBytes, m.dataPacket.get(), portIdx);
-			std::this_thread::sleep_for(5ms);
-			incomingCommands.pop();
-			// lk.unlock();
+		{
+			std::unique_lock<std::mutex> lk(incomingCommandsLock);
+			if(!incomingCommands.empty()){
+				// assert(incomingCommands.size() <= 200);
+				Message m = incomingCommands.front();
+				flexseaSerial.write(m.numBytes, m.dataPacket.get(), portIdx);
+				incomingCommands.pop_front();
+			}
 		}
+		std::this_thread::sleep_for(1ms);
 	}
 }
 
@@ -306,6 +311,9 @@ void Device::setUpLogging(){
 
 bool Device::tryOpen(std::string portName){
 	this->portName = portName;
+	if(connectionState >= OPEN){
+		return false;
+	}
 	startInitialThreads();
 	bool opened = flexseaSerial.open(portName, portIdx);
 	if(opened){
@@ -315,5 +323,32 @@ bool Device::tryOpen(std::string portName){
 }
 
 void Device::close(){
+
+	stopStreaming();
+	std::cout << "Shutting down device: " << devId << std::endl;
+	std::this_thread::sleep_for(100ms); //give some time to send rest of commands
+	stopThreads();
 	flexseaSerial.close(portIdx);
+
+	{
+		std::unique_lock<std::mutex> lk(incomingCommandsLock);
+		if(!incomingCommands.empty()){
+			std::cout << "Device still had commands left to send" << std::endl;
+		}
+		incomingCommands.clear();
+	}
+
+	if(serialDeviceIsSetUp){
+		if(streamCmd.func != nullptr){
+			delete streamCmd.func;
+		}
+		delete dataLogger;
+		dataLogger = nullptr;
+		delete serialDevice;
+		serialDevice = nullptr;
+	}
+	serialDeviceIsSetUp = false;
+	devId = -1;
+	shouldLog = false;
+	connectionState = NODEVICE;
 }
