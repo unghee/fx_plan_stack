@@ -127,8 +127,6 @@ int FlexseaSerial::sysDataParser(int port, MultiCommPeriph* mCP, FlexseaDevice* 
 }
 
 void FlexseaSerial::processReceivedData(uint8_t* largeRxBuffer, size_t len, int portIdx, FlexseaDevice* &serialDevice){
-//    int numMessagesExpected = (totalBuffered / COMM_STR_BUF_LEN);
-	// int maxMessagesExpected = (totalBuffered / COMM_STR_BUF_LEN + (totalBuffered % COMM_STR_BUF_LEN != 0));
 	MultiCommPeriph* mCP = multiCommPeriphs + portIdx;
 	int totalBuffered = len + circ_buff_get_size(&(mCP->circularBuff));
 	int numMessagesReceived = 0;
@@ -145,7 +143,6 @@ void FlexseaSerial::processReceivedData(uint8_t* largeRxBuffer, size_t len, int 
 
 		circ_error = circ_buff_write(&(mCP->circularBuff), (largeRxBuffer + bytesWritten), bytesToWrite);
 		assert(!circ_error);
-		// if(error) std::cout << "circ_buff_write error:" << error << std::endl;
 
 		do {
 			mCP->bytesReadyFlag = 1;
@@ -156,18 +153,15 @@ void FlexseaSerial::processReceivedData(uint8_t* largeRxBuffer, size_t len, int 
 			circ_error = circ_buff_move_head(&mCP->circularBuff, convertedBytes);
 			assert(!circ_error);
 
-			if(mCP->in.isMultiComplete)
-			{
+			if(mCP->in.isMultiComplete){
+
 				uint8_t cmd = MULTI_GET_CMD7(mCP->in.unpacked);
 				int parseResult;
 
-				if(cmd == CMD_SYSDATA)
-				{
-					// use sys data handling
+				if(cmd == CMD_SYSDATA){	
 					parseResult = sysDataParser(portIdx, mCP, serialDevice);
 				}
-				else if(isCmdOverloaded(cmd))
-				{
+				else if(isCmdOverloaded(cmd)){
 					// use user added Rx function
 					MultiPacketInfo info;
 					info.xid = mCP->in.unpacked[MP_XID];
@@ -177,8 +171,7 @@ void FlexseaSerial::processReceivedData(uint8_t* largeRxBuffer, size_t len, int 
 
 					callRx(cmd, &info, mCP->in.unpacked + MP_DATA1, mCP->in.unpackedIdx);
 				}
-				else
-				{
+				else{
 					assert(serialDevice);
 					mCP->in.unpacked[MP_XID] = serialDevice->getRole();
 
@@ -207,7 +200,7 @@ void FlexseaSerial::processReceivedData(uint8_t* largeRxBuffer, size_t len, int 
 void FlexseaSerial::readAndProcessData(int portIdx, FlexseaDevice* &serialDevice){
 	size_t i, bytesToRead;
 	long int numBytes;
-	// uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
+	uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
 
 	numBytes = bytesAvailable(portIdx);
 	while(numBytes > 0){

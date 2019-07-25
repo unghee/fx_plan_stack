@@ -55,7 +55,7 @@ extern "C"
 	// open serial port named portName at portIdx [0-3],
 	void fxOpen(char* portName, int portIdx)
 	{
-		commManager->loadAndGetDeviceId(portName, portIdx);
+		commManager->openDevice(portName, portIdx);
 		// commManager.open(std::string(portName), portIdx);
 	}
 

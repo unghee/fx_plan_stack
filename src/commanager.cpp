@@ -13,12 +13,11 @@ CommManager::CommManager()
 	for(int i = 0; i < FX_NUMPORTS; ++i){
 		devicePortMap[i] = new Device(i);
 	}
-	DataLogger::setDefaultLogFolder();
+	// DataLogger::setDefaultLogFolder();
 }
 
 CommManager::~CommManager()
 {
-
 	for(auto deviceEntry : devicePortMap){
 		delete deviceEntry.second;
 	}
@@ -27,8 +26,20 @@ CommManager::~CommManager()
 	deviceIds.clear();
 }
 
+FlexseaDevice* CommManager::getDevicePtr(int devId){
+	if(!isValidDevId(devId)){
+		std::cerr << "Invalid devId" << std::endl;
+		return nullptr;
+	}
 
-int CommManager::loadAndGetDeviceId(const char* portName, uint16_t portIdx){
+	return deviceMap[devId]->getFlexseaDevice();
+}
+
+int CommManager::isOpen(int portIdx){
+	return devicePortMap[portIdx]->getConnectionState() >= OPEN;
+}
+
+int CommManager::openDevice(const char* portName, uint16_t portIdx){
 	int attempts = 0;
 	std::string pName = portName;
 	if(devicePortMap[portIdx]->tryOpen(pName)){
@@ -47,21 +58,8 @@ int CommManager::loadAndGetDeviceId(const char* portName, uint16_t portIdx){
 			return devId;
 		}
 	}
-	return -1; //weird error
-}
-
-FlexseaDevice* CommManager::getDevicePtr(int devId){
-	if(!isValidDevId(devId)){
-		return nullptr;
-	}
-
-	return deviceMap[devId]->getFlexseaDevice();
-}
-
-int CommManager::isOpen(int portIdx){
-	// return true;
-	// return (devicePortMap[portIdx]->getDevId() != -1);
-	return devicePortMap[portIdx]->getConnectionState() >= OPEN;
+	std::cerr << "Could not open device" << std::endl;
+	return -1;
 }
 
 void CommManager::closeDevice(uint16_t portIdx)
@@ -77,6 +75,15 @@ std::vector<int> CommManager::getDeviceIds(){
 	return deviceIds;
 }
 
+// We may want to bake this in to accessing a device
+bool CommManager::isValidDevId(int devId){
+	if(deviceMap.find(devId) == deviceMap.end()){
+		std::cerr << "Cannot find device with devId: " << devId << std::endl;
+		return false;
+	}
+	return true;
+}
+
 std::vector<int> CommManager::getStreamingFrequencies() const
 {
 	std::vector<int> frequencies;
@@ -88,15 +95,6 @@ std::vector<int> CommManager::getStreamingFrequencies() const
 bool isValidFreq(int freq){
 	if(TIMER_FREQS_SET.find(freq) == TIMER_FREQS_SET.end()){
 		std::cerr << "Timer freq: " << freq << " not valid." << std::endl;
-		return false;
-	}
-	return true;
-}
-
-// We may want to bake this in to accessing a device
-bool CommManager::isValidDevId(int devId){
-	if(deviceMap.find(devId) == deviceMap.end()){
-		std::cerr << "Cannot find device with devId: " << devId << std::endl;
 		return false;
 	}
 	return true;
@@ -164,8 +162,9 @@ void CommManager::setColumnValue(unsigned col, int val)
 
 int CommManager::writeDeviceMap(int devId, uint32_t *map)
 {
-	if(!isValidDevId(devId))
+	if(!isValidDevId(devId)){
 		return false;
+	}
 	Device* device = deviceMap.at(devId);
 
 	device->writeDeviceMap(map);
@@ -178,14 +177,11 @@ int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
 	uint32_t map[FX_BITMAP_WIDTH];
 	memset(map, 0, sizeof(uint32_t)*FX_BITMAP_WIDTH);
 
-	for(auto&& f : fields)
-	{
-		if(f < nf)
-		{
+	for(auto&& f : fields){
+		if(f < nf){
 			SET_FIELD_HIGH(f, map);
 		}
 	}
 
 	return writeDeviceMap(devId, map);
 }
-

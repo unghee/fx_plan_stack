@@ -63,6 +63,19 @@ FlexseaDevice::FlexseaDevice(int id, int port, std::vector<std::string> fieldLab
 	memset(this->bitmap, 0, FX_BITMAP_WIDTH * sizeof(uint32_t));
 }
 
+
+bool FlexseaDevice::hasData() const
+{
+	std::unique_lock<std::mutex> lk(dataLock);
+	return !_data.empty();
+}
+
+size_t FlexseaDevice::dataCount() const
+{
+	std::unique_lock<std::mutex> lk(dataLock);
+	return _data.count(); 
+}
+
 /* Returns a vector of strings which describe the fields specified by map  */
 std::vector<std::string> FlexseaDevice::getActiveFieldLabels() const
 {
@@ -116,6 +129,8 @@ std::vector<std::string> FlexseaDevice::getAllFieldLabels() const
 	return fieldLabels;
 }
 
+
+// NOT THE BEST DESIGN TO CALL A GETTER WITHIN A MEMBER FUNCTION, CHANGE LATER
 uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputSize)
 {
 	return getData(fieldIds, output, outputSize, dataCount() - 1);
@@ -154,7 +169,7 @@ uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr outPtr, uint16_t o
 
 	int32_t *dataPtr = 0;
 	try{
-		if(index >= dataCount()){
+		if(index >= _data.count()){
 			throw InvalidIndex();
 		}
 		dataPtr = ((int32_t*)_data.peek(index));

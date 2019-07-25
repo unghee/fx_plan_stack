@@ -25,19 +25,20 @@
 typedef std::chrono::high_resolution_clock Clock;
 typedef std::function<void(uint8_t*, uint8_t*, uint8_t*, uint16_t*)> StreamFunc;
 
+/* 	
+	NODEVICE = Device default state, serial port has not been opened
+	OPEN = Serial port has been opened, commands can be sent and data can be read
+	CONNECTED = Is currently streaming commands, including through an AutoStream command
+*/  
 enum ConnectionState {NODEVICE, OPEN, CONNECTED};
-
-static const int MAX_TRY_OPEN_ATTEMPTS = 10;
 
 static const int NUM_TIMER_FREQS = 11;
 static const int TIMER_FREQS_IN_HZ[NUM_TIMER_FREQS] = {1, 5, 10, 20, 33, 50, 100, 200, 300, 500, 1000};
-static const int TIMER_PERIODS_IN_MS[NUM_TIMER_FREQS] = {1000, 200, 100, 50, 30, 20, 10, 5, 3, 2, 1};
 static const std::unordered_set<int> TIMER_FREQS_SET (TIMER_FREQS_IN_HZ, TIMER_FREQS_IN_HZ + NUM_TIMER_FREQS);
 
 class Device {
 public:
 	
-	// const std::string portName;
 	const int portIdx;
 	std::string portName;
 
@@ -53,9 +54,9 @@ public:
 
 	ConnectionState getConnectionState();
 
-	//Getters and setters
-	// bool getAutoStream();
-	// void setAutoStream(bool shouldAutoStream);
+	// Getters and setters
+	bool getAutoStreamStatus();
+	void setAutoStreamStatus(bool shouldAutoStream);
 
 	bool getShouldLog();
 	void setShouldLog(bool shouldLog);
@@ -103,7 +104,6 @@ private:
 	};
 	// static std::mutex flexseaSerial
 	static FlexseaSerial flexseaSerial;
-	// std::string portName;
 
 	std::mutex stateLock;
 	int devId;

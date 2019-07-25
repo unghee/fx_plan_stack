@@ -42,14 +42,13 @@ public:
 
 	int getShortId() const { return _shortId; }
 	int getRole() const { return _role; }
-	bool hasData() const { return !_data.empty(); }
-	size_t dataCount() const { return _data.count(); }
-
+	bool hasData() const;
+	size_t dataCount() const;
 
 	// dataMutex should be locked while accessing data to ensure thread safety
 	// a const pointer to a (non-const) recursive_mutex
 	// std::recursive_mutex *const dataMutex;
-	void setMetaData(uint8_t shortId, FlexseaDeviceType devType, uint8_t devRole);
+	// void setMetaData(uint8_t shortId, FlexseaDeviceType devType, uint8_t devRole);
 
 	// Returns a vector of strings which describe the fields specified by map
 	std::vector<std::string> getActiveFieldLabels() const;
@@ -86,7 +85,7 @@ public:
 
 	void updateData(uint8_t* buf);
 
-	FxDevData* getCircBuff() { return &_data; }
+	// FxDevData* getCircBuff() { return &_data; }
 
 	bool isValid() const { return this->_devId != -1; }
 	/// \brief Returns the rate at which this device is/was receiving data in Hz

@@ -1,4 +1,3 @@
-
 #include "device.h"
 
 using namespace std::chrono_literals;
@@ -28,14 +27,6 @@ Device::~Device(){
 	if(devId != -1){
 		close();
 	}
-	// if(serialDeviceIsSetUp){
-	// 	if(streamCmd.func != nullptr){
-	// 		delete streamCmd.func;
-	// 	}
-	// 	delete dataLogger;
-	// 	delete serialDevice;
-	// }
-
 }
 
 int Device::getDevId(){
@@ -130,10 +121,10 @@ void Device::addStream(int freq, const StreamFunc& func){
 
 void Device::stopStreaming(uint8_t cmdCode){
 	shouldLog = false;
-	//streamElement is a key-value pair <int, vector<uint8_t>>
+
 	{
 		std::unique_lock<std::mutex> lk(streamLock);
-		if(cmdCode == (uint8_t)-1){
+		if(cmdCode == (uint8_t)(-1)){
 			streamCmd = {false, CMD_CODE_BASE, nullptr};
 		}
 		else if(cmdCode == streamCmd.cmdCode){
@@ -172,8 +163,6 @@ void Device::sendSysDataRead(){
 	enqueueCommand(tx_cmd_sysdata_r, nullptr, 1);
 }
 
-
-
 void Device::startInitialThreads(){
 	shouldRun = true;
 	if(deviceReader != nullptr || commandSender != nullptr){
@@ -208,10 +197,6 @@ void Device::stopThreads(){
 	// 		delete th;
 	// 	}
 	// }
-	if(commandSender){
-		commandSender->join();
-		delete commandSender;
-	}
 	if(commandStreamer){
 		commandStreamer->join();
 		delete commandStreamer;
@@ -223,6 +208,10 @@ void Device::stopThreads(){
 	if(deviceLogger){
 		deviceLogger->join();
 		delete deviceLogger;
+	}
+	if(commandSender){ // Stop this thread last because it takes the most time to shutdown
+		commandSender->join();
+		delete commandSender;
 	}
 	// commandSenders.clear();
 	commandSender = nullptr;
@@ -258,12 +247,12 @@ void Device::streamCommands(){
 	}
 }
 
+// This will run until all commands are sent to ensure proper shutdown
 void Device::sendCommands(){
-	while(shouldRun){
+	while(shouldRun || !incomingCommands.empty()){ // No race condition present because we check empty again after acquiring the lock
 		{
 			std::unique_lock<std::mutex> lk(incomingCommandsLock);
 			if(!incomingCommands.empty()){
-				// assert(incomingCommands.size() <= 200);
 				Message m = incomingCommands.front();
 				flexseaSerial.write(m.numBytes, m.dataPacket.get(), portIdx);
 				incomingCommands.pop_front();
@@ -275,14 +264,14 @@ void Device::sendCommands(){
 
 void Device::readFromDevice(){
 	while(shouldRun){
-		flexseaSerial.readAndProcessData(portIdx, serialDevice);
+		flexseaSerial.readAndProcessData(portIdx, serialDevice); // Will do the setup for serialDevice
 		
-		if(!serialDeviceIsSetUp && serialDevice != nullptr){
+		if(!serialDeviceIsSetUp && serialDevice != nullptr){ // On first receive of device metadata
 			connectionState = OPEN; //now it is actually open
 			serialDeviceIsSetUp = true;
 			devId = serialDevice->_devId;
-			// setUpLogging();
 			startStreamingThreads();
+			// setUpLogging();
 		}
 	}
 }
@@ -314,19 +303,18 @@ bool Device::tryOpen(std::string portName){
 	if(connectionState >= OPEN){
 		return false;
 	}
-	startInitialThreads();
 	bool opened = flexseaSerial.open(portName, portIdx);
 	if(opened){
+		startInitialThreads();
 		sendSysDataRead();
 	}
 	return opened;
 }
 
 void Device::close(){
-
 	stopStreaming();
 	std::cout << "Shutting down device: " << devId << std::endl;
-	std::this_thread::sleep_for(100ms); //give some time to send rest of commands
+	
 	stopThreads();
 	flexseaSerial.close(portIdx);
 
@@ -335,20 +323,21 @@ void Device::close(){
 		if(!incomingCommands.empty()){
 			std::cout << "Device still had commands left to send" << std::endl;
 		}
-		incomingCommands.clear();
+		assert(incomingCommands.empty());
 	}
 
-	if(serialDeviceIsSetUp){
-		if(streamCmd.func != nullptr){
-			delete streamCmd.func;
-		}
-		delete dataLogger;
-		dataLogger = nullptr;
-		delete serialDevice;
-		serialDevice = nullptr;
-	}
+	//clean up dynamic variables
+	delete streamCmd.func;
+	streamCmd.func = nullptr;
+	delete dataLogger;
+	dataLogger = nullptr;
+	delete serialDevice;
+	serialDevice = nullptr;
+
+	// assert(shouldLog = false);
+
+	//reset the device's status
 	serialDeviceIsSetUp = false;
 	devId = -1;
-	shouldLog = false;
 	connectionState = NODEVICE;
 }

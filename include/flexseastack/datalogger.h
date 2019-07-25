@@ -13,11 +13,12 @@
 #define DEFAULT_LOG_FOLDER "Plan-GUI-Logs"
 #define LOG_FOLDER_CONFIG_FILE "logFolderConfigFile.txt"
 
-/// \brief class which manages creating log files
-/// reads data from FlexseaDevices provided by a FlexseaDeviceProvider
-/// employs a polling method therefore the owner MUST either
-///  - trigger polls by calling serviceLogs, or
-///  - run DataLogger on a thread using the PeriodicTask pattern
+/*
+    Class intended to be coupled with a single Device that is CONNECTED 
+    Periodically reads data from a FlexseaDevice and writes it to the log file
+    The static variables are shared amongst DataLoggers and will modify the logging
+    settings for all Devices 
+*/ 
 class DataLogger {
 
 public:
@@ -25,8 +26,8 @@ public:
     ~DataLogger();
 
     static bool sessionInitialized;
-    static bool createSessionFolder(std::string session_name);
 
+    static bool createSessionFolder(std::string session_name);
     static bool setLogFolder(std::string folderPath);
     static bool setDefaultLogFolder();
 
@@ -53,6 +54,7 @@ private:
     static std::string _logFolderPath;
     static std::string _sessionPath;
 
+    // Per Device variables
     bool initialized;
     int folderNumber;
     std::ofstream* fileObject;
@@ -61,6 +63,7 @@ private:
     unsigned int logFileSplitIndex;
     unsigned int numActiveFields;
     unsigned int logAdditionalField;
+
     FlexseaDevice* flexseaDevice;
 
     static bool createFolder(std::string path);
@@ -69,8 +72,9 @@ private:
     
     std::string generateFileName(std::string suffix="");
     void writeLogHeader();
-    void changeFileName(std::string newfilename);
 
+    // Runs when we change folders or fill up a log file
+    void changeFileName(std::string newfilename);
 };
 
 #endif // DATALOGGER_H
