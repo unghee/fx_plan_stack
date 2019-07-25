@@ -14,7 +14,6 @@
 #include <thread>
 #include <chrono>
 
-// #include "flexsea_system.h"
 #include "flexseadevicetypes.h"
 #include "device.h"
 
@@ -25,31 +24,32 @@ public:
     CommManager();
     ~CommManager();
 
-    //returns -1 if cannot connect to device
-    int loadAndGetDeviceId(const char* portName, uint16_t portIdx);
+    // Returns -1 if cannot connect to device
     FlexseaDevice* getDevicePtr(int devId);
-    /// \brief overloaded to manage streams and connected devices
-    int isOpen(int portIdx);
-    void closeDevice(uint16_t portIdx);//
-    std::vector<int> getDeviceIds();
 
+    int isOpen(int portIdx);
+    // Returns devId on successful open
+    int openDevice(const char* portName, uint16_t portIdx);
+    void closeDevice(uint16_t portIdx);
+    std::vector<int> getDeviceIds();
     bool isValidDevId(int devId);
 
-    std::vector<int> getStreamingFrequencies() const;//
-    bool startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode=CMD_SYSDATA);//
-    int startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc);//
-    bool stopStreaming(int devId, int cmdCode=-1);//
-    int writeDeviceMap(int devId, const std::vector<int> &fields);//
-    int writeDeviceMap(int devId, uint32_t* map);//
+    std::vector<int> getStreamingFrequencies() const;
+    bool startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode=CMD_SYSDATA);
+    int startStreaming(int devId, int freq, bool shouldLog, const StreamFunc &streamFunc);
+    bool stopStreaming(int devId, int cmdCode=-1);
+    
+    int writeDeviceMap(int devId, uint32_t* map);
+    int writeDeviceMap(int devId, const std::vector<int> &fields);
 
+    // DataLogger functions, modifies datalogging settings for all devices
+    bool createSessionFolder(std::string sessionName);
+    void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);
+    void setColumnValue(unsigned col, int val);
+    bool setLogFolder(std::string logFolderPath);
+    bool setDefaultLogFolder();
 
-    bool createSessionFolder(std::string sessionName);//
-    void setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue);//
-    void setColumnValue(unsigned col, int val);//
-    bool setLogFolder(std::string logFolderPath);//
-    bool setDefaultLogFolder();//
-
-    /// \brief adds a message to a queue of messages to be written to the port periodically
+    // Sends command to device
     template<typename T, typename... Args>
     bool enqueueCommand(int devId, T tx_func, Args&&... tx_args)
     {
@@ -62,6 +62,7 @@ public:
     }
 
 private:
+    // For fast lookup, devicePortMap always has keys {0, 1, ..., FX_NUM_PORTS}
     std::unordered_map<int, Device*> deviceMap;
     std::unordered_map<uint16_t, Device*> devicePortMap;
     std::vector<int> deviceIds;

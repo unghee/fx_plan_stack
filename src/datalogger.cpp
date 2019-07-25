@@ -13,6 +13,8 @@
 
 bool DataLogger::sessionInitialized = false;
 
+
+// Initialization of static variables
 std::mutex DataLogger::_additionalValuesLock;
 std::vector<std::string> DataLogger::_additionalColumnLabels;
 std::vector<int> DataLogger::_additionalColumnValues;
@@ -138,14 +140,16 @@ void DataLogger::logDevice()
     }
 
     auto fieldIds = flexseaDevice->getActiveFieldIds();
-    //no active fields, logging for this device is done
-    assert(fieldIds.size() >= 0);
+
+    if(fieldIds.empty()){ // No active fields, logging for this device is done
+        return;
+    }
 
     std::vector<uint32_t> timestampOutput;
     std::vector<std::vector<int32_t>> data;
     lastTimestamp = flexseaDevice->getDataAfterTime(lastTimestamp, timestampOutput, data);
 
-    // if timestampOutput and data mismatch in size, we have some kind of problem
+    // If timestampOutput and data mismatch in size, we have some kind of problem
     assert(timestampOutput.size() != data.size());
 
     for(unsigned int line = 0; line < timestampOutput.size(); line++){
@@ -203,9 +207,9 @@ bool DataLogger::createFolder(std::string path)
 #else
 #   error "Unknown compiler"
 #endif
-   
-    if(success)
+    if(success){
         std::cout << "Folder created : " << pathOK << std::endl;
+    }
 
     return success;
 }
@@ -293,9 +297,7 @@ void DataLogger::saveLogFolderConfig()
         return;
     }
 
-    {
-        fout << _logFolderPath;
-    }
+    fout << _logFolderPath;
     fout.close();
 }
 
@@ -331,6 +333,7 @@ void DataLogger::changeFileName(std::string newFileName)
     // generate the new file object
     std::replace(newFileName.begin(), newFileName.end(), '\\', '/');
     fileObject = new std::ofstream(newFileName);
+    
     writeLogHeader();
     logFileSize = 0;
 }

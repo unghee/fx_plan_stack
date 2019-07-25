@@ -33,7 +33,11 @@ typedef std::vector<OpenAttempt> OpenAttemptList;
 #define CHUNK_SIZE              48
 #define MAX_SERIAL_RX_LEN       (CHUNK_SIZE*15 + 10)
 
-/// \brief FlexseaSerial class manages serial ports and connected devices
+/*
+    FlexseaSerial class abstracts away all the serial communication for the Device class
+    It is SHARED amongst all Devices
+*/
+
 class Message;
 
 class FlexseaSerial : public SerialDriver, public RxHandlerManager
@@ -45,11 +49,9 @@ public:
 
     /// \brief opens portName at portIdx
     /// Starts an open attempt at the corresponding port. Later polls for the state of the port
-    /// If the port opens successfully, FlexseaSerial periodically sends whoami messages until metadata is received
     bool open(std::string portName, int portIdx);
 
-    /// \brief close the corresponding port
-    // void close(int portIdx);
+    // close is inherited from SerialDriver
 
     void readAndProcessData(int portIdx, FlexseaDevice* &serialDevice);
 
@@ -83,33 +85,28 @@ public:
     /// metadata includes device id, device type, device role, and currently active fields
     void sendDeviceWhoAmI(int port);
 
-    /// \brief [Blocking] write to the device specified by the device handle d
-    /// GUI should prefer non blocking writes
-    /// for a non blocking write, use CommManager::enqueueCommand
-    // virtual void write(uint8_t bytes_to_send, uint8_t *serial_tx_data, uint16_t portIdx);
-
-    
-
 private:
 
+    // Reads data from serial
     void readDevice(std::string portName, uint16_t portIdx);
-
     int sysDataParser(int port, MultiCommPeriph* mCP, FlexseaDevice* &serialDevice);
+
     // / \brief processes nb bytes at the port, analyses for packets, parses, etc
     void processReceivedData(uint8_t* largeRxBuffer, size_t len, int portIdx, FlexseaDevice* &serialDevice);
 
-    
     MultiCommPeriph* multiCommPeriphs;
-    uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
+    // uint8_t largeRxBuffer[MAX_SERIAL_RX_LEN];
 };
 
 class Message {
+
 public:
     static void do_delete(uint8_t buf[]) { delete[] buf; }
 
     Message(uint8_t numberOfBytes, uint8_t* data): numBytes(numberOfBytes), 
                                         dataPacket(std::shared_ptr<uint8_t>(new uint8_t[numberOfBytes], 
                                         do_delete)){
+        
         uint8_t* temp = dataPacket.get();
         for(int i = 0; i < numBytes; i++)
             temp[i] = data[i];
