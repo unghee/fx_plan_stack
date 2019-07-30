@@ -36,9 +36,6 @@ include_directories(
 	unity
 	${CMAKE_CURRENT_SOURCE_DIR}/serial/include
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-comm/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/CycleTester/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/ExperimentalController/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared/unity
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared/i2t/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared/utilities/inc
@@ -52,7 +49,6 @@ include_directories(
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-comm)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-system)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-projects)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared)
 add_subdirectory(serial)
 
@@ -93,15 +89,15 @@ target_link_libraries(fx_plan_stack_static pthread)
 ##  Create a psuedo-target to be created before the library
  if(WIN32)
 add_custom_target(
- 	revisionTarget
- 	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.bat ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
- 	COMMENT "Updating revision information"
+	revisionTarget
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.bat ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
+	COMMENT "Updating revision information"
  )
  else()
  add_custom_target(
-    revisionTarget
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.sh ${CMAKE_CURRENT_SOURCE_DIR}/git-revision.py ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
-    COMMENT "Updating revision information"
+	revisionTarget
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.sh ${CMAKE_CURRENT_SOURCE_DIR}/git-revision.py ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
+	COMMENT "Updating revision information"
 )
 endif()
 
