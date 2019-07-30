@@ -60,9 +60,10 @@ extern "C" {
 
 #ifdef BUILD_SHARED_LIB_DLL
 #include <stdint.h>
-#include "../flexsea-comm/inc/flexsea_comm.h"
-//#include "../flexsea-comm/inc/flexsea.h"
+#include "flexsea_comm.h"
 #endif	//BUILD_SHARED_LIB_DLL
+
+#include "flexsea.h"
 
 //****************************************************************************
 // Prototype(s):

@@ -1,18 +1,9 @@
 [submodule "serial"]
 	path = serial
 	url = https://github.com/DephyInc/serial.git
-[submodule "flexsea-comm"]
-	path = flexsea-comm
-	url = https://github.com/JFDuval/flexsea-comm.git
-[submodule "flexsea-system"]
-	path = flexsea-system
-	url = https://github.com/JFDuval/flexsea-system.git
-[submodule "flexsea-shared"]
-	path = flexsea-shared
-	url = https://github.com/JFDuval/flexsea-shared.git
-[submodule "flexsea-projects"]
-	path = flexsea-projects
-	url = https://github.com/DephyInc/flexsea-projects.git
 [submodule "flexsea-dephy"]
 	path = flexsea-dephy
 	url = https://github.com/DephyInc/flexsea-dephy.git
+[submodule "flexsea-core"]
+	path = flexsea-core
+	url = https://github.com/DephyInc/flexsea-core.git
