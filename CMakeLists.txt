@@ -33,10 +33,8 @@ include_directories(
 	include
 	include/flexseastack
 	include/flex_lib
-	unity
 	${CMAKE_CURRENT_SOURCE_DIR}/serial/include
 	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-comm/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-shared/unity
 	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-shared/i2t/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-shared/utilities/inc
 	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-shared/logger/inc
@@ -68,7 +66,6 @@ file(GLOB PLAN_STACK_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/flex_lib/*.c
-	${CMAKE_CURRENT_SOURCE_DIR}/unity/*.c
 )
 
 set(FX_SRCFILES
