@@ -54,11 +54,11 @@ add_subdirectory(serial)
 
 if(PLAN_TYPE STREQUAL PLAN_GUI)
 	include_directories(
-		${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-dephy/CycleTester/inc
-		${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-dephy/ExperimentalController/inc
-		${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-dephy/inc
+		${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-dephy/CycleTester/inc
+		${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-dephy/ExperimentalController/inc
+		${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-dephy/inc
 	)
-	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy ${CMAKE_CURRENT_SOURCE_DIR}/build/dephy)
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-dephy ${CMAKE_CURRENT_SOURCE_DIR}/build/dephy)
 endif()
 
 
