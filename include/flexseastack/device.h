@@ -87,7 +87,7 @@ public:
 		if(packedMessages.empty()){
 			return false;
 		}
-		std::unique_lock<std::mutex> incomingQueueLock(incomingCommandsLock);
+		std::unique_lock<std::mutex> lk(incomingCommandsLock);
 		for(auto & message : packedMessages){
 			incomingCommands.push_back(message);
 		}
@@ -102,7 +102,6 @@ private:
 		uint16_t cmdCode;
 		StreamFunc* func;
 	};
-	// static std::mutex flexseaSerial
 	static FlexseaSerial flexseaSerial;
 
 	std::mutex stateLock;
@@ -137,7 +136,6 @@ private:
 	void setUpFlexseaSerialDevice();
 	void setUpLogging();
 
-	bool passedPeriod(int freqIndex);
 	// runnable functions (separate threads)
 	void streamCommands();
 	void sendCommands();
