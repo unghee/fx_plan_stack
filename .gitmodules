@@ -1,6 +1,3 @@
 [submodule "serial"]
 	path = serial
 	url = https://github.com/DephyInc/serial.git
-[submodule "flexsea-core"]
-	path = flexsea-core
-	url = https://github.com/DephyInc/flexsea-core.git
