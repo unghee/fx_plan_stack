@@ -69,7 +69,7 @@ bool DataLogger::createSessionFolder(std::string session_name)
         _sessionPath = sessionPath;
     }   
     //session folder was successfully initialized, can begin logging
-    sessionInitialized = folder_was_created;
+    // sessionInitialized = folder_was_created;
 
     return folder_was_created;
 }
@@ -86,7 +86,7 @@ bool DataLogger::setLogFolder(std::string folderPath)
         _logFolderPath = folderPath;
         saveLogFolderConfig();
     }
-
+    sessionInitialized = success;
     return success;
 }
 

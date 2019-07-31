@@ -176,9 +176,6 @@ void Device::startInitialThreads(){
 void Device::startStreamingThreads(){
 	assert(connectionState >= OPEN);
 	commandStreamer = new std::thread(&Device::streamCommands, this);
-	// for(int i = 0; i < 5; ++i){
-	// 	commandSenders.push_back(new std::thread(&Device::sendCommands, this));
-	// }
 }
 
 void Device::startLoggingThread(){
@@ -191,12 +188,6 @@ void Device::startLoggingThread(){
 void Device::stopThreads(){
 	shouldRun = false;
 
-	// if(commandSenders.size()){
-	// 	for(std::thread* th : commandSenders){
-	// 		th->join();
-	// 		delete th;
-	// 	}
-	// }
 	if(commandStreamer){
 		commandStreamer->join();
 		delete commandStreamer;
@@ -213,7 +204,6 @@ void Device::stopThreads(){
 		commandSender->join();
 		delete commandSender;
 	}
-	// commandSenders.clear();
 	commandSender = nullptr;
 	commandStreamer = nullptr;
 	deviceReader = nullptr;
@@ -253,12 +243,13 @@ void Device::sendCommands(){
 		{
 			std::unique_lock<std::mutex> lk(incomingCommandsLock);
 			if(!incomingCommands.empty()){
+				// std::cout << "Commands queue size: " << incomingCommands.size() << std::endl;
 				Message m = incomingCommands.front();
 				flexseaSerial.write(m.numBytes, m.dataPacket.get(), portIdx);
 				incomingCommands.pop_front();
 			}
 		}
-		std::this_thread::sleep_for(1ms);
+		std::this_thread::sleep_for(500us);
 	}
 }
 
@@ -272,6 +263,7 @@ void Device::readFromDevice(){
 			devId = serialDevice->_devId;
 			startStreamingThreads();
 			// setUpLogging();
+			// startLoggingThread();
 		}
 	}
 }
@@ -312,9 +304,9 @@ bool Device::tryOpen(std::string portName){
 }
 
 void Device::close(){
-	stopStreaming();
 	std::cout << "Shutting down device: " << devId << std::endl;
 	
+	stopStreaming();
 	stopThreads();
 	flexseaSerial.close(portIdx);
 
@@ -334,7 +326,7 @@ void Device::close(){
 	delete serialDevice;
 	serialDevice = nullptr;
 
-	// assert(shouldLog = false);
+	assert(shouldLog == false);
 
 	//reset the device's status
 	serialDeviceIsSetUp = false;

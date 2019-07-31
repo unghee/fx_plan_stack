@@ -207,52 +207,10 @@ uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
 {
 	std::unique_lock<std::mutex> lk(dataLock);
 	return findIndexAfterTime(timestamp);
-	// size_t lb = 0, ub = _data.count();
-	// size_t i = ub/2;
-	// uint32_t t = _data.peek(i)[0];
-
-	// while(i != lb && lb != ub){
-	// 	if(timestamp > t){
-	// 		lb = i;             //go right
-	// 	}
-	// 	else{
-	// 		ub = i;             //go left
-	// 	}
-
-	// 	i = (lb + ub) / 2;
-	// 	t = _data.peek(i)[0];
-	// }
-
-	// return i + (t >= timestamp);
 }
-
-//uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, uint32_t *output, uint16_t outputSize) const
-//{
-//    size_t i = 0, j = 0, sizeData = (this->numFields+1)*sizeof(int32_t);
-
-//    std::lock_guard<std::recursive_mutex> lk(*this->dataMutex);
-
-//    while(i < _data.count() && _data.peek(i)[0] <= timestamp)
-//        i++;
-
-//    while(i < _data.count() && j < outputSize)
-//    {
-//        memcpy(output+j, _data.peek(i++), sizeData);
-//        j+=numFields+1;
-//    }
-
-//    uint32_t last = _data.peek(i-1)[0];
-
-//    return last;
-//}
 
 inline size_t FlexseaDevice::findIndexAfterTime(uint32_t timestamp) const
 {
-// ---- Linear search O(n)
-//    size_t i=0;
-//    while(i < _data.count() && _data.peek(i)[0] <= timestamp)
-//        i++;
-
 // ---- Binary search O(logn)
 	size_t lb = 0, ub = _data.count();
 
@@ -354,7 +312,6 @@ uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint3
 {
 	// -1 ensures that std::min always returns (_data.count() - 1)
 	// unsigned(-1) = std::numeric_limits(size_t)
-	// return getDataAfterTime(fieldIds, timestamp, ts_output, data_output, -1);
 	return getDataAfterTime(fieldIds, timestamp, ts_output, data_output, std::numeric_limits<unsigned>::max());
 }
 

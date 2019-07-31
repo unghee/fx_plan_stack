@@ -45,11 +45,6 @@ public:
 	bool hasData() const;
 	size_t dataCount() const;
 
-	// dataMutex should be locked while accessing data to ensure thread safety
-	// a const pointer to a (non-const) recursive_mutex
-	// std::recursive_mutex *const dataMutex;
-	// void setMetaData(uint8_t shortId, FlexseaDeviceType devType, uint8_t devRole);
-
 	// Returns a vector of strings which describe the fields specified by map
 	std::vector<std::string> getActiveFieldLabels() const;
 	std::vector<int> getActiveFieldIds() const;
@@ -103,6 +98,7 @@ private:
 
 	uint32_t bitmap[FX_BITMAP_WIDTH];
 	std::vector<std::string> fieldLabels;
+	
 	//mutable because they're used for caching
 	mutable uint32_t lastFieldLabelMap[FX_BITMAP_WIDTH] = {0};
 	mutable std::vector<std::string> lastRequest;
