@@ -25,7 +25,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # adding an easy way to compile differently for plan and manage
 set(FLEXSEA_TYPE "PLAN")
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/plan_definitions.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/../plan_definitions.cmake)
 
 option(COMPILE_SHARED "compile as a shared lib vs. a static lib" ON)
 
@@ -33,35 +33,39 @@ include_directories(
 	include
 	include/flexseastack
 	include/flex_lib
-	unity
 	${CMAKE_CURRENT_SOURCE_DIR}/serial/include
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-comm/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/CycleTester/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/ExperimentalController/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared/unity
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared/i2t/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared/utilities/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared/logger/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-system/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-projects/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-projects/ActPack/inc
-	${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-projects/Rigid/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-comm/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-shared/i2t/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-shared/utilities/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-shared/logger/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-system/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-projects/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-projects/ActPack/inc
+	${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-projects/Rigid/inc
 )
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-comm)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-system)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-projects)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-dephy)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/flexsea-core/flexsea-shared)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-comm ${CMAKE_CURRENT_SOURCE_DIR}/build/comm)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-system ${CMAKE_CURRENT_SOURCE_DIR}/build/system)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-projects ${CMAKE_CURRENT_SOURCE_DIR}/build/projects)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-core/flexsea-shared ${CMAKE_CURRENT_SOURCE_DIR}/build/shared)
 add_subdirectory(serial)
+
+if(PLAN_TYPE STREQUAL PLAN_GUI)
+	include_directories(
+		${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-dephy/CycleTester/inc
+		${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-dephy/ExperimentalController/inc
+		${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-dephy/inc
+	)
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../flexsea-dephy ${CMAKE_CURRENT_SOURCE_DIR}/build/dephy)
+endif()
+
+
 
 file(GLOB PLAN_STACK_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/flex_lib/*.c
-	${CMAKE_CURRENT_SOURCE_DIR}/unity/*.c
 )
 
 set(FX_SRCFILES
@@ -93,15 +97,15 @@ target_link_libraries(fx_plan_stack_static pthread)
 ##  Create a psuedo-target to be created before the library
  if(WIN32)
 add_custom_target(
- 	revisionTarget
- 	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.bat ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
- 	COMMENT "Updating revision information"
+	revisionTarget
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.bat ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
+	COMMENT "Updating revision information"
  )
  else()
  add_custom_target(
-    revisionTarget
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.sh ${CMAKE_CURRENT_SOURCE_DIR}/git-revision.py ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
-    COMMENT "Updating revision information"
+	revisionTarget
+	COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/update_revs.sh ${CMAKE_CURRENT_SOURCE_DIR}/git-revision.py ${CMAKE_CURRENT_SOURCE_DIR}/include/git_rev_data.h
+	COMMENT "Updating revision information"
 )
 endif()
 
