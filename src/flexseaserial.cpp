@@ -38,30 +38,29 @@ FlexseaSerial::~FlexseaSerial()
 
 #define CALL_MEMBER_FN(object,ptrToMember)  ((object)->*(ptrToMember))
 
-void FlexseaSerial::sendDeviceWhoAmI(int port)
-{
+// void FlexseaSerial::sendDeviceWhoAmI(int port)
+// {
+// 	uint32_t flag = 0;
+// 	uint8_t lenFlags = 1, error;
 
-	uint32_t flag = 0;
-	uint8_t lenFlags = 1, error;
+// 	MultiWrapper *out = &multiCommPeriphs[port].out;
+// 	error = CommStringGeneration::generateCommString(0, out, tx_cmd_sysdata_r, &flag, lenFlags);
 
-	MultiWrapper *out = &multiCommPeriphs[port].out;
-	error = CommStringGeneration::generateCommString(0, out, tx_cmd_sysdata_r, &flag, lenFlags);
-
-	if(error)
-		std::cout << "Error packing multipacket" << std::endl;
-	else
-	{
-		unsigned int frameId = 0;
-		while(out->frameMap > 0)
-		{
-			write(PACKET_WRAPPER_LEN, out->packed[frameId], port);
-			out->frameMap &= (   ~(1 << frameId)   );
-			frameId++;
-		}
-		out->isMultiComplete = 1;
-		std::cout << "Wrote who am i message" << std::endl;
-	}
-}
+// 	if(error)
+// 		std::cout << "Error packing multipacket" << std::endl;
+// 	else
+// 	{
+// 		unsigned int frameId = 0;
+// 		while(out->frameMap > 0)
+// 		{
+// 			write(PACKET_WRAPPER_LEN, out->packed[frameId], port);
+// 			out->frameMap &= (   ~(1 << frameId)   );
+// 			frameId++;
+// 		}
+// 		out->isMultiComplete = 1;
+// 		std::cout << "Wrote who am i message" << std::endl;
+// 	}
+// }
 
 bool FlexseaSerial::open(std::string portName, int portIdx)
 {
@@ -95,7 +94,6 @@ inline int updateDeviceMetadata(int port, FlexseaDevice* &serialDevice, uint8_t 
 	return 0;
 }
 
-
 inline int updateDeviceData(FlexseaDevice* serialDevice, uint8_t *buf)
 {
 	if(serialDevice == nullptr){
@@ -107,7 +105,6 @@ inline int updateDeviceData(FlexseaDevice* serialDevice, uint8_t *buf)
 
 	return 0;
 }
-
 
 int FlexseaSerial::sysDataParser(int port, MultiCommPeriph* mCP, FlexseaDevice* &serialDevice){
 	uint8_t *msgBuf = mCP->in.unpacked;
@@ -131,7 +128,6 @@ void FlexseaSerial::processReceivedData(uint8_t* largeRxBuffer, size_t len, int 
 	int totalBuffered = len + circ_buff_get_size(&(mCP->circularBuff));
 	int numMessagesReceived = 0;
 	int maxMessagesExpected = (totalBuffered - 1) / COMM_STR_BUF_LEN + 1; //roundup int division
-
 
 	uint16_t bytesToWrite, cbSpace, bytesWritten=0;
 	int circ_error, successfulParse;

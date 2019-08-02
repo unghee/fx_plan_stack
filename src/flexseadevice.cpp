@@ -66,20 +66,20 @@ FlexseaDevice::FlexseaDevice(int id, int port, std::vector<std::string> fieldLab
 
 bool FlexseaDevice::hasData() const
 {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 	return !_data.empty();
 }
 
 size_t FlexseaDevice::dataCount() const
 {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 	return _data.count(); 
 }
 
 /* Returns a vector of strings which describe the fields specified by map  */
 std::vector<std::string> FlexseaDevice::getActiveFieldLabels() const
 {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 
 	bool equal = true;
 	for(int i = 0; i < FX_BITMAP_WIDTH && equal; i++){
@@ -111,7 +111,7 @@ std::vector<std::string> FlexseaDevice::getActiveFieldLabels() const
 
 std::vector<int> FlexseaDevice::getActiveFieldIds() const
 {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 
 	std::vector<int> r;
 	r.reserve(_numFields);
@@ -140,7 +140,7 @@ uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputS
 {
 	if(index < 0 || (unsigned int)index >= dataCount()) return 0;
 
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 
 	int32_t *dataPtr = ((int32_t*)_data.peek(index));
 
@@ -157,7 +157,6 @@ uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputS
 			fieldIds[outIdx] = field;
 			++outIdx;
 		}
-
 	}
 
 	return dataPtr[0]; //why do we return the data ptr?
@@ -165,7 +164,11 @@ uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputS
 
 uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr outPtr, uint16_t outputSize) const
 {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
+
+	if(index == -1){
+		index = _data.count() - 1;
+	}
 
 	int32_t *dataPtr = 0;
 	try{
@@ -195,7 +198,7 @@ uint32_t FlexseaDevice::getDataPtr(uint32_t index, FX_DataPtr outPtr, uint16_t o
 
 uint32_t FlexseaDevice::getLatestTimestamp() const
 {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 	if(_data.count()){
 		return _data.peekBack()[0];
 	}
@@ -205,7 +208,7 @@ uint32_t FlexseaDevice::getLatestTimestamp() const
 
 uint16_t FlexseaDevice::getIndexAfterTime(uint32_t timestamp) const
 {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 	return findIndexAfterTime(timestamp);
 }
 
@@ -241,7 +244,7 @@ inline size_t FlexseaDevice::findIndexAfterTime(uint32_t timestamp) const
 
 uint32_t FlexseaDevice::getDataAfterTime(int field, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<int32_t> &data_output) const
 {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 
 	if(!IS_FIELD_HIGH(field, this->bitmap)) return timestamp;
 
@@ -269,7 +272,7 @@ uint32_t FlexseaDevice::getDataAfterTime(int field, uint32_t timestamp, std::vec
 
 uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint32_t timestamp, std::vector<uint32_t> &ts_output, std::vector<std::vector<int32_t>> &data_output, unsigned max) const
 {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 
 	for(auto && field : fieldIds ){
 		if(!IS_FIELD_HIGH(field, this->bitmap)) return timestamp;
@@ -317,7 +320,7 @@ uint32_t FlexseaDevice::getDataAfterTime(const std::vector<int> &fieldIds, uint3
 
 uint32_t FlexseaDevice::getDataAfterTime(uint32_t timestamp, std::vector<uint32_t> &timestamps, std::vector<std::vector<int32_t>> &outputData) const
 {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 	size_t i = 0, sizeData = _numFields * sizeof(int32_t);
 
 	while(i < _data.count() && _data.peek(i)[0] <= timestamp){
@@ -357,7 +360,7 @@ uint32_t numberOfSetBits(uint32_t i)
 
 int FlexseaDevice::getNumActiveFields() const
 {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 	int count = 0;
 	for(int i = 0; i < FX_BITMAP_WIDTH; i++){
 		count += numberOfSetBits(this->bitmap[i]);
@@ -368,7 +371,7 @@ int FlexseaDevice::getNumActiveFields() const
 
 double FlexseaDevice::getDataRate() const
 {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 	const int AVG_OVER = 10;
 	if(_data.count() < AVG_OVER){
 		return -1;
@@ -393,17 +396,17 @@ std::string FlexseaDevice::getName() const
 }
 
 void FlexseaDevice::getBitmap(uint32_t* out) const {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::shared_lock<std::shared_timed_mutex> lk(dataLock);
 	memcpy(out, bitmap, FX_BITMAP_WIDTH*sizeof(uint32_t));
 }
 
 void FlexseaDevice::setBitmap(uint32_t* in) {
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::unique_lock<std::shared_timed_mutex> lk(dataLock);
 	memcpy(bitmap, in, FX_BITMAP_WIDTH*sizeof(uint32_t));
 }
 
 void FlexseaDevice::updateData(uint8_t *buf){
-	std::unique_lock<std::mutex> lk(dataLock);
+	std::unique_lock<std::shared_timed_mutex> lk(dataLock);
 
 	FlexseaDeviceSpec ds = deviceSpecs[_devType];
 	FX_DataPtr fxDataPtr = _data.getWrite();

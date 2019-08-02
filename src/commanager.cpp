@@ -26,15 +26,6 @@ CommManager::~CommManager()
 	deviceIds.clear();
 }
 
-FlexseaDevice* CommManager::getDevicePtr(int devId){
-	if(!isValidDevId(devId)){
-		std::cerr << "Invalid devId" << std::endl;
-		return nullptr;
-	}
-
-	return deviceMap[devId]->getFlexseaDevice();
-}
-
 int CommManager::isOpen(int portIdx){
 	return devicePortMap[portIdx]->getConnectionState() >= OPEN;
 }
@@ -135,31 +126,6 @@ bool CommManager::stopStreaming(int devId, int cmdCode)
 	device->stopStreaming(cmdCode);
 }
 
-bool CommManager::createSessionFolder(std::string sessionName)
-{
-	return DataLogger::createSessionFolder(sessionName);
-}
-
-bool CommManager::setLogFolder(std::string logFolderPath)
-{
-	return DataLogger::setLogFolder(logFolderPath);
-}
-
-bool CommManager::setDefaultLogFolder()
-{
-	return DataLogger::setDefaultLogFolder();
-}
-
-void CommManager::setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue)
-{
-	DataLogger::setAdditionalColumn(addLabel, addValue);
-}
-
-void CommManager::setColumnValue(unsigned col, int val)
-{
-	DataLogger::setColumnValue(col, val);
-}
-
 int CommManager::writeDeviceMap(int devId, uint32_t *map)
 {
 	if(!isValidDevId(devId)){
@@ -184,4 +150,48 @@ int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
 	}
 
 	return writeDeviceMap(devId, map);
+}
+
+bool CommManager::readDevice(int devId, int* dataBuffer, int numFields){
+	if(!isValidDevId(devId)){
+		std::cerr << "Invalid devId" << std::endl;
+		return false;
+	}
+
+	Device* device = deviceMap.at(devId);
+	return device->getDeviceData(dataBuffer, numFields);
+}
+
+FlexseaDevice* CommManager::getDevicePtr(int devId){
+	if(!isValidDevId(devId)){
+		std::cerr << "Invalid devId" << std::endl;
+		return nullptr;
+	}
+
+	return deviceMap[devId]->getFlexseaDevice();
+}
+
+bool CommManager::createSessionFolder(std::string sessionName)
+{
+	return DataLogger::createSessionFolder(sessionName);
+}
+
+bool CommManager::setLogFolder(std::string logFolderPath)
+{
+	return DataLogger::setLogFolder(logFolderPath);
+}
+
+bool CommManager::setDefaultLogFolder()
+{
+	return DataLogger::setDefaultLogFolder();
+}
+
+void CommManager::setAdditionalColumn(std::vector<std::string> addLabel, std::vector<int> addValue)
+{
+	DataLogger::setAdditionalColumn(addLabel, addValue);
+}
+
+void CommManager::setColumnValue(unsigned col, int val)
+{
+	DataLogger::setColumnValue(col, val);
 }
