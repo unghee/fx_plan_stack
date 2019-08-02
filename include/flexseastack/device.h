@@ -13,6 +13,7 @@
 #include <iostream>
 #include <chrono>
 #include <functional>
+#include <fstream>
 
 #include "flexseaserial.h"
 #include "flexseadevice.h"
@@ -61,6 +62,7 @@ public:
 	bool getShouldLog();
 	void setShouldLog(bool shouldLog);
 
+	int getDeviceData(int* dataBuffer, int numFields);
 	FlexseaDevice* getFlexseaDevice();
 
 	std::vector<int> getStreamingFreqs();
@@ -103,6 +105,8 @@ private:
 		StreamFunc* func;
 	};
 	static FlexseaSerial flexseaSerial;
+
+	// std::ofstream* commandLogger;
 
 	std::mutex stateLock;
 	int devId;

@@ -7,6 +7,7 @@ FlexseaSerial Device::flexseaSerial;
 Device::Device(int portIdx):
 							portIdx(portIdx)
 {
+
 	streamCmd = {false, CMD_CODE_BASE, nullptr};
 	serialDeviceIsSetUp = false;
 	devId = -1;
@@ -26,6 +27,10 @@ Device::Device(int portIdx):
 Device::~Device(){
 	if(devId != -1){
 		close();
+
+		// commandLogger->flush();
+		// commandLogger->close();
+		// delete commandLogger;
 	}
 }
 
@@ -50,6 +55,14 @@ bool Device::getShouldLog(){
 
 void Device::setShouldLog(bool shouldLog){
 	this->shouldLog = shouldLog;
+}
+
+int Device::getDeviceData(int* dataBuffer, int numFields){
+	if(connectionState < OPEN){
+		std::cerr << "Device is not open!" << std::endl;
+		return false;
+	}
+	return serialDevice->getDataPtr(-1, (FX_DataPtr)dataBuffer, numFields);
 }
 
 FlexseaDevice* Device::getFlexseaDevice(){
@@ -246,6 +259,10 @@ void Device::sendCommands(){
 				// std::cout << "Commands queue size: " << incomingCommands.size() << std::endl;
 				Message m = incomingCommands.front();
 				flexseaSerial.write(m.numBytes, m.dataPacket.get(), portIdx);
+				// commandLogger->write((char*)m.dataPacket.get(), m.numBytes);
+				// *commandLogger << "\n";
+				// *commandLogger << m.numBytes << ", " << m.dataPacket.get() << "\n";
+				// write the dataPacket to a file
 				incomingCommands.pop_front();
 			}
 		}
@@ -296,7 +313,16 @@ bool Device::tryOpen(std::string portName){
 		return false;
 	}
 	bool opened = flexseaSerial.open(portName, portIdx);
+	
 	if(opened){
+		//delete when done debugging
+		// commandLogger = new std::ofstream("commands.txt");
+		// if(!commandLogger->is_open()){
+	 //        delete commandLogger;
+	 //        commandLogger = nullptr;
+	 //        throw std::bad_alloc();
+	 //    }
+
 		startInitialThreads();
 		sendSysDataRead();
 	}

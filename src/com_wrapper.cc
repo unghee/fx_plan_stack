@@ -119,8 +119,9 @@ extern "C"
 	uint8_t fxStartStreaming(int devId, int freq, bool shouldLog, int shouldAuto)
 	{
 		if(!commManager->isValidDevId(devId)) return 0;
-		if(!ctrlsMap.count(devId))
-				ctrlsMap.insert({devId, defaultCtrlParams()});
+		if(!ctrlsMap.count(devId)){
+			ctrlsMap.insert({devId, defaultCtrlParams()});
+		}
 
 		// stream reading and commands at same rate
 		commManager->startStreaming(devId, freq, shouldLog, shouldAuto);
@@ -138,96 +139,48 @@ extern "C"
 		std::vector<int> m;
 		m.reserve(n);
 		int i;
-		for(i = 0; i < n; i++)
-		{
+		for(i = 0; i < n; i++){
 			m.push_back(fieldIds[i]);
 		}
 
 		return !commManager->writeDeviceMap(devId, m);
 	}
 
-	const int MAX_L = 100;
-	int devData[MAX_L];
-	int devDataPriv[MAX_L];
+	const int MAX_DEVICE_DATA_LENGTH = 100;
+	int entireDevDataBuffer[MAX_DEVICE_DATA_LENGTH];
+	int devData[MAX_DEVICE_DATA_LENGTH];
 
-	int* fxReadDevice(int devId, int* fieldIds, uint8_t* success, int n)
+	int* fxReadDevice(int devId, int* fieldIds, uint8_t* success, int numFields)
 	{
-		auto dev = commManager->getDevicePtr(devId);
-		memset(success, 0, n);
-		if(!dev)
-		{
-			std::cout << "Device does not exist" << std::endl;
-			return &devData[0];
-		}
-		if(!dev->hasData())
-		{
-			std::cout << "Device does not have data" << std::endl;
-			return &devData[0];
-		}
-		auto readSuccess = dev->getDataPtr( dev->dataCount()-1, (FX_DataPtr)devDataPriv, MAX_L );
-		if(readSuccess == 0)
-		{
-			std::cout << "Failed to read device data" << std::endl;
-			return &devData[0];
-		}
-
-		auto activeIds = dev->getActiveFieldIds();
-
-		for(int i = 0; i < n; i++)
-		{
-			auto it = std::find(activeIds.begin(), activeIds.end(), fieldIds[i]);
-			if(it != activeIds.end())
-			{
-				devData[i] = devDataPriv[1 + fieldIds[i]];
-				success[i] = 1;
-			}
-			else
-			{
-				std::cout << "Requested field not found" << std::endl;
-				devData[i] = 0;
-			}
-		}
-		fflush(stdout);
-		return &devData[0];
+		fxReadDeviceEx(devId, fieldIds, success, devData, numFields);
+		return devData;
 	}
-	int fxReadDeviceEx(int devId, int* fieldIds, uint8_t* success, int* dataBuffer, int n)
-	{
-		// Initialize return values (ensure theya re all set to false)
-		memset(success, 0, n);
-		int returnCount = 0;
-		auto dev = commManager->getDevicePtr(devId);
 
-		// Check input parameters
-		if(!dataBuffer)
-		{
+	int fxReadDeviceEx(int devId, int* fieldIds, uint8_t* success, int* dataBuffer, int numFields)
+	{
+		// Initialize return values (ensure they're all set to false)
+		memset(success, 0, numFields);
+		int returnCount = 0;
+		if(!dataBuffer){
 			std::cout << "Invalid Input buffer or size" << std::endl;
 			return returnCount;
 		}
-		if(!dev)
-		{
-			std::cout << "Device does not exist" << std::endl;
-			return returnCount;
-		}
-		if(!dev->hasData())
-		{
-			std::cout << "Device does not have data" << std::endl;
-			return returnCount;
-		}
-		auto readSuccess = dev->getDataPtr( dev->dataCount()-1, (FX_DataPtr)devDataPriv, MAX_L );
-		if(readSuccess == 0)
-		{
+
+		bool readSuccess = commManager->readDevice(devId, entireDevDataBuffer, MAX_DEVICE_DATA_LENGTH);
+
+		if(readSuccess == 0){
 			std::cout << "Failed to read device data" << std::endl;
 			return returnCount;
 		}
 
 		// We know we have data and a place to put it
-		auto activeIds = dev->getActiveFieldIds();
-		for(int i = 0; i < n; i++)
+		auto activeIds = commManager->getDevicePtr(devId)->getActiveFieldIds();
+		for(int i = 0; i < numFields; i++)
 		{
 			auto it = std::find(activeIds.begin(), activeIds.end(), fieldIds[i]);
 			if(it != activeIds.end())
 			{
-				dataBuffer[i] = devDataPriv[1 + fieldIds[i]];
+				dataBuffer[i] = entireDevDataBuffer[1 + fieldIds[i]];
 				success[i] = 1;
 			}
 			else

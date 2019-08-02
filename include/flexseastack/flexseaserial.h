@@ -58,7 +58,7 @@ public:
     template<typename T, typename... Args>
     std::vector<Message> generateMessages(int devId, int portIdx, T tx_func, Args&&... tx_args)
     {
-        MultiWrapper* out = &(multiCommPeriphs[portIdx].out);
+        MultiWrapper* out = multiCommPeriphs[portIdx].out + multiCommPeriphs[portIdx].outIndex;
         CommStringGeneration::generateCommString(devId, out, tx_func, std::forward<Args>(tx_args)...);
 
         std::vector<Message> generatedMessages;
@@ -76,6 +76,10 @@ public:
         }
         out->isMultiComplete = 1;
 
+        ++multiCommPeriphs[portIdx].outIndex;
+        if(multiCommPeriphs[portIdx].outIndex == 4)
+            multiCommPeriphs[portIdx].outIndex = 0; //wrap the index
+
         return generatedMessages;
     }
     /// \brief DEPRECATED: sends a who am i (who are you really?) message at the given port
@@ -83,7 +87,7 @@ public:
     /// --
     /// When a FlexSEA device receives a who am i message, it responds with metadata describing itself
     /// metadata includes device id, device type, device role, and currently active fields
-    void sendDeviceWhoAmI(int port);
+    // void sendDeviceWhoAmI(int port);
 
 private:
 

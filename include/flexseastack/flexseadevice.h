@@ -6,6 +6,7 @@
 #include <mutex>
 #include <cassert>
 #include <limits>
+#include <shared_mutex>
 #include "flexseadevicetypes.h"
 #include "circular_buffer.h"
 #include "flexsea_multi_frame_packet_def.h"
@@ -106,7 +107,8 @@ private:
 	int _shortId;
 	int _role;
 	
-	mutable std::mutex dataLock;
+	mutable std::shared_timed_mutex dataLock;
+	// mutable std::mutex dataLock;
 	FxDevData _data;
 };
 
