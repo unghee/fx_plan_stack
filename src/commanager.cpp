@@ -10,10 +10,10 @@ using namespace std::chrono_literals;
 
 CommManager::CommManager()
 {
+	DataLogger::setDefaultLogFolder();
 	for(int i = 0; i < FX_NUMPORTS; ++i){
 		devicePortMap[i] = new Device(i);
 	}
-	// DataLogger::setDefaultLogFolder();
 }
 
 CommManager::~CommManager()

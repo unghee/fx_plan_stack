@@ -27,10 +27,6 @@ Device::Device(int portIdx):
 Device::~Device(){
 	if(devId != -1){
 		close();
-
-		// commandLogger->flush();
-		// commandLogger->close();
-		// delete commandLogger;
 	}
 }
 
@@ -54,7 +50,12 @@ bool Device::getShouldLog(){
 }
 
 void Device::setShouldLog(bool shouldLog){
+	if(!dataLogger && shouldLog){
+		setUpLogging();
+	}
+
 	this->shouldLog = shouldLog;
+	loggingSignal.notify_all();
 }
 
 int Device::getDeviceData(int* dataBuffer, int numFields){
@@ -108,28 +109,34 @@ void Device::writeDeviceMap(uint32_t* map){
 }
 
 void Device::addStream(int freq, uint8_t cmdCode){
-	std::unique_lock<std::mutex> lk(streamLock);
-	assert(connectionState >= OPEN);
-	if(streamCmd.func){ //replace func
-		delete streamCmd.func;
-		streamCmd.func = nullptr;
+	{
+		std::unique_lock<std::mutex> lk(streamLock);
+		assert(connectionState >= OPEN);
+		if(streamCmd.func){ //replace func
+			delete streamCmd.func;
+			streamCmd.func = nullptr;
+		}
+		connectionState = CONNECTED;
+		streamingFreq = freq;
+		streamCmd = {true, cmdCode, nullptr};
 	}
-	connectionState = CONNECTED;
-	streamingFreq = freq;
-	streamCmd = {true, cmdCode, nullptr};
+	streamSignal.notify_all(); // do not need to hold the lock to notify
 }
 
 void Device::addStream(int freq, const StreamFunc& func){
-	std::unique_lock<std::mutex> lk(streamLock);
-	assert(connectionState >= OPEN);
+	{
+		std::unique_lock<std::mutex> lk(streamLock);
+		assert(connectionState >= OPEN);
 
-	if(streamCmd.func){ //replace func
-		delete streamCmd.func;
-		streamCmd.func = nullptr;
+		if(streamCmd.func){ // replace previous func
+			delete streamCmd.func;
+			streamCmd.func = nullptr;
+		}
+
+		streamingFreq = freq;
+		streamCmd = {true, CMD_CODE_BASE, new StreamFunc(func)};
 	}
-
-	streamingFreq = freq;
-	streamCmd = {true, CMD_CODE_BASE, new StreamFunc(func)};
+	streamSignal.notify_all(); // do not need to hold the lock to notify
 }
 
 void Device::stopStreaming(uint8_t cmdCode){
@@ -192,7 +199,6 @@ void Device::startStreamingThreads(){
 }
 
 void Device::startLoggingThread(){
-	assert(connectionState == CONNECTED);
 	if(!deviceLogger){
 		deviceLogger = new std::thread(&Device::logDevice, this);
 	}
@@ -200,6 +206,9 @@ void Device::startLoggingThread(){
 
 void Device::stopThreads(){
 	shouldRun = false;
+
+	streamSignal.notify_all(); // do not need to hold the lock to notify
+	loggingSignal.notify_all(); // do not need to hold the lock to notify
 
 	if(commandStreamer){
 		commandStreamer->join();
@@ -244,8 +253,7 @@ void Device::streamCommands(){
 			}
 		}
 		else{
-			lk.unlock();
-			std::this_thread::sleep_for(50ms);	
+			streamSignal.wait(lk, [this]{return streamCmd.shouldStream || !shouldRun;});		
 		}
 	}
 }
@@ -256,13 +264,8 @@ void Device::sendCommands(){
 		{
 			std::unique_lock<std::mutex> lk(incomingCommandsLock);
 			if(!incomingCommands.empty()){
-				// std::cout << "Commands queue size: " << incomingCommands.size() << std::endl;
 				Message m = incomingCommands.front();
 				flexseaSerial.write(m.numBytes, m.dataPacket.get(), portIdx);
-				// commandLogger->write((char*)m.dataPacket.get(), m.numBytes);
-				// *commandLogger << "\n";
-				// *commandLogger << m.numBytes << ", " << m.dataPacket.get() << "\n";
-				// write the dataPacket to a file
 				incomingCommands.pop_front();
 			}
 		}
@@ -279,26 +282,28 @@ void Device::readFromDevice(){
 			serialDeviceIsSetUp = true;
 			devId = serialDevice->_devId;
 			startStreamingThreads();
-			// setUpLogging();
-			// startLoggingThread();
+			startLoggingThread();
 		}
 	}
 }
 
 void Device::logDevice(){
 	while(shouldRun){
-		if(shouldLog){
-			startLoggingThread();
-			assert(connectionState == CONNECTED);
-			if(!dataLogger){
-				std::cerr << "Device has not been configured to log yet" << std::endl;
-				assert(dataLogger);
-				continue;
+		{
+			std::unique_lock<std::mutex> lk(stateLock);
+			if(shouldLog){
+				assert(connectionState == CONNECTED);
+				if(!dataLogger){
+					std::cerr << "Device has not been configured to log yet" << std::endl;
+					assert(dataLogger);
+					continue;
+				}
+				dataLogger->logDevice();
 			}
-			dataLogger->logDevice();
-		}
-		else{
-			std::this_thread::sleep_for(50ms); //max 50ms delay
+			else{
+				loggingSignal.wait(lk, [this]{return shouldLog || !shouldRun;});		
+			}
+			std::this_thread::sleep_for(5ms);
 		}
 	}
 }
@@ -315,14 +320,6 @@ bool Device::tryOpen(std::string portName){
 	bool opened = flexseaSerial.open(portName, portIdx);
 	
 	if(opened){
-		//delete when done debugging
-		// commandLogger = new std::ofstream("commands.txt");
-		// if(!commandLogger->is_open()){
-	 //        delete commandLogger;
-	 //        commandLogger = nullptr;
-	 //        throw std::bad_alloc();
-	 //    }
-
 		startInitialThreads();
 		sendSysDataRead();
 	}
