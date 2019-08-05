@@ -3,6 +3,7 @@
 
 #include <string>
 #include <deque>
+#include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <atomic>
@@ -106,8 +107,6 @@ private:
 	};
 	static FlexseaSerial flexseaSerial;
 
-	// std::ofstream* commandLogger;
-
 	std::mutex stateLock;
 	int devId;
 	bool shouldLog;
@@ -127,11 +126,13 @@ private:
 	std::vector<std::pair<int, uint8_t>> autoStreamList;
 
 	bool shouldRun;
-	// std::vector<std::thread*> commandSenders;
+
 	std::thread* commandSender;
 	std::thread* commandStreamer;
 	std::thread* deviceReader;
 	std::thread* deviceLogger;
+	std::condition_variable streamSignal;
+	std::condition_variable loggingSignal;
 
 	FlexseaDevice* serialDevice;
 	DataLogger* dataLogger;

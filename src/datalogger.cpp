@@ -37,6 +37,7 @@ DataLogger::DataLogger(bool logAdditionalField, FlexseaDevice* flexseaDevice):  
 
 DataLogger::~DataLogger()
 {
+    fileObject->flush();
     fileObject->close();
     delete fileObject;
 }
@@ -86,13 +87,14 @@ bool DataLogger::setLogFolder(std::string folderPath)
         _logFolderPath = folderPath;
         saveLogFolderConfig();
     }
+    _sessionPath = _logFolderPath;
     sessionInitialized = success;
     return success;
 }
 
 bool DataLogger::setDefaultLogFolder()
 {
-   return setLogFolder(DEFAULT_LOG_FOLDER);
+    setLogFolder(DEFAULT_LOG_FOLDER);
 }
 
 void DataLogger::setColumnValue(unsigned col, int val)
@@ -117,6 +119,7 @@ void DataLogger::initLogging()
         fileObject = nullptr;
         throw std::bad_alloc();
     }
+    std::cout << "Log filename: " + filename << std::endl;
     writeLogHeader();
 
     lastTimestamp = 0;
@@ -150,7 +153,7 @@ void DataLogger::logDevice()
     lastTimestamp = flexseaDevice->getDataAfterTime(lastTimestamp, timestampOutput, data);
 
     // If timestampOutput and data mismatch in size, we have some kind of problem
-    assert(timestampOutput.size() != data.size());
+    assert(timestampOutput.size() == data.size());
 
     for(unsigned int line = 0; line < timestampOutput.size(); line++){
         (*fileObject) << timestampOutput.at(line);
@@ -194,11 +197,11 @@ bool DataLogger::createFolder(std::string path)
 #elif __linux__
     std::replace(pathOK.begin(), pathOK.end(), '\\', '/');
 
-    #ifdef __linux__
-        mkdir(pathOK.c_str(), 777); // Is this too permissive?
-    #else
-        _mkdir(pathOK.c_str());
-    #endif
+    mkdir(pathOK.c_str(), ACCESSPERMS); // Is this too permissive?
+    // #ifdef __linux__
+    // #else
+    //     _mkdir(pathOK.c_str());
+    // #endif
 
     if(errno == EEXIST || errno == 0) {
         success = true;
