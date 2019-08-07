@@ -131,12 +131,12 @@ std::vector<std::string> FlexseaDevice::getAllFieldLabels() const
 
 
 // NOT THE BEST DESIGN TO CALL A GETTER WITHIN A MEMBER FUNCTION, CHANGE LATER
-uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputSize)
+uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputSize) const
 {
 	return getData(fieldIds, output, outputSize, dataCount() - 1);
 }
 
-uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputSize, int index)
+uint32_t FlexseaDevice::getData(int* fieldIds, int32_t* output, uint16_t outputSize, int index) const
 {
 	if(index < 0 || (unsigned int)index >= dataCount()) return 0;
 

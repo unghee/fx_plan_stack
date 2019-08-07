@@ -42,7 +42,7 @@ public:
     int writeDeviceMap(int devId, const std::vector<int> &fields);
 
     bool readDevice(int devId, int* dataBuffer, int numFields);
-    FlexseaDevice* getDevicePtr(int devId);
+    const FlexseaDevice* getDevicePtr(int devId);
 
     // DataLogger functions, modifies datalogging settings for all devices
     bool createSessionFolder(std::string sessionName);

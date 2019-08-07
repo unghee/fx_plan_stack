@@ -57,8 +57,8 @@ public:
 
 	/// \brief fills the output buffer with the requested field ids
 	/// skips over invalid field ids, updating the fieldIds array to reflect what is actually read
-	uint32_t getData(int* fieldIds, int* output, uint16_t outputSize);
-	uint32_t getData(int* fieldIds, int* output, uint16_t outputSize, int index);
+	uint32_t getData(int* fieldIds, int* output, uint16_t outputSize) const;
+	uint32_t getData(int* fieldIds, int* output, uint16_t outputSize, int index) const;
 	uint32_t  getDataPtr(uint32_t index, FX_DataPtr ptr, uint16_t outputSize) const;
 
 	/// \brief returns the first index of data whose timestamp is later than given timeStamp
