@@ -8,12 +8,18 @@ echo "Plan stack builder at your service :)"
 rm -rf build
 mkdir -p build
 cd build
-cmake .. -G "Ninja"
+if  [[ $1 = "-pi" ]]; then
+	cmake .. -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=CMAKE_RASPBERRY_PI_TOOLCHAIN_FILE
+else
+	cmake .. -G "Ninja"
+fi
 ninja
 cd ..
 
 # guest host OS
-if [[ "$OSTYPE" == "linux-gnu" ]]; then
+if [[ $1 = "-pi" ]]; then
+	HOST_OS="raspberryPi"
+elif [[ "$OSTYPE" == "linux-gnu" ]]; then
 	HOST_OS="linux"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
 	HOST_OS="mac"
