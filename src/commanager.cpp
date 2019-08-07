@@ -162,7 +162,7 @@ bool CommManager::readDevice(int devId, int* dataBuffer, int numFields){
 	return device->getDeviceData(dataBuffer, numFields);
 }
 
-FlexseaDevice* CommManager::getDevicePtr(int devId){
+const FlexseaDevice* CommManager::getDevicePtr(int devId){
 	if(!isValidDevId(devId)){
 		std::cerr << "Invalid devId" << std::endl;
 		return nullptr;
