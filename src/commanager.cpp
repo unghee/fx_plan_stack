@@ -26,11 +26,13 @@ CommManager::~CommManager()
 	deviceIds.clear();
 }
 
-int CommManager::isOpen(int portIdx){
-	return devicePortMap[portIdx]->getConnectionState() >= OPEN;
+int CommManager::isOpen(int portIdx) const
+{
+	return devicePortMap.at(portIdx)->getConnectionState() >= OPEN;
 }
 
-int CommManager::openDevice(const char* portName, uint16_t portIdx){
+int CommManager::openDevice(const char* portName, uint16_t portIdx)
+{
 	int attempts = 0;
 	std::string pName = portName;
 	if(devicePortMap[portIdx]->tryOpen(pName)){
@@ -62,12 +64,14 @@ void CommManager::closeDevice(uint16_t portIdx)
 	device->close();
 }
 
-std::vector<int> CommManager::getDeviceIds(){
+std::vector<int> CommManager::getDeviceIds() const
+{
 	return deviceIds;
 }
 
 // We may want to bake this in to accessing a device
-bool CommManager::isValidDevId(int devId){
+bool CommManager::isValidDevId(int devId) const
+{
 	if(deviceMap.find(devId) == deviceMap.end()){
 		std::cerr << "Cannot find device with devId: " << devId << std::endl;
 		return false;
@@ -83,7 +87,8 @@ std::vector<int> CommManager::getStreamingFrequencies() const
 	return frequencies;
 }
 
-bool isValidFreq(int freq){
+bool isValidFreq(int freq)
+{
 	if(TIMER_FREQS_SET.find(freq) == TIMER_FREQS_SET.end()){
 		std::cerr << "Timer freq: " << freq << " not valid." << std::endl;
 		return false;
@@ -152,7 +157,8 @@ int CommManager::writeDeviceMap(int devId, const std::vector<int> &fields)
 	return writeDeviceMap(devId, map);
 }
 
-bool CommManager::readDevice(int devId, int* dataBuffer, int numFields){
+bool CommManager::readDevice(int devId, int* dataBuffer, int numFields) const
+{
 	if(!isValidDevId(devId)){
 		std::cerr << "Invalid devId" << std::endl;
 		return false;
@@ -162,13 +168,14 @@ bool CommManager::readDevice(int devId, int* dataBuffer, int numFields){
 	return device->getDeviceData(dataBuffer, numFields);
 }
 
-const FlexseaDevice* CommManager::getDevicePtr(int devId){
+const FlexseaDevice* CommManager::getDevicePtr(int devId) const
+{
 	if(!isValidDevId(devId)){
 		std::cerr << "Invalid devId" << std::endl;
 		return nullptr;
 	}
 
-	return deviceMap[devId]->getFlexseaDevice();
+	return deviceMap.at(devId)->getFlexseaDevice();
 }
 
 bool CommManager::createSessionFolder(std::string sessionName)

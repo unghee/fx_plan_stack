@@ -26,12 +26,12 @@ public:
     ~CommManager();
 
     // Returns -1 if cannot connect to device
-    int isOpen(int portIdx);
+    int isOpen(int portIdx) const;
     // Returns devId on successful open
     int openDevice(const char* portName, uint16_t portIdx);
     void closeDevice(uint16_t portIdx);
-    std::vector<int> getDeviceIds();
-    bool isValidDevId(int devId);
+    std::vector<int> getDeviceIds() const;
+    bool isValidDevId(int devId) const;
 
     std::vector<int> getStreamingFrequencies() const;
     bool startStreaming(int devId, int freq, bool shouldLog, int shouldAuto, uint8_t cmdCode=CMD_SYSDATA);
@@ -41,8 +41,8 @@ public:
     int writeDeviceMap(int devId, uint32_t* map);
     int writeDeviceMap(int devId, const std::vector<int> &fields);
 
-    bool readDevice(int devId, int* dataBuffer, int numFields);
-    const FlexseaDevice* getDevicePtr(int devId);
+    bool readDevice(int devId, int* dataBuffer, int numFields) const;
+    const FlexseaDevice* getDevicePtr(int devId) const;
 
     // DataLogger functions, modifies datalogging settings for all devices
     bool createSessionFolder(std::string sessionName);

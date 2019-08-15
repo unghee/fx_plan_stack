@@ -41,7 +41,7 @@
 //     virtual void writeDevice(uint8_t bytes_to_send, uint8_t *serial_tx_data, const FlexseaDevice &d);
 
 //     // overriding flexseaserial functions
-//     virtual int writeDeviceMap(const FxDevicePtr d, uint32_t* map);
+//     virtual int writeDeviceMap(const FlexseaDevice* d, uint32_t* map);
 //     virtual void sendDeviceWhoAmI(int port);
 //     virtual void serviceOpenPorts() {} // do nothing as data is fake received when written to
 
@@ -94,7 +94,7 @@
 
 //     void printData(int id,  int numFields, FX_DataPtr data);
 //     void printBitMap(const uint32_t* map, int numFields);
-//     void printDeviceMaps(const std::vector<int>& deviceIds, const std::unordered_map<int, FxDevicePtr> &connectedDevices);
+//     void printDeviceMaps(const std::vector<int>& deviceIds, const std::unordered_map<int, FlexseaDevice*> &connectedDevices);
 //     const char TAB = '\t';
 
 //     std::vector<std::string> fakePortList = {"COM3", "COM2", "ttyACM0", "ttyACM1", "ttyACM2" };
