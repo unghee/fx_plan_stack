@@ -31,6 +31,7 @@ else
 	HOST_OS="linux"
 fi
 
+mkdir -p libs/${HOST_OS}
 cp build/libs/* libs/${HOST_OS}
 
 exit 0
